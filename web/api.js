@@ -326,6 +326,43 @@
     };
   });
 
+  // Buscador para armar un pedido a mano: primero el maestro (trae SKU y unidades por pack), luego Stock.
+  API.buscarProductoPedido = guard(async function (p, query) {
+    var q = String(query || '').replace(/[,()*%\\]/g, ' ').trim();
+    if (!q) return { ok: true, results: [] };
+    var sede = exigirSede(p, null);
+    var filtro = 'descripcion.ilike.%' + q + '%,sku.ilike.%' + q + '%';
+    var res = await Promise.all([
+      sb.from('mbees').select('descripcion,sku,factor').eq('sede_id', sede).or(filtro).order('descripcion').limit(15),
+      sb.from('sede_productos').select('sku,descripcion').eq('sede_id', sede).or(filtro).order('sku').limit(15)
+    ]);
+    if (res[0].error) throw res[0].error;
+    if (res[1].error) throw res[1].error;
+    var results = [];
+    res[0].data.forEach(function (r) {
+      if (/^SIN SKU/i.test(str(r.sku))) return;
+      results.push({ sku: str(r.sku), desc: str(r.descripcion), factor: num(r.factor) || 1, fuente: 'maestro' });
+    });
+    res[1].data.forEach(function (r) {
+      results.push({ sku: str(r.sku), desc: str(r.descripcion), factor: 1, fuente: 'stock' });
+    });
+    return { ok: true, results: results };
+  });
+
+  // Registra un pedido completo a mano (varias líneas). La base rechaza pedidos repetidos o cancelados.
+  API.registrarPedidoManual = guard(async function (p, d) {
+    var sede = exigirSede(p, null);
+    var fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(d.fecha || '')) ? d.fecha : null;
+    var r = await sb.rpc('registrar_pedido_manual', {
+      p_sede: sede, p_nro_pedido: str(d.nroPedido), p_fecha: fecha, p_motorizado: str(d.motorizado),
+      p_lineas: (d.lineas || []).map(function (l) {
+        return { sku: str(l.sku), descripcion: str(l.desc), pack: l.pack, unidad: l.unidad };
+      })
+    });
+    if (r.error) throw r.error;
+    return r.data;
+  });
+
   API.editarSalida = guard(async function (p, rowNum, fila) {
     var r = await sb.from('salidas').update({
       sku: str(fila.sku), nro_pedido: nulo(fila.nroPedido), descripcion: str(fila.desc),

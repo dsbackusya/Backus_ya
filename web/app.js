@@ -308,7 +308,8 @@ function renderTopbarActions(name){
   } else if(name==='stock'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirSKUForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Nuevo SKU</span></button>'+btnExport+btnRefresh;
   } else if(name==='salidas'){
-    el.innerHTML=btnExport+btnRefresh;
+    var btnPedido=(S&&S.rol==='store')?'<button class="btn btn-primary btn-sm" onclick="abrirPedidoManual()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar pedido</span></button>':'';
+    el.innerHTML=btnPedido+btnExport+btnRefresh;
   } else if(name==='entradas'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirEntrada()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar entrada</span></button>'+btnExport+btnRefresh;
   } else if(name==='mt'){
@@ -1390,6 +1391,127 @@ function guardarSalida(){
       .withFailureHandler(function(e){btn.disabled=false;btn.textContent=btnLabel;err.textContent=e.message;})
       .registrarSalida(S.token,fila);
   }
+}
+
+/* ── AGREGAR PEDIDO A MANO (varias líneas, con buscador en maestro y Stock) ── */
+var PED={n:0,lineas:{},res:{},timers:{}};
+
+function abrirPedidoManual(){
+  PED={n:0,lineas:{},res:{},timers:{}};
+  document.getElementById('ped-nro').value='';
+  var f=document.getElementById('ped-fecha'); f.value=_hoyISO(); f.max=_hoyISO();
+  document.getElementById('ped-moto').value='';
+  document.getElementById('ped-lineas').innerHTML='';
+  document.getElementById('ped-err').textContent='';
+  var b=document.getElementById('btn-ped-save'); b.disabled=false; b.textContent='Guardar pedido';
+  pedAgregarLinea();
+  openFS('fs-pedido');
+}
+
+function pedAgregarLinea(){
+  var id=++PED.n;
+  PED.lineas[id]={sku:'',desc:'',factor:1,pack:1,und:'',undManual:false};
+  var d=document.createElement('div');
+  d.id='pl-'+id;
+  d.style.cssText='border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px';
+  d.innerHTML=
+    '<div style="display:flex;gap:8px;align-items:flex-start">'+
+      '<div class="autocomplete-wrap" style="flex:1">'+
+        '<input class="inp" id="pl-q-'+id+'" placeholder="Busca por descripción o SKU..." autocomplete="off" oninput="pedBuscar('+id+')"/>'+
+        '<div class="ac-list" id="pl-ac-'+id+'"></div>'+
+      '</div>'+
+      '<button class="btn btn-ghost btn-sm" title="Quitar producto" onclick="pedQuitarLinea('+id+')">✕</button>'+
+    '</div>'+
+    '<div id="pl-sel-'+id+'" style="font-size:12px;color:var(--text3)">Elige un producto de la lista</div>'+
+    '<div style="display:flex;gap:10px">'+
+      '<div style="flex:1"><div class="form-label">Pack <span class="req">*</span></div><input class="inp" id="pl-pack-'+id+'" type="number" min="1" step="1" value="1" oninput="pedCambioPack('+id+')"/></div>'+
+      '<div style="flex:1"><div class="form-label">Unidades <span class="req">*</span></div><input class="inp" id="pl-und-'+id+'" type="number" min="1" step="1" oninput="pedCambioUnd('+id+')"/></div>'+
+    '</div>';
+  document.getElementById('ped-lineas').appendChild(d);
+}
+
+function pedQuitarLinea(id){
+  var d=document.getElementById('pl-'+id); if(d) d.remove();
+  delete PED.lineas[id];
+  if(!Object.keys(PED.lineas).length) pedAgregarLinea();
+}
+
+function pedBuscar(id){
+  var l=PED.lineas[id]; if(!l) return;
+  // Si vuelve a escribir, la selección anterior ya no vale
+  l.sku=''; l.desc=''; l.undManual=false;
+  document.getElementById('pl-sel-'+id).textContent='Elige un producto de la lista';
+  clearTimeout(PED.timers[id]);
+  var q=document.getElementById('pl-q-'+id).value.trim();
+  var list=document.getElementById('pl-ac-'+id);
+  if(q.length<2){list.classList.remove('open');return;}
+  PED.timers[id]=setTimeout(function(){
+    google.script.run
+      .withSuccessHandler(function(r){
+        if(!PED.lineas[id]||!r||!r.ok)return;
+        if(!r.results.length){list.innerHTML='<div class="ac-item"><div class="ac-desc">Sin resultados</div></div>';list.classList.add('open');return;}
+        PED.res[id]=r.results;
+        list.innerHTML=r.results.map(function(x,i){
+          return '<div class="ac-item" onclick="pedElegir('+id+','+i+')">'+
+            '<div class="ac-sku">'+esc(x.sku)+(x.fuente==='maestro'?' · '+fmt(x.factor)+' und. por pack':' · Stock')+'</div>'+
+            '<div class="ac-desc">'+esc(x.desc)+'</div>'+
+          '</div>';
+        }).join('');
+        list.classList.add('open');
+      })
+      .withFailureHandler(function(){list.classList.remove('open');})
+      .buscarProductoPedido(S.token,q);
+  },300);
+}
+
+function pedElegir(id,i){
+  var x=(PED.res[id]||[])[i], l=PED.lineas[id]; if(!x||!l) return;
+  l.sku=x.sku; l.desc=x.desc; l.factor=x.factor||1; l.undManual=false;
+  document.getElementById('pl-q-'+id).value=x.desc||x.sku;
+  document.getElementById('pl-ac-'+id).classList.remove('open');
+  document.getElementById('pl-sel-'+id).textContent='SKU '+x.sku+(x.fuente==='maestro'
+    ? ' · '+fmt(x.factor)+' und. por pack (maestro)'
+    : ' · producto del Stock, no está en el maestro: revisa las unidades');
+  pedCambioPack(id);
+}
+
+function pedCambioPack(id){
+  var l=PED.lineas[id]; if(!l) return;
+  if(l.undManual) return;
+  var p=parseInt(document.getElementById('pl-pack-'+id).value,10);
+  document.getElementById('pl-und-'+id).value=(p>0&&l.sku)?p*l.factor:'';
+}
+function pedCambioUnd(id){ var l=PED.lineas[id]; if(l) l.undManual=true; }
+
+function guardarPedidoManual(){
+  var err=document.getElementById('ped-err');
+  var nro=document.getElementById('ped-nro').value.trim().toUpperCase();
+  if(!nro){err.textContent='Escribe el número de pedido';return;}
+  var lineas=[], ids=Object.keys(PED.lineas);
+  for(var k=0;k<ids.length;k++){
+    var id=ids[k], l=PED.lineas[id];
+    var pack=Number(document.getElementById('pl-pack-'+id).value);
+    var und=Number(document.getElementById('pl-und-'+id).value);
+    if(!l.sku){err.textContent='Producto '+(k+1)+': elige un producto de la lista';return;}
+    if(!(pack>=1)||pack!==Math.floor(pack)){err.textContent='Producto '+(k+1)+': el pack debe ser un número entero mayor a 0';return;}
+    if(!(und>=1)||und!==Math.floor(und)){err.textContent='Producto '+(k+1)+': las unidades deben ser un número entero mayor a 0';return;}
+    lineas.push({sku:l.sku,desc:l.desc,pack:pack,unidad:und});
+  }
+  err.textContent='';
+  var btn=document.getElementById('btn-ped-save');
+  btn.disabled=true; btn.textContent='Guardando...';
+  var fecha=document.getElementById('ped-fecha').value;
+  google.script.run
+    .withSuccessHandler(function(r){
+      btn.disabled=false; btn.textContent='Guardar pedido';
+      if(!r||!r.ok){err.textContent=(r&&r.error)||'No se pudo guardar el pedido';return;}
+      closeFS('fs-pedido');
+      showToast('Pedido '+nro+' registrado ('+r.filas+' producto'+(r.filas===1?'':'s')+')','ok');
+      PAGE_LOADED['stock']=false;
+      reloadPage('salidas');
+    })
+    .withFailureHandler(function(e){btn.disabled=false;btn.textContent='Guardar pedido';err.textContent=e.message;})
+    .registrarPedidoManual(S.token,{nroPedido:nro,fecha:fecha,motorizado:document.getElementById('ped-moto').value.trim(),lineas:lineas});
 }
 
 var CANCEL_ROW=null;

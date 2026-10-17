@@ -244,6 +244,42 @@ window.addEventListener('load', function(){
 
     </div>
 
+<!-- ══ FORM: AGREGAR PEDIDO A MANO ══ -->
+<div class="fscreen" id="fs-pedido">
+  <div class="fs-header">
+    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-pedido')">← Volver</button>
+    <div class="fs-title">Agregar pedido</div>
+  </div>
+  <div class="fs-body">
+    <div style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:16px;font-family:var(--font-mono)">
+      Para pedidos que la extensión no registró. No se puede repetir un pedido ya registrado ni uno cancelado.
+    </div>
+    <div class="fs-section">Pedido</div>
+    <div class="form-grid cols3">
+      <div class="form-field">
+        <div class="form-label">Nro. Pedido <span class="req">*</span></div>
+        <input class="inp" id="ped-nro" placeholder="Ej: ABC123XYZ" autocomplete="off" style="font-family:var(--font-mono);text-transform:uppercase"/>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Fecha</div>
+        <input class="inp" id="ped-fecha" type="date"/>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Motorizado</div>
+        <input class="inp" id="ped-moto" placeholder="Opcional"/>
+      </div>
+    </div>
+    <div class="fs-section">Productos del pedido</div>
+    <div id="ped-lineas"></div>
+    <button class="btn btn-ghost btn-sm" onclick="pedAgregarLinea()" style="margin-top:4px">+ Agregar otro producto</button>
+    <div id="ped-err" class="err-msg" style="margin-top:12px"></div>
+  </div>
+  <div class="fs-footer">
+    <button class="btn btn-ghost" onclick="closeFS('fs-pedido')">Cancelar</button>
+    <button class="btn btn-primary" id="btn-ped-save" onclick="guardarPedidoManual()">Guardar pedido</button>
+  </div>
+</div>
+
 <!-- ══ FORM: SALIDA ══ -->
 <div class="fscreen" id="fs-salida">
   <div class="fs-header">
