@@ -56,8 +56,10 @@ def main():
         sede_id = s[0]['id']
 
     pw = a.password or secrets.token_urlsafe(12)
+    if len(pw) < 8:
+        sys.exit('La contraseña debe tener mínimo 8 caracteres')
     if len(pw) < 10:
-        sys.exit('La contraseña debe tener mínimo 10 caracteres')
+        print('Aviso: contraseña de menos de 10 caracteres; conviene cambiarla.')
     email = usuario_a_email(a.usuario)
     u = llamar(env, 'POST', '/auth/v1/admin/users',
                {'email': email, 'password': pw, 'email_confirm': True, 'user_metadata': {'usuario': a.usuario.strip()}})

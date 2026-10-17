@@ -2920,7 +2920,7 @@ input.filter-inp:focus{
     </div>
 
     <nav class="sb-nav">
-      <button class="sb-item sb-admin-only" id="nav-dashboard" data-tip="Dashboard" onclick="navTo('dashboard',this)" style="display:none">
+      <button class="sb-item" id="nav-dashboard" data-tip="Dashboard" onclick="navTo('dashboard',this)">
         <span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span><span class="sb-item-label">Dashboard</span>
       </button>
       <div class="sb-section">Compras</div>
@@ -3961,12 +3961,6 @@ function renderDashboard(r){
         _dDLCard('Mermas & Traslados','Historial completo · 1 hoja por sede','btn-dl-mt','dashExportModulo(\'mt\',\'btn-dl-mt\')')+
       '</div>'+
     '</div>'+
-    '<div style="margin-top:32px">'+
-      '<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:16px">Adicional</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">'+
-        _dDLCard('Conteo Victor','Pivot SKU × sedes · packs · solo SKUs de hoja Victor','btn-dl-victor','dashExportConteoVictor()')+
-      '</div>'+
-    '</div>'+
     '<div style="margin-top:32px;border-top:1px solid var(--border);padding-top:28px">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
         '<div><div style="font-size:14px;font-weight:700;color:var(--text)">Calculador de requerimiento</div>'+
@@ -4042,53 +4036,6 @@ function dashExportStock(){
   ws['!cols']=colW;XLSX.utils.book_append_sheet(wb,ws,'Stock por sede');
   XLSX.writeFile(wb,'stock_pivot_'+_hoyISO()+'.xlsx');
   showToast('Pivot Stock exportado ('+Object.keys(skuMap).length+' SKUs · '+sedes.length+' sedes)','ok');
-}
-
-function dashExportConteoVictor(){
-  var btn=document.getElementById('btn-dl-victor');
-  var data=DATA.stock||[];
-  if(!data.length){showToast('Sin datos','err');return;}
-  if(btn){btn.disabled=true;btn.textContent='Descargando...';}
-  gscript('getSkusVictor',S.token,false).then(function(r){
-    if(btn){btn.disabled=false;btn.textContent='Descargar';}
-    if(_handleExpired(r,null)) return;
-    if(!r||!r.ok){showToast(r?r.error:'Error al obtener SKUs de Victor','err');return;}
-    var skusVictor=r.skus||[];
-    if(!skusVictor.length){showToast('Hoja Victor sin SKUs','err');return;}
-    var sedes=[...new Set(data.map(function(x){return x.sede;}).filter(Boolean))].sort();
-    // Normalizador de SKU — tolera "12345.0" o notación numérica en cualquiera de los dos lados
-    var normSku=function(v){var s=String(v==null?'':v).trim();return s.replace(/\.0+$/,'');};
-    var skuMap={};
-    data.forEach(function(r2){
-      if(!r2.sku) return;
-      var k=normSku(r2.sku);
-      if(!skuMap[k]) skuMap[k]={sku:r2.sku,desc:'',marca:'',cat:'',sedes:{}};
-      if(!skuMap[k].desc&&r2.desc) skuMap[k].desc=r2.desc;
-      if(!skuMap[k].marca&&r2.marca) skuMap[k].marca=r2.marca;
-      if(!skuMap[k].cat&&r2.categoria) skuMap[k].cat=r2.categoria;
-      if(r2.sede) skuMap[k].sedes[r2.sede]=(skuMap[k].sedes[r2.sede]||0)+(Number(r2.stockPack)||0);
-    });
-    var headers=['SKU / Lovis','Descripción','Marca','Categoría'];
-    sedes.forEach(function(s){headers.push(s+' · Stock pack');});
-    headers.push('TOTAL Stock pack');
-    var ws_data=[headers];
-    skusVictor.forEach(function(sku){
-      var item=skuMap[normSku(sku)];
-      var fila=[sku,item?item.desc:'',item?item.marca:'',item?item.cat:''];
-      var total=0;
-      sedes.forEach(function(s){var v=Math.round(item?(item.sedes[s]||0):0);fila.push(v);total+=v;});
-      fila.push(total);ws_data.push(fila);
-    });
-    var wb=XLSX.utils.book_new();var ws=XLSX.utils.aoa_to_sheet(ws_data);
-    var colW=[{wch:14},{wch:40},{wch:16},{wch:18}];
-    sedes.forEach(function(){colW.push({wch:16});});colW.push({wch:14});
-    ws['!cols']=colW;XLSX.utils.book_append_sheet(wb,ws,'Conteo Victor');
-    XLSX.writeFile(wb,'conteo_victor_'+_hoyISO()+'.xlsx');
-    showToast('Conteo Victor exportado ('+skusVictor.length+' SKUs)','ok');
-  }).catch(function(e){
-    if(btn){btn.disabled=false;btn.textContent='Descargar';}
-    showToast(e.message,'err');
-  });
 }
 
 function dashExportModulo(modulo,btnId){

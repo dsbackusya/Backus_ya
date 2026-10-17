@@ -216,7 +216,8 @@
         stock: num(r.stock_actual), stockPack: num(r.stock_pack), costo: num(r.costo),
         fVenc: '', diasVenc: ''
       };
-      if (p.rol !== 'store') { o.sede = sedeNombre(r.sede_id); o.sheetId = String(r.sede_id); }
+      o.sede = sedeNombre(r.sede_id);
+      if (p.rol !== 'store') o.sheetId = String(r.sede_id);
       return o;
     });
     return { ok: true, data: data, usuario: p.usuario, rol: p.rol };
@@ -701,15 +702,8 @@
     };
   });
 
-  API.getSkusVictor = guard(async function (p) {
-    if (p.rol !== 'admin') return { ok: false, error: 'No autorizado' };
-    var filas = await todas(function () { return sb.from('skus_victor').select('sku').order('sku'); });
-    return { ok: true, skus: filas.map(function (r) { return str(r.sku); }).filter(Boolean) };
-  });
-
   /* ── EXPORT MULTI-SEDE ── */
   API.getExportMultiSede = guard(async function (p, modulo) {
-    if (p.rol === 'store') return { ok: false, error: 'Sin permiso para exportar multi-sede.' };
     var cfg = {
       salidas: { tabla: 'v_salidas', map: function (r) {
         return { fecha: fmtFecha(r.fecha), hora: fmtHora(r.hora), sku: str(r.sku), nroPedido: str(r.nro_pedido), desc: str(r.descripcion),
@@ -728,7 +722,7 @@
     }[modulo];
     if (!cfg) return { ok: false, error: 'Módulo no soportado: ' + modulo };
     var filas = await todas(function () { return sb.from(cfg.tabla).select('*').order('id'); });
-    var sedes = (_sedes || []).map(function (s) {
+    var sedes = (_sedes || []).filter(function (s) { return p.rol !== 'store' || s.id === p.sede_id; }).map(function (s) {
       return { nombre: s.nombre, data: filas.filter(function (r) { return r.sede_id === s.id; }).map(cfg.map).filter(function (r) { return r.sku; }) };
     });
     return { ok: true, sedes: sedes };
