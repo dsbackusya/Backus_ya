@@ -808,23 +808,23 @@
   /* ── EXPORT MULTI-SEDE ── */
   API.getExportMultiSede = guard(async function (p, modulo) {
     var cfg = {
-      salidas: { tabla: 'v_salidas', map: function (r) {
+      salidas: { tabla: 'v_salidas', cols: 'id,sede_id,fecha,hora,sku,nro_pedido,descripcion,pack,unidad,marca,motorizado,envases,estado,revision,tamano', map: function (r) {
         return { fecha: fmtFecha(r.fecha), hora: fmtHora(r.hora), sku: str(r.sku), nroPedido: str(r.nro_pedido), desc: str(r.descripcion),
           pack: r.pack || 0, unidad: r.unidad || 0, marca: str(r.marca), motorizado: str(r.motorizado), envases: str(r.envases),
           estado: str(r.estado), revision: str(r.revision), tamano: r.tamano == null ? '' : String(r.tamano) }; } },
-      entradas: { tabla: 'entradas', map: function (r) {
+      entradas: { tabla: 'entradas', cols: 'id,sede_id,factura,fecha,sku,descripcion,unidades,f_vencimiento,proveedor,oc,dynamics,responsable', map: function (r) {
         return { factura: str(r.factura), fecha: fmtFecha(r.fecha), sku: str(r.sku), desc: str(r.descripcion), unidades: r.unidades || 0,
           fVenc: fVencTxt(r.f_vencimiento), proveedor: str(r.proveedor), oc: str(r.oc), dynamics: str(r.dynamics), responsable: str(r.responsable) }; } },
-      mt: { tabla: 'v_mt', map: function (r) {
+      mt: { tabla: 'v_mt', cols: 'id,sede_id,fecha,sku,descripcion,cantidad,tipo,motivo,observaciones,estado,nro_factura,fecha_retiro', map: function (r) {
         return { fecha: fmtFecha(r.fecha), sku: str(r.sku), desc: str(r.descripcion), cant: r.cantidad || 0, tipo: str(r.tipo),
           motivo: str(r.motivo), obs: str(r.observaciones), estado: str(r.estado), nroFactura: str(r.nro_factura),
           fechaRetiro: fmtFecha(r.fecha_retiro) }; } },
-      conteo: { tabla: 'conteos', map: function (r) {
+      conteo: { tabla: 'conteos', cols: 'id,sede_id,fecha,hora,ean,sku,producto,packs,und_packs,unds,total,ubicacion', map: function (r) {
         return { fecha: fmtFecha(r.fecha), hora: fmtHora(r.hora), ean: str(r.ean), sku: str(r.sku), producto: str(r.producto),
           packs: r.packs || 0, und: r.und_packs || 0, unds: r.unds || 0, total: r.total || 0, ubicacion: str(r.ubicacion) }; } }
     }[modulo];
     if (!cfg) return { ok: false, error: 'Módulo no soportado: ' + modulo };
-    var filas = await todas(function () { return sb.from(cfg.tabla).select('*').order('id'); });
+    var filas = await todas(function () { return sb.from(cfg.tabla).select(cfg.cols).order('id'); });
     var sedes = (_sedes || []).filter(function (s) { return p.rol !== 'store' || s.id === p.sede_id; }).map(function (s) {
       return { nombre: s.nombre, data: filas.filter(function (r) { return r.sede_id === s.id; }).map(cfg.map).filter(function (r) { return r.sku; }) };
     });
