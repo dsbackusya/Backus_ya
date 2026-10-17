@@ -6139,7 +6139,7 @@ function exportCancelados(){
    MAESTRO — descripción del pedido -> SKU y unidades por pack
    (si un producto no está aquí, la salida entra como "SIN SKU")
 ══════════════════════════════════════ */
-var MAESTRO={data:[],prod:{},sinSku:[],vista:[]};
+var MAESTRO={data:[],prod:{},lista:[],sinSku:[],vista:[]};
 var _MAE_EDIT=null;   // descripción original de la fila que se edita (null = nueva)
 var _MAE_AP=null;     // estado del diálogo "Actualizar salidas"
 
@@ -6166,6 +6166,7 @@ function renderMaestro(r){
   DATA.maestro=r.data;
   MAESTRO.prod={};
   (r.productos||[]).forEach(function(p){ MAESTRO.prod[p.sku]=p.desc; });
+  MAESTRO.lista=(r.productos||[]).map(function(p){ return {sku:p.sku,desc:p.desc,n:_maeNorm(p.sku+' '+p.desc)}; });
   MAESTRO.sinSku=(r.sinSku||[]).sort(function(a,b){return b.filas-a.filas;});
 
   var enMaestro={};
@@ -6253,15 +6254,69 @@ function abrirMaestroForm(idx,prefill){
   document.getElementById('mae-sku').value=m?m.sku:'';
   document.getElementById('mae-factor').value=m?m.factor:1;
   document.getElementById('mae-err').textContent='';
+  document.getElementById('mae-buscar').value='';
+  document.getElementById('ac-mae').classList.remove('open');
   maestroSkuCambio();
+  maestroSugerir(m?'':(prefill||''));
   openFS('fs-maestro');
-  setTimeout(function(){document.getElementById(m||prefill?'mae-sku':'mae-desc').focus();},120);
+  setTimeout(function(){document.getElementById(m?'mae-sku':(prefill?'mae-buscar':'mae-desc')).focus();},120);
 }
 function maestroAsignar(i){ abrirMaestroForm(null,MAESTRO.sinSku[i].descripcion); }
+
+function _maeNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+
+/* Búsqueda por lo que escribe el usuario: todas las palabras deben estar en el SKU o nombre */
+function maestroBuscar(){
+  var list=document.getElementById('ac-mae');
+  var q=_maeNorm(document.getElementById('mae-buscar').value).split(/[^a-z0-9]+/).filter(Boolean);
+  if(!q.length){list.classList.remove('open');return;}
+  var res=MAESTRO.lista.filter(function(p){return q.every(function(t){return p.n.indexOf(t)>-1;});}).slice(0,30);
+  if(!res.length){
+    list.innerHTML='<div class="ac-item" style="color:var(--text3);cursor:default">Sin resultados en el Stock de la sede</div>';
+  } else {
+    list.innerHTML=res.map(function(p){
+      return '<div class="ac-item" data-sku="'+esc(p.sku)+'" onclick="maestroElegir(this.dataset.sku)"><div class="ac-sku">'+esc(p.sku)+'</div><div class="ac-desc">'+esc(p.desc)+'</div></div>';
+    }).join('');
+  }
+  list.classList.add('open');
+}
+
+/* Sugerencias automáticas: productos del Stock que comparten palabras con la descripción del pedido */
+function maestroSugerir(desc){
+  var box=document.getElementById('mae-sugs');
+  var stop={und:1,con:1,sin:1,del:1,los:1,las:1,pack:1};
+  var toks=_maeNorm(desc).split(/[^a-z0-9]+/).filter(function(t){return t.length>=2&&!stop[t];});
+  toks=toks.filter(function(t,i){return toks.indexOf(t)===i;});
+  if(!toks.length){box.innerHTML='';return;}
+  var min=toks.length>=3?2:1;
+  var res=MAESTRO.lista.map(function(p){
+    var sc=0; toks.forEach(function(t){ if(p.n.indexOf(t)>-1) sc++; });
+    return {p:p,sc:sc};
+  }).filter(function(x){return x.sc>=min;}).sort(function(a,b){return b.sc-a.sc;}).slice(0,6);
+  if(!res.length){box.innerHTML='<div style="font-size:12px;color:var(--text3)">No hay sugerencias: busca el producto arriba por nombre o SKU.</div>';return;}
+  box.innerHTML='<div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">Sugerencias del Stock (clic para elegir)</div>'+
+    res.map(function(x){
+      return '<div class="ac-item" style="border:1px solid var(--border);border-radius:8px;margin-bottom:4px" data-sku="'+esc(x.p.sku)+'" onclick="maestroElegir(this.dataset.sku)"><div class="ac-sku">'+esc(x.p.sku)+'</div><div class="ac-desc">'+esc(x.p.desc)+'</div></div>';
+    }).join('');
+}
+
+function maestroElegir(sku){
+  document.getElementById('mae-sku').value=sku;
+  document.getElementById('ac-mae').classList.remove('open');
+  document.getElementById('mae-buscar').value='';
+  document.getElementById('mae-sugs').innerHTML='';
+  maestroSkuCambio();
+  document.getElementById('mae-factor').focus();
+  document.getElementById('mae-factor').select();
+}
 
 function maestroSkuCambio(){
   var sku=(document.getElementById('mae-sku').value||'').trim();
   var el=document.getElementById('mae-sku-info');
+  var fi=document.getElementById('mae-factor-info');
+  var otros=MAESTRO.data.filter(function(m){return sku&&m.sku===sku;}).map(function(m){return m.factor;});
+  otros=otros.filter(function(f,i){return otros.indexOf(f)===i;});
+  fi.textContent=otros.length?('En el maestro, este SKU también se usa con: '+otros.join(', ')+' und. por pack'):'';
   if(!sku){el.innerHTML='';return;}
   var n=MAESTRO.prod[sku];
   el.innerHTML=n
@@ -9703,14 +9758,23 @@ function guardarEditarSkuFila(){
         <div class="form-label">Descripción del pedido <span class="req">*</span></div>
         <input class="inp" id="mae-desc" placeholder="Tal como llega en el pedido (igual al texto de la salida)"/>
       </div>
+      <div class="form-field span2">
+        <div class="form-label">Buscar el producto en el Stock (nombre o SKU)</div>
+        <div class="autocomplete-wrap">
+          <input class="inp" id="mae-buscar" placeholder="Ej: johnnie walker black" oninput="maestroBuscar()" autocomplete="off"/>
+          <div class="ac-list" id="ac-mae"></div>
+        </div>
+        <div id="mae-sugs" style="margin-top:8px"></div>
+      </div>
       <div class="form-field">
-        <div class="form-label">SKU <span class="req">*</span></div>
+        <div class="form-label">SKU <span class="req">*</span> <span style="font-weight:400;color:var(--text3)">(se completa al elegir arriba)</span></div>
         <input class="inp" id="mae-sku" placeholder="Ej: 10000086" oninput="maestroSkuCambio()" style="font-family:var(--font-mono);font-weight:600"/>
         <div id="mae-sku-info" style="font-size:12px;margin-top:4px"></div>
       </div>
       <div class="form-field">
         <div class="form-label">Unidades por pack <span class="req">*</span></div>
         <input class="inp" id="mae-factor" type="number" min="1" step="1" value="1"/>
+        <div id="mae-factor-info" style="font-size:12px;margin-top:4px;color:var(--text3)"></div>
       </div>
     </div>
     <div id="mae-err" class="err-msg" style="margin-top:12px"></div>
