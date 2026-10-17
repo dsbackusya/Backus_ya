@@ -42,9 +42,9 @@ class Api:
         except urllib.error.HTTPError as e:
             raise RuntimeError(f'{metodo} {ruta} -> {e.code}: {e.read().decode("utf-8")[:400]}')
 
-    def insertar(self, tabla, filas, lote=1000, on_conflict=None):
+    def insertar(self, tabla, filas, lote=1000, on_conflict=None, ignorar=False):
         ruta = tabla + (f'?on_conflict={on_conflict}' if on_conflict else '')
-        pref = 'return=minimal' + (',resolution=merge-duplicates' if on_conflict else '')
+        pref = 'return=minimal' + (',resolution=' + ('ignore' if ignorar else 'merge') + '-duplicates' if on_conflict else '')
         for i in range(0, len(filas), lote):
             self._req('POST', ruta, filas[i:i + lote], {'Prefer': pref})
 
@@ -135,7 +135,7 @@ def ultimo_por(filas, clave):
 
 
 # ---------- catálogos globales ----------
-def catalogos(wb):
+def catalogos(wb, sede_id):
     maestro = {}
     for r in hoja_filas(wb, 'MAESTRO', 1, 4):
         sku = txt(r[0])
@@ -146,7 +146,7 @@ def catalogos(wb):
     for r in hoja_filas(wb, 'MCONTEO', 1, 5):
         ean, sku = txt(r[0]), txt(r[1])
         if ean and sku:
-            mconteo.append({'ean': ean, 'sku': sku, 'sap': txt(r[2]), 'producto': txt(r[3]),
+            mconteo.append({'sede_id': sede_id, 'ean': ean, 'sku': sku, 'sap': txt(r[2]), 'producto': txt(r[3]),
                             'multiplicador': decimal(r[4]) or 1})
 
     mbees = {}
@@ -154,7 +154,7 @@ def catalogos(wb):
         desc = txt(r[0])
         if desc:
             m = re.search(r'\d+', str(r[2])) if not vacio(r[2]) else None
-            mbees[desc] = {'descripcion': desc, 'sku': txt(r[1]), 'factor': int(m[0]) if m else 1}
+            mbees[desc] = {'sede_id': sede_id, 'descripcion': desc, 'sku': txt(r[1]), 'factor': int(m[0]) if m else 1}
 
     env_prod, env_sku = {}, {}
     for r in hoja_filas(wb, 'MENVASES', 1, 8):
@@ -163,10 +163,10 @@ def catalogos(wb):
             if tipo not in ('Retornable', 'Venta'):
                 aviso(f'MENVASES: tipo inesperado {tipo!r} en {desc!r}, omitido')
             else:
-                env_prod[desc] = {'descripcion': desc, 'tipo': tipo}
+                env_prod[desc] = {'sede_id': sede_id, 'descripcion': desc, 'tipo': tipo}
         sku = txt(r[3])
         if sku:
-            env_sku[sku] = {'sku': sku, 'descripcion': txt(r[4]), 'tamano': entero(r[5]),
+            env_sku[sku] = {'sede_id': sede_id, 'sku': sku, 'descripcion': txt(r[4]), 'tamano': entero(r[5]),
                             'llena': txt(r[6]), 'vacio_envases': txt(r[7])}
     return {'maestro_sku': list(maestro.values()), 'mconteo': mconteo, 'mbees': list(mbees.values()),
             'envases_producto': list(env_prod.values()), 'envases_sku': list(env_sku.values())}
@@ -325,7 +325,7 @@ def main():
         wb_v = openpyxl.load_workbook(a.archivo, data_only=True)
         wb_f = openpyxl.load_workbook(a.archivo, data_only=False)
         if a.catalogos:
-            plan.update(catalogos(wb_v))
+            plan.update(catalogos(wb_v, sede_id))
         plan.update(datos_sede(wb_v, wb_f, sede_id))
 
     print('--- Plan ---')
@@ -342,6 +342,7 @@ def main():
         return
 
     por_sede = ['sede_productos', 'salidas', 'cancelados', 'entradas', 'mt', 'conteos']
+    cat_sede = ['mbees', 'mconteo', 'envases_producto', 'envases_sku']
     if sede_id:
         for t in por_sede:
             n = api.contar(t, f'&sede_id=eq.{sede_id}')
@@ -353,11 +354,11 @@ def main():
 
     orden = ['maestro_sku', 'mconteo', 'mbees', 'envases_producto', 'envases_sku', 'sede_productos',
              'salidas', 'cancelados', 'entradas', 'mt', 'conteos', 'ordenes_compra']
-    claves = {'maestro_sku': 'sku', 'mbees': 'descripcion', 'envases_producto': 'descripcion', 'envases_sku': 'sku',
+    claves = {'maestro_sku': 'sku', 'mbees': 'sede_id,descripcion', 'envases_producto': 'sede_id,descripcion', 'envases_sku': 'sede_id,sku',
               'ordenes_compra': 'oc', 'sede_productos': 'sede_id,sku'}
     for t in orden:
         if t in plan and plan[t]:
-            api.insertar(t, plan[t], on_conflict=claves.get(t))
+            api.insertar(t, plan[t], on_conflict=claves.get(t), ignorar=(t == 'maestro_sku'))
             print(f'cargado {t}: {len(plan[t])}')
     print('Listo.')
 

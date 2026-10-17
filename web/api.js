@@ -488,8 +488,8 @@
   });
 
   /* ── CONTEO ── */
-  API.getMConteo = guard(async function () {
-    var filas = await todas(function () { return sb.from('mconteo').select('*').order('id'); });
+  API.getMConteo = guard(async function (p) {
+    var filas = await todas(function () { return filtroSede(sb.from('mconteo').select('*'), p).order('id'); });
     return {
       ok: true,
       data: filas.map(function (r) {
@@ -503,13 +503,13 @@
   }
   API.buscarEAN = guard(async function (p, ean) {
     var q = normEan(ean);
-    var r = await sb.from('mconteo').select('*').eq('ean', q).limit(1).maybeSingle();
+    var r = await filtroSede(sb.from('mconteo').select('*'), p).eq('ean', q).limit(1).maybeSingle();
     if (r.error) throw r.error;
     if (!r.data) return { ok: false, error: 'EAN ' + q + ' no encontrado en MCONTEO' };
     return mapMConteo(r.data);
   });
   API.buscarSKUConteo = guard(async function (p, sku) {
-    var r = await sb.from('mconteo').select('*').ilike('sku', lcEsc(str(sku))).limit(1).maybeSingle();
+    var r = await filtroSede(sb.from('mconteo').select('*'), p).ilike('sku', lcEsc(str(sku))).limit(1).maybeSingle();
     if (r.error) throw r.error;
     if (!r.data) return { ok: false, error: 'SKU ' + sku + ' no encontrado en MCONTEO' };
     return mapMConteo(r.data);
