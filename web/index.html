@@ -451,9 +451,10 @@ window.addEventListener('load', function(){
         <div style="font-size:13px;font-weight:600" id="arch-preview-title">Vista previa</div>
         <button class="btn btn-ghost btn-sm" onclick="clearFile()">✕ Quitar archivo</button>
       </div>
+      <div id="arch-total" style="display:none;margin-bottom:12px"></div>
       <div class="table-wrap" style="max-height:280px;overflow-y:auto">
         <table><thead><tr>
-          <th>#</th><th>SKU</th><th>Descripción</th><th class="r">Cantidad</th><th class="c">¿Incluir?</th>
+          <th>#</th><th>SKU</th><th>Descripción</th><th class="r">Cantidad</th><th class="r" id="arch-th-monto" style="display:none">Monto S/</th><th class="c">¿Incluir?</th>
         </tr></thead>
         <tbody id="arch-preview-tbody"></tbody>
         </table>

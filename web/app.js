@@ -1942,6 +1942,7 @@ function editarDynamicsRow(rowNum, valorActual){
 /* ── ENTRADA TABS ── */
 var ENTRADA_TAB='manual';
 var ARCH_ROWS=[];   // filas parseadas del archivo
+var ARCH_TOT=null;  // totales de la OC leídos del PDF: {sub, imp, total}
 var ENT_ROW_COUNT=0;
 
 function switchEntradaTab(tab){
@@ -2051,14 +2052,27 @@ function handleFileSelect(file){
 
       // Detectar fila de headers (buscar "Código de artículo" o similar)
       var dataStart=1; // por defecto saltar fila 0 (headers)
-      ARCH_ROWS=[];
+      ARCH_ROWS=[]; ARCH_TOT=null;
+
+      // Si el Excel trae una columna de monto (por su encabezado), se muestra el total a importar
+      var montoCol=-1;
+      (rows[0]||[]).forEach(function(h,ci){
+        var n=String(h||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+        if(montoCol<0 && ['monto','monto neto','importe','importe neto','importe de linea','valor neto'].indexOf(n)>-1) montoCol=ci;
+      });
 
       rows.slice(dataStart).forEach(function(row,i){
         var sku=String(row[2]||'').trim();
         var desc=String(row[4]||'').trim();
         var cant=Number(row[6]||0);
         if(!sku||sku===''||sku.toLowerCase()==='código de artículo')return;
-        ARCH_ROWS.push({idx:i+1,sku:sku,desc:desc,cant:cant,incluir:true});
+        var fila={idx:i+1,sku:sku,desc:desc,cant:cant,incluir:true};
+        if(montoCol>-1){
+          var mv=row[montoCol];
+          var mn=typeof mv==='number'?mv:Number(String(mv||'').replace(/[^\d.,-]/g,'').replace(/,/g,''));
+          if(isFinite(mn)&&String(mv||'')!=='') fila.monto=Math.round(mn*100)/100;
+        }
+        ARCH_ROWS.push(fila);
       });
 
       if(!ARCH_ROWS.length){err.textContent='No se encontraron productos en el archivo';return;}
@@ -2068,33 +2082,75 @@ function handleFileSelect(file){
   reader.readAsArrayBuffer(file);
 }
 
+function _soles(n){
+  return 'S/ '+Number(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+// Monto de la OC: baja al desmarcar productos. Solo aparece si el archivo trae montos (el PDF de la OC los trae).
+function _archTotal(){
+  var el=document.getElementById('arch-total'); if(!el) return;
+  var th=document.getElementById('arch-th-monto');
+  var conMonto=ARCH_ROWS.some(function(r){return typeof r.monto==='number';});
+  if(th) th.style.display=conMonto?'':'none';
+  if(!conMonto){ el.style.display='none'; el.innerHTML=''; return; }
+  var todo=0, sel=0, nSel=0;
+  ARCH_ROWS.forEach(function(r){
+    if(typeof r.monto!=='number') return;
+    todo+=r.monto;
+    if(r.incluir){ sel+=r.monto; nSel++; }
+  });
+  todo=Math.round(todo*100)/100; sel=Math.round(sel*100)/100;
+  var quita=Math.round((todo-sel)*100)/100;
+  var t=ARCH_TOT||{};
+  var html='<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px 16px">'+
+    '<div><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)">Monto a importar (sin impuestos)</div>'+
+      '<div style="font-size:26px;font-weight:700;letter-spacing:-.02em;color:var(--text)">'+_soles(sel)+'</div>'+
+      '<div style="font-size:12px;color:var(--text2)">'+nSel+' de '+ARCH_ROWS.length+' productos'+(quita>0.004?' · <span style="color:var(--warn)">− '+_soles(quita)+' sin incluir</span>':'')+'</div></div>';
+  if(t.total && t.sub){
+    var exacto=Math.abs(sel-t.sub)<0.005;
+    var est=exacto? t.total : Math.round(sel*(t.total/t.sub)*100)/100;
+    html+='<div style="text-align:right"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)">Total con impuestos'+(exacto?'':' (aprox.)')+'</div>'+
+      '<div style="font-size:18px;font-weight:600;color:var(--text)">'+(exacto?'':'≈ ')+_soles(est)+'</div>'+
+      '<div style="font-size:12px;color:var(--text2)">OC completa: '+_soles(t.total)+'</div></div>';
+  }
+  html+='</div>';
+  if(t.sub && Math.abs(todo-t.sub)>0.05){
+    html+='<div style="font-size:12px;color:var(--warn);margin-top:6px">⚠ La suma de las líneas ('+_soles(todo)+') no coincide con el subtotal del PDF ('+_soles(t.sub)+'). Puede que algún monto se leyó mal: revisa la columna Monto.</div>';
+  }
+  el.innerHTML=html; el.style.display='block';
+}
+
 function renderPreview(){
   document.getElementById('arch-preview-title').textContent=
     'Vista previa — '+ARCH_ROWS.length+' producto(s) encontrados';
+  var conMonto=ARCH_ROWS.some(function(r){return typeof r.monto==='number';});
   var tbody=ARCH_ROWS.map(function(r){
     // Las filas leídas de un PDF se pueden corregir aquí (SKU y cantidad); las de Excel se muestran tal cual
     var skuCell=r.editable
-      ? '<input class="inp" value="'+esc(r.sku)+'" onchange="editArch('+r.idx+',\'sku\',this.value)" style="width:112px;padding:4px 8px;font-family:var(--font-mono)"/>'
+      ? '<input class="inp" value="'+esc(r.sku)+'" onchange="editArch('+r.idx+',\'sku\',this.value)" style="width:98px;padding:4px 6px;font-size:13px;font-family:var(--font-mono)"/>'
       : esc(r.sku);
     var cantCell=r.editable
-      ? '<input class="inp" type="number" min="0" value="'+esc(r.cant)+'" onchange="editArch('+r.idx+',\'cant\',this.value)" style="width:84px;padding:4px 8px;text-align:right;font-weight:600"/>'
+      ? '<input class="inp" type="number" min="0" value="'+esc(r.cant)+'" onchange="editArch('+r.idx+',\'cant\',this.value)" style="width:68px;padding:4px 6px;font-size:13px;text-align:right;font-weight:600"/>'
       : fmt(r.cant);
     return '<tr id="prev-row-'+r.idx+'">'+
       '<td class="mono" style="font-size:11px;color:var(--text3)">'+r.idx+'</td>'+
       '<td class="mono">'+skuCell+'</td>'+
-      '<td class="td-desc">'+esc(r.desc)+(r.aviso?'<div style="font-size:11px;color:var(--warn);white-space:normal">'+esc(r.aviso)+'</div>':'')+'</td>'+
+      '<td class="td-desc"'+(r.editable?' style="max-width:130px"':'')+'>'+esc(r.desc)+(r.aviso?'<div style="font-size:11px;color:var(--warn);white-space:normal">'+esc(r.aviso)+'</div>':'')+'</td>'+
       '<td class="r" style="font-weight:600">'+cantCell+'</td>'+
+      (conMonto?'<td class="r mono" style="font-size:12px;color:var(--text2);white-space:nowrap">'+(typeof r.monto==='number'?_soles(r.monto).replace('S/ ',''):'—')+'</td>':'')+
       '<td class="c"><input type="checkbox" '+(r.incluir?'checked':'')+ 
         ' onchange="toggleArch('+r.idx+',this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"/></td>'+
     '</tr>';
   }).join('');
   document.getElementById('arch-preview-tbody').innerHTML=tbody;
   document.getElementById('arch-preview').classList.remove('hidden');
+  _archTotal();
 }
 
 function toggleArch(idx,val){
   var row=ARCH_ROWS.find(function(r){return r.idx===idx;});
   if(row)row.incluir=val;
+  _archTotal();
 }
 
 /* ── LEER LA OC DESDE UN PDF ──
@@ -2127,7 +2183,14 @@ function _ocrCargarLibs(){
 function _parsearOCTexto(paginas){
   var oc='';
   var items=[], ultimaLinea=0;
-  var reItem=/^[\s|~_.\-]*(\d{1,3})\s+(\d{6,10})\s+(.*?)\s*(\d{2}\/\d{2}\/\d{4})\s+(\d[\d.]*,\d{2}|\d+)\s+[A-Za-z]{2,4}\b/;
+  var reItem=/^[\s|~_.\-]*(\d{1,3})\s+(\d{6,10})\s+(.*?)\s*(\d{2}\/\d{2}\/\d{4})\s+(\d[\d.]*,\d{2}|\d+)\s+[A-Za-z]{2,4}\b(.*)$/;
+  // Los montos siempre llevan 2 decimales; el OCR a veces pierde la coma ("3.14815"), así que se toman los dígitos y se divide entre 100
+  function monto(tok){ var d=String(tok||'').replace(/\D/g,''); return d? Number(d)/100 : null; }
+  function ultimoNumero(txt){
+    var t=String(txt||'').split(/\s+/).filter(function(x){ return /^\d[\d.,]*$/.test(x); });
+    return t.length? t[t.length-1] : '';
+  }
+  var totales=null;
   var reItemFlojo=/^[\s|~_.\-]*(\d{1,3})\s+(\d{6,10})\s+(.*)$/;
   var reFinTabla=/Monto del|subtotal|^\s*Moneda|Impuesto/i;
   function limpiar(s){ return String(s||'').replace(/[~_|]+/g,' ').replace(/\s+/g,' ').trim(); }
@@ -2138,13 +2201,20 @@ function _parsearOCTexto(paginas){
       if(m) oc=m[0].replace(/^0C/,'OC');
     }
     var dentro=false, actual=null;
+    // Totales de la OC (última página): "PEN subtotal descuento cargos impuesto redondeo total"
+    lineas.forEach(function(l){
+      if(/^\s*PEN\b/.test(l)){
+        var nums=l.split(/\s+/).filter(function(x){ return /^\d[\d.,]*$/.test(x); }).map(monto);
+        if(nums.length>=2) totales={sub:nums[0], imp:nums.length>=4?nums[3]:null, total:nums[nums.length-1]};
+      }
+    });
     lineas.forEach(function(l){
       if(!dentro){ if(/de\s+l[ií]nea/i.test(l)) dentro=true; return; }
       if(reFinTabla.test(l)){ dentro=false; actual=null; return; }
       var m=l.match(reItem);
       if(m){
         var cant=Number(String(m[5]).replace(/\./g,'').replace(',','.'));
-        actual={linea:Number(m[1]),sku:m[2],desc:limpiar(m[3]),cant:cant,aviso:''};
+        actual={linea:Number(m[1]),sku:m[2],desc:limpiar(m[3]),cant:cant,aviso:'',monto:monto(ultimoNumero(m[6]))};
         items.push(actual); ultimaLinea=Math.max(ultimaLinea,actual.linea); return;
       }
       var f=l.match(reItemFlojo);
@@ -2162,7 +2232,7 @@ function _parsearOCTexto(paginas){
   var vistas={}; items.forEach(function(it){ vistas[it.linea]=true; });
   var faltan=[];
   for(var n=1;n<=ultimaLinea;n++){ if(!vistas[n]) faltan.push(n); }
-  return {oc:oc.replace(/(OC-\d+)-\d+$/,'$1'), items:items, faltan:faltan};
+  return {oc:oc.replace(/(OC-\d+)-\d+$/,'$1'), items:items, faltan:faltan, totales:totales};
 }
 
 async function leerPDFdeOC(file){
@@ -2194,8 +2264,9 @@ async function leerPDFdeOC(file){
       return;
     }
     ARCH_ROWS=r.items.map(function(it,i){
-      return {idx:i+1,sku:it.sku,desc:it.desc,cant:it.cant,incluir:it.cant>0,editable:true,aviso:it.aviso,descOCR:it.desc};
+      return {idx:i+1,sku:it.sku,desc:it.desc,cant:it.cant,incluir:it.cant>0,editable:true,aviso:it.aviso,descOCR:it.desc,monto:it.monto};
     });
+    ARCH_TOT=r.totales||{sub:null,imp:null,total:null};
     var ocEl=document.getElementById('arch-oc');
     if(r.oc && ocEl && !ocEl.value.trim()) ocEl.value=r.oc;
 
@@ -2249,7 +2320,7 @@ function editArch(idx,campo,valor){
 }
 
 function clearFile(){
-  ARCH_ROWS=[];
+  ARCH_ROWS=[]; ARCH_TOT=null;
   _archEstado('');
   document.getElementById('arch-file-inp').value='';
   document.getElementById('arch-preview').classList.add('hidden');
