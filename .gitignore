@@ -6,3 +6,8 @@ node_modules/
 .vercel/
 *.xlsx
 *.csv
+dist/
+supabase/.temp/
+credenciales.local.txt
+.claude/
+__pycache__/

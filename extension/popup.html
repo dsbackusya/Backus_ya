@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>TaDa Scraper</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      width: 320px;
+      background: #f5f5f5;
+      color: #333;
+    }
+    .header {
+      background: #1a1a2e;
+      color: white;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header h1 { font-size: 14px; font-weight: 600; }
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #4caf50;
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+
+    /* ── Banner de captura ── */
+    #bannerCaptura {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      border-bottom: 1px solid transparent;
+      transition: background 0.3s;
+    }
+    #bannerCaptura.capturando {
+      display: flex;
+      background: #fff8e1;
+      border-color: #ffe082;
+      color: #795548;
+    }
+    #bannerCaptura.enviado {
+      display: flex;
+      background: #e8f5e9;
+      border-color: #a5d6a7;
+      color: #2e7d32;
+    }
+    #bannerCaptura.error {
+      display: flex;
+      background: #ffebee;
+      border-color: #ef9a9a;
+      color: #c62828;
+    }
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid #e0c96a;
+      border-top-color: #795548;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #bannerIcon { font-size: 15px; flex-shrink: 0; }
+    #bannerTexto { flex: 1; }
+    #bannerNumero { font-family: monospace; font-weight: 700; }
+
+    .section {
+      background: white;
+      margin: 10px;
+      border-radius: 8px;
+      padding: 12px 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .section h2 {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #888;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-size: 13px;
+    }
+    .stat span:last-child { font-weight: 600; color: #1a1a2e; }
+    .badge {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge.error { background: #ffebee; color: #c62828; }
+    .pedido-item {
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-between;
+    }
+    .pedido-item:last-child { border-bottom: none; }
+    .pedido-id { font-weight: 600; font-family: monospace; }
+    .pedido-total { color: #2e7d32; font-weight: 600; }
+    .empty { color: #aaa; font-size: 12px; text-align: center; padding: 8px 0; }
+    .btn {
+      width: calc(100% - 20px);
+      margin: 0 10px 10px;
+      padding: 9px;
+      background: #1a1a2e;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .btn:hover { background: #2d2d4e; }
+    .btn.secondary {
+      background: white;
+      color: #1a1a2e;
+      border: 1px solid #ddd;
+    }
+    .btn.secondary:hover { background: #f5f5f5; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="status-dot" id="statusDot"></div>
+    <h1>TaDa Order Scraper</h1>
+  </div>
+
+  <!-- Banner de estado de captura -->
+  <div id="bannerCaptura">
+    <div class="spinner" id="bannerSpinner"></div>
+    <span id="bannerIcon" style="display:none"></span>
+    <div class="bannerTexto">
+      <div id="bannerTexto">Detectando pedido...</div>
+      <div id="bannerNumero"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Estadísticas</h2>
+    <div class="stat">
+      <span>Pedidos enviados</span>
+      <span id="totalEnviados">0</span>
+    </div>
+    <div class="stat">
+      <span>En cola (pendientes)</span>
+      <span id="totalCola">0</span>
+    </div>
+    <div class="stat">
+      <span>Estado</span>
+      <span class="badge" id="estadoBadge">Activo</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Últimos pedidos</h2>
+    <div id="listaUltimos"></div>
+  </div>
+
+  <button class="btn" id="btnReintentar">🔄 Reintentar cola pendiente</button>
+  <button class="btn secondary" id="btnLimpiar">🗑️ Limpiar historial</button>
+
+  <script src="popup.js"></script>
+</body>
+</html>
