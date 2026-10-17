@@ -174,6 +174,8 @@ body[data-density="compact"] thead th{padding:7px 12px!important}
   box-shadow: 0 30px 80px rgba(46,14,107,.16), 0 6px 18px rgba(46,14,107,.08);
   animation:fadeUp .45s ease both;
 }
+@keyframes flashNew{0%{background:var(--accent-bg,#ede9fe)}100%{background:transparent}}
+tr.flash-new td{animation:flashNew 3s ease-out}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── Panel visual (izquierda) ── */
@@ -3685,6 +3687,7 @@ document.getElementById('inp-p').addEventListener('keydown',function(e){if(e.key
 function doLogout(){
   google.script.run.cerrarSesion(S.token);
   if(_sessionPingInterval){clearInterval(_sessionPingInterval);_sessionPingInterval=null;}
+  if(window.TadaRealtime) TadaRealtime.detener();
   S={};DATA={stock:[],salidas:[],entradas:[],mt:[],conteo:[],cancelados:[],oc:[]};window.sal_rango=null;
   PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,conteo:false,validacion:false,oc:false};
   clearSession();
@@ -3721,6 +3724,7 @@ function initApp(){
   var av=document.getElementById('sb-avatar');
   if(av)av.textContent=sede.charAt(0).toUpperCase();
   _startSessionPing();
+  _salVivoIniciar();
   var esAdmin=S.rol==='admin'||S.rol==='invitado';
   document.querySelectorAll('.sb-store-only').forEach(function(el){ el.style.display=esAdmin?'none':''; });
   document.querySelectorAll('.sb-admin-only').forEach(function(el){ el.style.display=esAdmin?'':'none'; });
@@ -4489,6 +4493,31 @@ function guardarSKU(){
 /* ══════════════════════════════════════
    SALIDAS
 ══════════════════════════════════════ */
+/* ── Salidas en vivo (Supabase Realtime): las filas aparecen solas, sin avisos ── */
+var _salFlash = {};
+function _salVivoIniciar(){
+  if(!window.TadaRealtime) return;
+  TadaRealtime.salidas(function(){ return window.sal_rango||null; }, _salVivoCambio, _salVivoResync);
+}
+function _salVivoCambio(c){
+  if(!S||!S.token||!document.getElementById('salidas-tbody')) return; // pantalla no abierta: se cargará fresca al entrar
+  var porId={}; (DATA.salidas||[]).forEach(function(r){ porId[r._row]=r; });
+  var hubo=c.upserts.length>0;
+  c.borrados.forEach(function(id){ if(porId[id]){ delete porId[id]; hubo=true; } });
+  if(!hubo) return; // p. ej. borrados de otra sede o de filas que no están cargadas
+  c.upserts.forEach(function(r){ if(!porId[r._row]) _salFlash[r._row]=true; porId[r._row]=r; });
+  DATA.salidas=Object.keys(porId).map(function(k){return porId[k];}).sort(function(a,b){return a._row-b._row;});
+  filterSalidas();
+  setTimeout(function(){ _salFlash={}; filterSalidas(); }, 3500);
+}
+// Tras recuperar la conexión, vuelve a leer el rango visible sin tocar la pantalla
+function _salVivoResync(){
+  if(!S||!S.token||!document.getElementById('salidas-tbody')) return;
+  google.script.run.withSuccessHandler(function(r){
+    if(r&&r.ok&&document.getElementById('salidas-tbody')){ DATA.salidas=r.data; filterSalidas(); }
+  }).getSalidas(S.token, true, window.sal_rango||null);
+}
+
 function loadSalidas(){
   if(!S||!S.token){errBox('salidas-root','Sin sesión activa. Recarga la página.','salidas');PAGE_LOADING['salidas']=false;return;}
   var force=!!_FORCE_REFRESH['salidas']; _FORCE_REFRESH['salidas']=false;
@@ -4751,7 +4780,7 @@ function _filterSalidas(){
     var descCell=cancelado
       ? '<td class="td-desc" title="'+esc(r.desc)+'"><span style="text-decoration:line-through">'+esc(r.desc)+'</span> <span style="background:var(--danger-bg,#fee2e2);color:var(--danger,#dc2626);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;vertical-align:middle">cancelado</span></td>'
       : '<td class="td-desc" title="'+esc(r.desc)+'">'+esc(r.desc)+'</td>';
-    return '<tr style="'+trStyle+'">'+
+    return '<tr'+(_salFlash[r._row]?' class="flash-new"':'')+' style="'+trStyle+'">'+
       '<td class="mono" style="font-size:12px">'+esc(r.fecha)+'</td>'+
       '<td class="mono col-hide-mobile" style="font-size:12px;color:var(--text3)">'+esc(r.hora)+'</td>'+
       '<td class="mono col-hide-mobile">'+esc(r.sku)+'</td>'+

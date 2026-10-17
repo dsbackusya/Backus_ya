@@ -751,5 +751,62 @@
       }
     });
   }
+
+  /* ───────── Tiempo real (Salidas) ───────── */
+  var _rt = { canal: null, cambios: {}, timer: null, visto: false };
+
+  async function _rtVaciar(rangoFn, onCambio) {
+    var cambios = _rt.cambios; _rt.cambios = {};
+    var upd = [], borrados = [];
+    Object.keys(cambios).forEach(function (id) { (cambios[id] === 'del' ? borrados : upd).push(Number(id)); });
+    var filas = [];
+    for (var i = 0; i < upd.length; i += 100) {
+      var r = await sb.from('v_salidas').select('*').in('id', upd.slice(i, i + 100));
+      if (r.error) return;
+      filas = filas.concat(r.data);
+    }
+    var rg = rangoFn() || {};
+    var hoy = hoyISO();
+    var desde = (rg.desde) || hoy, hasta = (rg.hasta) || hoy;
+    filas = filas.filter(function (f) { return f.fecha >= desde && f.fecha <= hasta; });
+    // una fila editada que sale del rango visible se trata como borrada
+    var vistos = {}; filas.forEach(function (f) { vistos[f.id] = true; });
+    upd.forEach(function (id) { if (!vistos[id]) borrados.push(id); });
+    onCambio({ upserts: filas.map(mapSalida), borrados: borrados });
+  }
+
+  window.TadaRealtime = {
+    // rangoFn: devuelve el rango cargado en pantalla ({desde,hasta}) o null = hoy
+    salidas: async function (rangoFn, onCambio, onReconectar) {
+      this.detener();
+      var p = await contexto();
+      if (!p) return;
+      var cfg = { event: '*', schema: 'public', table: 'salidas' };
+      if (p.rol === 'store') cfg.filter = 'sede_id=eq.' + p.sede_id;
+      var avisar = function (pl) {
+        var id = (pl.new && pl.new.id) || (pl.old && pl.old.id);
+        if (!id) return;
+        _rt.cambios[id] = pl.eventType === 'DELETE' ? 'del' : 'upd';
+        clearTimeout(_rt.timer);
+        _rt.timer = setTimeout(function () { _rtVaciar(rangoFn, onCambio).catch(function () {}); }, 300);
+      };
+      _rt.visto = false;
+      // Realtime no admite filtros en DELETE (solo viaja el id): se escucha aparte y se ignora lo que no esté cargado.
+      _rt.canal = sb.channel('salidas-vivo')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'salidas', filter: cfg.filter }, avisar)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'salidas', filter: cfg.filter }, avisar)
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'salidas' }, avisar)
+        .subscribe(function (status) {
+          if (status !== 'SUBSCRIBED') return;
+          if (_rt.visto && onReconectar) onReconectar(); // se cayó la conexión: pudo haber cambios perdidos
+          _rt.visto = true;
+        });
+    },
+    detener: function () {
+      clearTimeout(_rt.timer); _rt.cambios = {};
+      if (_rt.canal) { try { sb.removeChannel(_rt.canal); } catch (e) { /* ignorar */ } _rt.canal = null; }
+    }
+  };
+
   window.google = { script: { run: runner(null, null) } };
 })();
