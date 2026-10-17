@@ -3452,12 +3452,12 @@ input.filter-inp:focus{
 <div id="modal-editar-sku-fila" style="display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(3px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);width:min(460px,96vw);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden">
     <div style="padding:20px 24px 0;border-bottom:1px solid var(--border);padding-bottom:16px">
-      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)">✎ Editar SKU</div>
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)">✎ Editar SKU y cantidades</div>
       <div style="font-size:12px;color:var(--text3);margin-top:2px" id="esku-info"></div>
     </div>
     <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
       <div class="form-field" style="position:relative">
-        <div class="form-label">SKU nuevo <span class="req">*</span></div>
+        <div class="form-label">SKU nuevo <span style="font-weight:400;color:var(--text3)">(déjalo vacío para mantener el actual)</span></div>
         <input class="inp" id="esku-busq" type="text" placeholder="Buscar SKU o descripción..."
           autocomplete="off" oninput="buscarESKU()" onfocus="buscarESKU()"/>
         <div id="esku-busq-results" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-lg);max-height:200px;overflow-y:auto"></div>
@@ -3467,6 +3467,17 @@ input.filter-inp:focus{
         <div style="font-weight:600;font-size:14px;color:var(--text)" id="esku-sel-desc"></div>
         <div style="font-size:12px;color:var(--text3);margin-top:1px">SKU: <strong id="esku-sel-sku" style="color:var(--accent)"></strong></div>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-field">
+          <div class="form-label">Pack</div>
+          <input class="inp" id="esku-pack" type="number" min="0" step="1" oninput="_eskuPackCambio()"/>
+        </div>
+        <div class="form-field">
+          <div class="form-label">Unidades</div>
+          <input class="inp" id="esku-und" type="number" min="0" step="1"/>
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:var(--text3);margin-top:-6px">Al cambiar el pack, las unidades se recalculan con la misma proporción; puedes corregirlas a mano. Esta fila queda marcada como ajustada a mano y la revalidación del maestro no la modifica.</div>
       <div id="esku-err" style="color:var(--danger);font-size:12px;min-height:14px"></div>
     </div>
     <div style="padding:12px 24px 20px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
@@ -3823,7 +3834,7 @@ function renderTopbarActions(name){
   } else if(name==='cancelados'){
     el.innerHTML=btnExport+btnRefresh;
   } else if(name==='maestro'){
-    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMaestroForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar al maestro</span></button>'+btnExport+btnRefresh;
+    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMaestroForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar al maestro</span></button>'+'<button class="btn btn-ghost btn-sm" onclick="maestroAplicarTodo()" style="border-color:var(--accent);color:var(--accent)" title="Revisar todas las salidas contra el maestro"><span class="tb-btn-plus">↻</span><span class="tb-btn-label"> Revalidar salidas</span></button>'+btnExport+btnRefresh;
   } else if(name==='conteo'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirConteo()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar conteo</span></button>'+btnExport+
       '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Actualizar" onclick="reloadConteoForce()">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>';
@@ -6237,6 +6248,7 @@ function filterMaestro(){
       '<td class="r">'+fmt(m.factor)+'</td>'+
       '<td class="c" style="white-space:nowrap">'+
         '<button class="btn btn-ghost btn-sm" onclick="abrirMaestroForm('+i+')">Editar</button> '+
+        '<button class="btn btn-ghost btn-sm" title="Revisar las salidas de este producto contra el maestro" onclick="maestroRevalidar('+i+')">Revalidar</button> '+
         '<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="eliminarMaestro('+i+')">Eliminar</button>'+
       '</td>'+
     '</tr>';
@@ -6365,17 +6377,37 @@ function eliminarMaestro(i){
 }
 
 /* ── Actualizar salidas ya registradas con lo que dice el maestro ── */
-function maestroAplicarSinSku(i){ _maePreguntarAplicar(MAESTRO.sinSku[i].descripcion); }
-function maestroAplicarTodo(){ _maePreguntarAplicar(null); }
+function maestroAplicarSinSku(i){ _maePreguntarAplicar(MAESTRO.sinSku[i].descripcion,null,true); }
+function maestroAplicarTodo(){ _maePreguntarAplicar(null,null,true); }
+function maestroRevalidar(i){ var m=MAESTRO.vista[i]; if(m) _maePreguntarAplicar(m.descripcion,null,true); }
 
 function _maeHoyISO(){
   var d=new Date(), p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
   return p;
 }
-function _maePreguntarAplicar(desc,valores){
-  _MAE_AP={desc:desc,desde:_maeHoyISO(),incluir:false,sin:0,dist:0,m:valores||null};
+function _maeSumarDias(iso,n){
+  var d=new Date(iso+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10);
+}
+/* Ventanas de fechas para revalidar salidas que ya tienen SKU pero no coinciden con el maestro */
+var _MAE_VENTANAS=[
+  {k:'hoy', etq:'Solo hoy',          dias:0,    c:'d_hoy'},
+  {k:'7',   etq:'Últimos 7 días',    dias:6,    c:'d_7'},
+  {k:'30',  etq:'Últimos 30 días',   dias:29,   c:'d_30'},
+  {k:'todo',etq:'Todo el historial', dias:null, c:'d_todo'}
+];
+function _maeVentana(k){ return _MAE_VENTANAS.filter(function(x){return x.k===k;})[0]||null; }
+
+/* forzar = abrir el diálogo aunque no haya nada pendiente (botón "Revalidar") */
+function _maePreguntarAplicar(desc,valores,forzar){
+  _MAE_AP={desc:desc,ventana:'ninguna',sin:0,w:{},m:valores||null};
   _maeContar(function(){
-    if(desc!==null && !_MAE_AP.sin && !_MAE_AP.dist) return; // nada que actualizar: no molestar
+    var a=_MAE_AP;
+    if(desc!==null && !forzar && !a.sin && !a.w.d_30) return; // nada relevante: no molestar
+    // Preselección: la ventana más corta que cubra todo lo que no coincide en los últimos 30 días
+    if(a.w.d_30>0){
+      var v=_MAE_VENTANAS.filter(function(x){return x.k!=='todo' && a.w[x.c]===a.w.d_30;})[0];
+      if(v) a.ventana=v.k;
+    }
     _maeDibujarAplicar();
     document.getElementById('modal-aplicar').style.display='flex';
   });
@@ -6385,33 +6417,37 @@ function _maeContar(cb){
   google.script.run
     .withSuccessHandler(function(r){
       if(!r||!r.ok){showToast((r&&r.error)||'No se pudo revisar las salidas','err');return;}
-      a.sin=r.sin_sku; a.dist=r.distintas;
+      a.sin=r.sin_sku; a.w={d_hoy:r.d_hoy,d_7:r.d_7,d_30:r.d_30,d_todo:r.d_todo};
       if(cb) cb();
     })
     .withFailureHandler(function(e){showToast(e.message,'err');})
-    .aplicarMaestro(S.token,{descripcion:a.desc,incluirConSku:false,desde:a.desde,ejecutar:false});
+    .aplicarMaestro(S.token,{descripcion:a.desc,incluirConSku:false,ejecutar:false});
 }
+function _maeCambioVentana(k){ _MAE_AP.ventana=k; _maeDibujarAplicar(); }
 function _maeDibujarAplicar(){
-  var a=_MAE_AP, k=a.sin+(a.incluir?a.dist:0);
+  var a=_MAE_AP, v=_maeVentana(a.ventana);
+  var nDist=v?a.w[v.c]:0, k=a.sin+nDist;
   var m=a.m||(a.desc?MAESTRO.data.filter(function(x){return x.descripcion===a.desc;})[0]:null);
   var html='';
   if(a.desc) html+='<div style="font-size:12.5px;color:var(--text2)"><b>'+esc(a.desc)+'</b>'+(m?'<br><span class="mono">SKU '+esc(m.sku)+' · '+fmt(m.factor)+' und. por pack</span>':'')+'</div>';
   else html+='<div style="font-size:12.5px;color:var(--text2)">Se revisarán todas las salidas con el maestro actual.</div>';
-  html+='<div style="font-size:13px">'+
-    (a.sin
-      ? 'Hay <b>'+a.sin+'</b> salida'+(a.sin===1?'':'s')+' que quedó'+(a.sin===1?'':'ron')+' <b>SIN SKU</b> con esta descripción (de cualquier fecha). Se les pondrá el SKU'+(m?' <b>'+esc(m.sku)+'</b>':'')+' y las unidades se calcularán (packs × '+(m?fmt(m.factor):'unidades por pack')+').'
-      : 'No hay salidas SIN SKU para actualizar.')+
-  '</div>';
-  // Opcional: salidas que ya tenían un SKU/cantidad distinto al del maestro (solo se ofrece si existen)
-  if(a.dist>0 || a.verMas){
+  if(a.sin){
+    html+='<div style="font-size:13px">Hay <b>'+a.sin+'</b> salida'+(a.sin===1?'':'s')+' que quedó'+(a.sin===1?'':'ron')+' <b>SIN SKU</b>'+(a.desc?' con esta descripción':'')+' (de cualquier fecha). Se les pondrá el SKU del maestro y las unidades se calcularán (packs × unidades por pack).</div>';
+  } else if(!a.w.d_todo){
+    html+='<div style="font-size:13px">Todo está al día: las salidas coinciden con el maestro.</div>';
+  } else {
+    html+='<div style="font-size:13px">No hay salidas SIN SKU para actualizar.</div>';
+  }
+  if(a.w.d_todo>0){
     html+='<div style="border-top:1px solid var(--border);padding-top:10px;font-size:12.5px;color:var(--text2)">'+
-      (a.dist>0
-        ? 'Además hay <b>'+a.dist+'</b> salida'+(a.dist===1?'':'s')+' <b>que ya tiene'+(a.dist===1?'':'n')+' SKU</b>, pero con un SKU o unas unidades distintas a las del maestro (desde el '
-        : 'No hay salidas con SKU distinto al del maestro (desde el ')+
-      '<input type="date" id="mae-ap-desde" value="'+esc(a.desde)+'" onchange="_maeCambioDesde(this.value)" class="inp" style="padding:2px 6px;font-size:12px;display:inline-block;width:auto"/>).'+
-      (a.dist>0
-        ? '<label style="display:flex;gap:8px;align-items:center;margin-top:8px;cursor:pointer"><input type="checkbox" id="mae-ap-incluir" '+(a.incluir?'checked':'')+' onchange="_MAE_AP.incluir=this.checked;_maeDibujarAplicar()"/> <span>Corregirlas también con el maestro</span></label>'
-        : '')+
+      '<b>Revalidar:</b> hay salidas que ya tienen SKU pero con un SKU o unas unidades <b>distintas a las del maestro</b> (packs × unidades por pack). Elige hasta qué fecha corregirlas:'+
+      '<select class="inp" id="mae-ap-vent" onchange="_maeCambioVentana(this.value)" style="margin-top:8px;width:100%">'+
+        '<option value="ninguna"'+(a.ventana==='ninguna'?' selected':'')+'>No corregir</option>'+
+        _MAE_VENTANAS.map(function(x){
+          return '<option value="'+x.k+'"'+(a.ventana===x.k?' selected':'')+'>'+x.etq+' ('+a.w[x.c]+' salida'+(a.w[x.c]===1?'':'s')+')</option>';
+        }).join('')+
+      '</select>'+
+      '<div style="font-size:11.5px;color:var(--text3);margin-top:6px">Las filas que editaste a mano con "✎ SKU" no se modifican.</div>'+
     '</div>';
   }
   document.getElementById('modal-aplicar-body').innerHTML=html;
@@ -6419,14 +6455,11 @@ function _maeDibujarAplicar(){
   ok.disabled=!k;
   ok.textContent=k?('Actualizar '+k+' salida'+(k===1?'':'s')):'Nada que actualizar';
 }
-function _maeCambioDesde(v){
-  if(!v) return;
-  _MAE_AP.desde=v;
-  _maeContar(_maeDibujarAplicar);
-}
 function _maeAplicarCancelar(){ document.getElementById('modal-aplicar').style.display='none'; _MAE_AP=null; }
 function _maeAplicarOk(){
   var a=_MAE_AP; if(!a) return;
+  var v=_maeVentana(a.ventana);
+  var desde=v?(v.dias===null?'1900-01-01':_maeSumarDias(_maeHoyISO(),-v.dias)):null;
   var ok=document.getElementById('modal-aplicar-ok');
   ok.disabled=true; ok.textContent='Actualizando...';
   google.script.run
@@ -6438,7 +6471,7 @@ function _maeAplicarOk(){
       loadMaestro();
     })
     .withFailureHandler(function(e){_maeAplicarCancelar();showToast(e.message,'err');})
-    .aplicarMaestro(S.token,{descripcion:a.desc,incluirConSku:a.incluir,desde:a.desde,ejecutar:true});
+    .aplicarMaestro(S.token,{descripcion:a.desc,incluirConSku:!!v,desde:desde,ejecutar:true});
 }
 
 function exportMaestro(){
@@ -9487,6 +9520,8 @@ function abrirEditarSkuFila(rowNum){
   document.getElementById('esku-busq').value='';
   document.getElementById('esku-busq-results').style.display='none';
   document.getElementById('esku-sel-card').style.display='none';
+  document.getElementById('esku-pack').value=row.pack;
+  document.getElementById('esku-und').value=row.unidad;
   document.getElementById('esku-err').textContent='';
   document.getElementById('esku-save-btn').disabled=false;
   document.getElementById('esku-save-btn').textContent='Guardar';
@@ -9498,6 +9533,14 @@ function abrirEditarSkuFila(rowNum){
     });
   }
   setTimeout(function(){ document.getElementById('esku-busq').focus(); },200);
+}
+
+// Al cambiar el pack, las unidades siguen la proporción original (p. ej. 24 und. por pack)
+function _eskuPackCambio(){
+  var r=_eskuRow; if(!r) return;
+  var pk=parseInt(document.getElementById('esku-pack').value,10);
+  if(isNaN(pk)||!(r.pack>0)) return;
+  document.getElementById('esku-und').value=Math.round(pk*(r.unidad/r.pack));
 }
 
 function cerrarModalESKU(){
@@ -9558,14 +9601,18 @@ function guardarEditarSkuFila(){
   // Aceptar SKU escrito manualmente si no se seleccionó del dropdown
   if(!_eskuNuevoSKU){
     var input=(document.getElementById('esku-busq').value||'').trim();
-    if(!input){ err.textContent='Ingresá o seleccioná el SKU nuevo'; return; }
-    var match=null;
-    if(_MAESTRO_LOCAL) match=_MAESTRO_LOCAL.find(function(p){ return p.lovis===input; });
-    if(!match) match=(DATA.salidas||[]).map(function(r){ return {lovis:r.sku,desc:r.desc}; }).find(function(p){ return p.lovis===input; });
-    if(match){ _eskuNuevoSKU=match.lovis; _eskuNuevaDesc=match.desc||input; }
-    else { _eskuNuevoSKU=input; _eskuNuevaDesc=input; }
+    if(input){
+      var match=null;
+      if(_MAESTRO_LOCAL) match=_MAESTRO_LOCAL.find(function(p){ return p.lovis===input; });
+      if(!match) match=(DATA.salidas||[]).map(function(r){ return {lovis:r.sku,desc:r.desc}; }).find(function(p){ return p.lovis===input; });
+      if(match){ _eskuNuevoSKU=match.lovis; _eskuNuevaDesc=match.desc||input; }
+      else { _eskuNuevoSKU=input; _eskuNuevaDesc=input; }
+    }
   }
-  if(_eskuNuevoSKU===_eskuRow.sku){ err.textContent='El SKU nuevo es igual al actual'; return; }
+  var packTxt=document.getElementById('esku-pack').value, undTxt=document.getElementById('esku-und').value;
+  var cambiaSku=!!_eskuNuevoSKU && _eskuNuevoSKU!==_eskuRow.sku;
+  var cambiaCant=String(packTxt)!==String(_eskuRow.pack) || String(undTxt)!==String(_eskuRow.unidad);
+  if(!cambiaSku && !cambiaCant){ err.textContent='No hiciste ningún cambio'; return; }
   err.textContent='';
   var btn=document.getElementById('esku-save-btn');
   btn.disabled=true; btn.textContent='Guardando...';
@@ -9574,14 +9621,14 @@ function guardarEditarSkuFila(){
       btn.disabled=false; btn.textContent='Guardar';
       if(!r||!r.ok){ err.textContent=r?r.error:'Error al guardar'; return; }
       cerrarModalESKU();
-      showToast('SKU actualizado','ok');
-      PAGE_LOADED['salidas']=false; reloadPage('salidas');
+      showToast('Fila actualizada','ok');
+      PAGE_LOADED['salidas']=false; PAGE_LOADED['stock']=false; reloadPage('salidas');
     })
     .withFailureHandler(function(e){
       btn.disabled=false; btn.textContent='Guardar';
       err.textContent=e.message;
     })
-    .editarSKUFila(S.token, _eskuRow._row, _eskuNuevoSKU, _eskuNuevaDesc);
+    .editarSKUFila(S.token, _eskuRow._row, cambiaSku?_eskuNuevoSKU:'', _eskuNuevaDesc, packTxt, undTxt);
 }
 
 

@@ -362,9 +362,23 @@
     return r.data;
   });
 
-  API.editarSKUFila = guard(async function (p, rowNum, nuevoSKU) {
-    var r = await sb.from('salidas').update({ sku: str(nuevoSKU) }).eq('id', rowNum);
+  // Edición manual de una fila: SKU (p. ej. SKU espejo) y/o cantidades. Queda marcada para que la revalidación no la pise.
+  API.editarSKUFila = guard(async function (p, rowNum, nuevoSKU, nuevaDesc, pack, unidad) {
+    var cambios = { ajuste_manual: true };
+    if (str(nuevoSKU)) cambios.sku = str(nuevoSKU);
+    if (pack !== undefined && pack !== null && pack !== '') {
+      var pk = entero(pack);
+      if (pk === null || pk < 0) return { ok: false, error: 'El pack debe ser un número entero (0 o más)' };
+      cambios.pack = pk;
+    }
+    if (unidad !== undefined && unidad !== null && unidad !== '') {
+      var un = entero(unidad);
+      if (un === null || un < 0) return { ok: false, error: 'Las unidades deben ser un número entero (0 o más)' };
+      cambios.unidad = un;
+    }
+    var r = await sb.from('salidas').update(cambios).eq('id', rowNum).select('id');
     if (r.error) throw r.error;
+    if (!r.data.length) return { ok: false, error: 'No se encontró la fila. Actualiza la pantalla.' };
     return { ok: true };
   });
 
