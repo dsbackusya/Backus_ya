@@ -1,0 +1,8 @@
+.env
+.env.*
+export/
+node_modules/
+.clasp.json
+.vercel/
+*.xlsx
+*.csv
