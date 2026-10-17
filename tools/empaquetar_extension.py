@@ -1,30 +1,16 @@
-"""Genera dist/extension-<SEDE>/ con la extensión lista para instalar (config.js con la clave de la sede).
+"""Genera dist/extension-tada/ y dist/extension-tada.zip: UNA sola extensión para todas las sedes.
 
-Uso: python -I tools/empaquetar_extension.py            (todas las sedes)
-     python -I tools/empaquetar_extension.py SM ATE     (solo esas)
-En Chrome: chrome://extensions > Modo desarrollador > Cargar descomprimida > dist/extension-SM
+La sede se determina por el usuario con el que se inicia sesión en la extensión (DS SAN MIGUEL, DS ATE...).
+Uso: python -I tools/empaquetar_extension.py
+En Chrome: chrome://extensions > Modo desarrollador > Cargar descomprimida > dist/extension-tada
 """
-import os, shutil, sys
+import os, shutil
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def leer_env():
-    env = {}
-    with open(os.path.join(RAIZ, '.env'), encoding='utf-8') as f:
-        for linea in f:
-            if '=' in linea and not linea.startswith('#'):
-                k, v = linea.strip().split('=', 1)
-                env[k] = v
-    return env
-
-
-env = leer_env()
-sedes = sys.argv[1:] or [k.replace('INGEST_KEY_', '') for k in env if k.startswith('INGEST_KEY_')]
-for cod in sedes:
-    destino = os.path.join(RAIZ, 'dist', f'extension-{cod}')
-    shutil.rmtree(destino, ignore_errors=True)
-    shutil.copytree(os.path.join(RAIZ, 'extension'), destino, ignore=shutil.ignore_patterns('config.js'))
-    with open(os.path.join(destino, 'config.js'), 'w', encoding='utf-8') as f:
-        f.write(f"const TADA_CONFIG = {{ URL: '{env['SUPABASE_URL']}', KEY: '{env['INGEST_KEY_' + cod]}' }};\n")
-    print('generado', destino)
+destino = os.path.join(RAIZ, 'dist', 'extension-tada')
+shutil.rmtree(destino, ignore_errors=True)
+for viejo in ('extension-SM', 'extension-ATE', 'extension-CHO'):
+    shutil.rmtree(os.path.join(RAIZ, 'dist', viejo), ignore_errors=True)
+shutil.copytree(os.path.join(RAIZ, 'extension'), destino)
+shutil.make_archive(destino, 'zip', destino)
+print('generado', destino, 'y', destino + '.zip')

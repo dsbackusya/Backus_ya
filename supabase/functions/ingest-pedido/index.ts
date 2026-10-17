@@ -8,7 +8,7 @@ const sb = createClient(
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'content-type, x-ingest-key',
+  'Access-Control-Allow-Headers': 'content-type, x-ingest-key, authorization',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -44,11 +44,33 @@ async function sedeDesdeClave(clave: string): Promise<number | null> {
   return igual(await sha256(secreto), k.key_hash) ? sede.id : null;
 }
 
+// Sesión de usuario (extensión con login): la sede sale del perfil del usuario.
+async function sedeDesdeSesion(auth: string): Promise<{ sede: number | null; error?: string }> {
+  const token = auth.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return { sede: null };
+  const { data: u, error } = await sb.auth.getUser(token);
+  if (error || !u?.user) return { sede: null };
+  const { data: p } = await sb.from('perfiles').select('rol, sede_id').eq('user_id', u.user.id).maybeSingle();
+  if (!p || p.rol !== 'store' || !p.sede_id) {
+    return { sede: null, error: 'Este usuario no tiene una sede asignada' };
+  }
+  return { sede: p.sede_id };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'POST') return json({ ok: false, error: 'Método no permitido' }, 405);
 
-  const sedeId = await sedeDesdeClave(req.headers.get('x-ingest-key') ?? '');
+  let sedeId: number | null = null;
+  const auth = req.headers.get('authorization') ?? '';
+  const clave = req.headers.get('x-ingest-key') ?? '';
+  if (clave) {
+    sedeId = await sedeDesdeClave(clave);
+  } else if (auth) {
+    const r = await sedeDesdeSesion(auth);
+    if (r.error) return json({ ok: false, error: r.error }, 403);
+    sedeId = r.sede;
+  }
   if (sedeId === null) return json({ ok: false, error: 'No autorizado' }, 401);
 
   const texto = await req.text();

@@ -406,6 +406,11 @@ function procesarPedido(popup) {
       mostrarToast('error', 'Error al enviar', chrome.runtime.lastError.message, 5000);
       return;
     }
+    if (response?.ok && response.sinSesion) {
+      ultimoPedidoProcesado = datos.numeroPedido;
+      mostrarToast('error', 'Inicia sesión en la extensión', `Nº ${datos.numeroPedido} quedó en cola`, 8000);
+      return;
+    }
     if (response?.ok) {
       ultimoPedidoProcesado = datos.numeroPedido;
       reproducirAlerta();

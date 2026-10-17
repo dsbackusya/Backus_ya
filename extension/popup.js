@@ -82,7 +82,79 @@ document.getElementById('btnReintentar').addEventListener('click', async () => {
 
 document.getElementById('btnLimpiar').addEventListener('click', async () => {
   await chrome.storage.local.set({ historial: [], cola: [] });
-  cargarEstado();
+  // ── Sesión ─────────────────────────────────────────────────
+async function mostrarVista() {
+  const { sesion, sede } = await chrome.storage.local.get(['sesion', 'sede']);
+  document.getElementById('vistaLogin').style.display     = sesion ? 'none' : 'block';
+  document.getElementById('vistaPrincipal').style.display = sesion ? 'block' : 'none';
+  if (sesion) {
+    document.getElementById('sedeNombre').textContent  = sede || '';
+    document.getElementById('sedeUsuario').textContent = sesion.usuario;
+    cargarEstado();
+  }
+}
+
+async function entrar() {
+  const usuario  = document.getElementById('inUsuario').value;
+  const password = document.getElementById('inPassword').value;
+  const errEl    = document.getElementById('loginError');
+  const btn      = document.getElementById('btnLogin');
+  if (!usuario.trim() || !password) { errEl.textContent = 'Ingresa usuario y contraseña'; return; }
+  btn.disabled = true; errEl.textContent = '';
+  chrome.runtime.sendMessage({ tipo: 'login', usuario, password }, (r) => {
+    btn.disabled = false;
+    if (chrome.runtime.lastError || !r?.ok) {
+      errEl.textContent = r?.error || 'No se pudo conectar';
+      return;
+    }
+    document.getElementById('inPassword').value = '';
+    mostrarVista();
+  });
+}
+
+document.getElementById('btnLogin').addEventListener('click', entrar);
+document.getElementById('inPassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') entrar(); });
+document.getElementById('btnLogout').addEventListener('click', () => {
+  chrome.runtime.sendMessage({ tipo: 'logout' }, mostrarVista);
 });
 
-cargarEstado();
+mostrarVista();
+});
+
+// ── Sesión ─────────────────────────────────────────────────
+async function mostrarVista() {
+  const { sesion, sede } = await chrome.storage.local.get(['sesion', 'sede']);
+  document.getElementById('vistaLogin').style.display     = sesion ? 'none' : 'block';
+  document.getElementById('vistaPrincipal').style.display = sesion ? 'block' : 'none';
+  if (sesion) {
+    document.getElementById('sedeNombre').textContent  = sede || '';
+    document.getElementById('sedeUsuario').textContent = sesion.usuario;
+    cargarEstado();
+  }
+}
+
+async function entrar() {
+  const usuario  = document.getElementById('inUsuario').value;
+  const password = document.getElementById('inPassword').value;
+  const errEl    = document.getElementById('loginError');
+  const btn      = document.getElementById('btnLogin');
+  if (!usuario.trim() || !password) { errEl.textContent = 'Ingresa usuario y contraseña'; return; }
+  btn.disabled = true; errEl.textContent = '';
+  chrome.runtime.sendMessage({ tipo: 'login', usuario, password }, (r) => {
+    btn.disabled = false;
+    if (chrome.runtime.lastError || !r?.ok) {
+      errEl.textContent = r?.error || 'No se pudo conectar';
+      return;
+    }
+    document.getElementById('inPassword').value = '';
+    mostrarVista();
+  });
+}
+
+document.getElementById('btnLogin').addEventListener('click', entrar);
+document.getElementById('inPassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') entrar(); });
+document.getElementById('btnLogout').addEventListener('click', () => {
+  chrome.runtime.sendMessage({ tipo: 'logout' }, mostrarVista);
+});
+
+mostrarVista();
