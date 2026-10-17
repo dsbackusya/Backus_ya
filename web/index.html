@@ -3834,7 +3834,7 @@ function renderTopbarActions(name){
   } else if(name==='cancelados'){
     el.innerHTML=btnExport+btnRefresh;
   } else if(name==='maestro'){
-    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMaestroForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar al maestro</span></button>'+'<button class="btn btn-ghost btn-sm" onclick="maestroAplicarTodo()" style="border-color:var(--accent);color:var(--accent)" title="Revisar todas las salidas contra el maestro"><span class="tb-btn-plus">↻</span><span class="tb-btn-label"> Revalidar salidas</span></button>'+btnExport+btnRefresh;
+    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMaestroForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar al maestro</span></button>'+btnExport+btnRefresh;
   } else if(name==='conteo'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirConteo()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar conteo</span></button>'+btnExport+
       '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Actualizar" onclick="reloadConteoForce()">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>';
@@ -6191,7 +6191,6 @@ function renderMaestro(r){
     panel='<div style="background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:var(--r);padding:12px 14px;margin-bottom:16px">'+
       '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">'+
         '<div style="font-size:13px;font-weight:700;color:var(--warn)">⚠ '+filasSin+' salida'+(filasSin===1?'':'s')+' SIN SKU ('+MAESTRO.sinSku.length+' producto'+(MAESTRO.sinSku.length===1?'':'s')+' distinto'+(MAESTRO.sinSku.length===1?'':'s')+')</div>'+
-        '<button class="btn btn-ghost btn-sm" onclick="maestroAplicarTodo()">Actualizar salidas con el maestro</button>'+
       '</div>'+
       '<div style="display:flex;flex-direction:column;gap:6px">'+
       MAESTRO.sinSku.map(function(x,i){
@@ -6378,7 +6377,6 @@ function eliminarMaestro(i){
 
 /* ── Actualizar salidas ya registradas con lo que dice el maestro ── */
 function maestroAplicarSinSku(i){ _maePreguntarAplicar(MAESTRO.sinSku[i].descripcion,null,true); }
-function maestroAplicarTodo(){ _maePreguntarAplicar(null,null,true); }
 function maestroRevalidar(i){ var m=MAESTRO.vista[i]; if(m) _maePreguntarAplicar(m.descripcion,null,true); }
 
 function _maeHoyISO(){
