@@ -3696,7 +3696,7 @@ function doLogout(){
   google.script.run.cerrarSesion(S.token);
   if(_sessionPingInterval){clearInterval(_sessionPingInterval);_sessionPingInterval=null;}
   if(window.TadaRealtime) TadaRealtime.detener();
-  S={};DATA={stock:[],salidas:[],entradas:[],mt:[],conteo:[],cancelados:[],oc:[]};window.sal_rango=null;
+  S={};DATA={stock:[],salidas:[],entradas:[],mt:[],conteo:[],cancelados:[],oc:[]};window.sal_rango=null;window.ent_rango=null;window.cnt_rango=null;
   PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,conteo:false,validacion:false,oc:false};
   clearSession();
   document.getElementById('s-app').classList.remove('active');
@@ -5036,7 +5036,7 @@ function loadEntradas(){
             if(t !== REQ_TOKEN.entradas) return;
             PAGE_LOADING['entradas']=false;PAGE_LOADED['entradas']=false;errBox('entradas-root',e2.message,'entradas');
           })
-          .getEntradas(S.token, false);
+          .getEntradas(S.token, false, window.ent_rango||null);
         return;
       }
       PAGE_LOADING['entradas']=false;renderEntradas(r);
@@ -5046,7 +5046,7 @@ function loadEntradas(){
       console.error('[ENTRADAS] failure handler:', e.message);
       PAGE_LOADING['entradas']=false;PAGE_LOADED['entradas']=false;errBox('entradas-root',e.message,'entradas');
     })
-    .getEntradas(S.token, force);
+    .getEntradas(S.token, force, window.ent_rango||null);
 }
 
 
@@ -5220,7 +5220,7 @@ function renderEntradas(r){
     '</div>'+
     '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
       '<input class="filter-inp" id="ent-busq" placeholder="Buscar SKU, factura, descripción..." style="width:240px" oninput="filterEntradas()"/>'+
-      _fechaFiltroHTML('ent','filterEntradas')+
+      _fechaFiltroHTML('ent','filterEntradas','entRangoCambio')+
       '<span class="result-count" id="ent-count"></span>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
@@ -5231,7 +5231,7 @@ function renderEntradas(r){
       '</tr></thead>'+
       '<tbody id="entradas-tbody"></tbody>'+
     '</table></div>';
-  _initFiltroFecha('ent','filterEntradas');
+  _initFiltroFecha('ent','filterEntradas',{page:'entradas'});
   filterEntradas();
 }
 
@@ -6541,7 +6541,7 @@ function loadConteo(){
       if(t !== REQ_TOKEN.conteo) return;
       PAGE_LOADING['conteo']=false;errBox('conteo-root',e.message,'conteo');
     })
-    .getConteo(S.token, 7, force); // últimos 7 días
+    .getConteo(S.token, 7, force, window.cnt_rango||null); // por defecto solo hoy
 }
 
 function renderConteo(r){
@@ -6564,7 +6564,7 @@ function renderConteo(r){
         '<button class="cam-btn" title="Escanear" onclick="openScannerConteoFiltro()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="11"/></svg></button>'+
         '<button class="btn btn-danger btn-sm" id="btn-eliminar-ean-dia" style="display:none;white-space:nowrap" onclick="eliminarEANDia()">✕ Eliminar EAN del día</button>'+
       '</div>'+
-      _fechaFiltroHTML('cnt','filterConteo')+
+      _fechaFiltroHTML('cnt','filterConteo','cntRangoCambio')+
       '<span class="result-count" id="cnt-count"></span>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
@@ -6575,7 +6575,7 @@ function renderConteo(r){
       '</tr></thead>'+
       '<tbody id="conteo-tbody"></tbody>'+
     '</table></div>';
-  _initFiltroFecha('cnt','filterConteo');
+  _initFiltroFecha('cnt','filterConteo',{page:'conteo'});
   filterConteo();
 }
 

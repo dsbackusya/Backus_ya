@@ -286,15 +286,22 @@
     };
   }
 
-  // Solo trae el rango pedido (por defecto, hoy): el historial completo se pide cuando el usuario elige fechas.
-  API.getSalidas = guard(async function (p, force, rango) {
+  // Rango que pide la pantalla ({desde,hasta} en ISO); sin rango = solo hoy.
+  function rangoPantalla(rango) {
     var hoy = hoyISO();
     var desde = parseFecha(rango && rango.desde) || hoy;
     var hasta = parseFecha(rango && rango.hasta) || (rango && rango.desde ? hoy : desde);
+    return { desde: desde, hasta: hasta };
+  }
+
+  // Solo trae el rango pedido (por defecto, hoy): el historial completo se pide cuando el usuario elige fechas.
+  API.getSalidas = guard(async function (p, force, rango) {
+    var hoy = hoyISO();
+    var rg = rangoPantalla(rango);
     var filas = await todas(function () {
-      return filtroSede(sb.from('v_salidas').select('*'), p).gte('fecha', desde).lte('fecha', hasta).order('id');
+      return filtroSede(sb.from('v_salidas').select('*'), p).gte('fecha', rg.desde).lte('fecha', rg.hasta).order('id');
     });
-    return { ok: true, data: filas.map(mapSalida), hoyStr: fmtFecha(hoy), rango: { desde: desde, hasta: hasta } };
+    return { ok: true, data: filas.map(mapSalida), hoyStr: fmtFecha(hoy), rango: rg };
   });
 
   API.registrarSalida = guard(async function (p, fila) {
@@ -394,12 +401,15 @@
     if (!v) return '';
     return /^\d{4}-\d{2}-\d{2}/.test(v) ? fmtFecha(v) : String(v);
   }
-  API.getEntradas = guard(async function (p) {
+  // Solo trae el rango pedido (por defecto, hoy)
+  API.getEntradas = guard(async function (p, force, rango) {
+    var r = rangoPantalla(rango);
     var filas = await todas(function () {
-      return filtroSede(sb.from('entradas').select('*'), p).order('id');
+      return filtroSede(sb.from('entradas').select('*'), p).gte('fecha', r.desde).lte('fecha', r.hasta).order('id');
     });
     return {
       ok: true,
+      rango: r,
       data: filas.map(function (r) {
         return {
           _row: r.id, factura: str(r.factura), fecha: fmtFecha(r.fecha), sku: str(r.sku), desc: str(r.descripcion),
@@ -527,13 +537,17 @@
       total: num(r.total), ubicacion: str(r.ubicacion), _uid: str(r.uid)
     };
   }
-  API.getConteo = guard(async function (p, diasAtras) {
-    var dias = Number(diasAtras) || 7;
-    var desde = restarDias(hoyISO(), dias);
+  // Trae el rango pedido (por defecto, hoy) y siempre los conteos de hoy, que la pantalla usa para sumar lo ya contado.
+  API.getConteo = guard(async function (p, diasAtras, force, rango) {
+    var r = rangoPantalla(rango), hoy = hoyISO();
     var filas = await todas(function () {
-      return filtroSede(sb.from('conteos').select('*'), p).gte('fecha', desde).order('id');
+      var q = filtroSede(sb.from('conteos').select('*'), p);
+      q = (r.desde <= hoy && r.hasta >= hoy)
+        ? q.gte('fecha', r.desde).lte('fecha', r.hasta)
+        : q.or('and(fecha.gte.' + r.desde + ',fecha.lte.' + r.hasta + '),fecha.eq.' + hoy);
+      return q.order('id');
     });
-    return { ok: true, data: filas.map(mapConteo) };
+    return { ok: true, data: filas.map(mapConteo), rango: r };
   });
 
   API.registrarConteo = guard(async function (p, filas) {
