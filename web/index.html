@@ -6399,14 +6399,23 @@ function _maeDibujarAplicar(){
   else html+='<div style="font-size:12.5px;color:var(--text2)">Se revisarán todas las salidas con el maestro actual.</div>';
   html+='<div style="font-size:13px">'+
     (a.sin
-      ? '<b>'+a.sin+'</b> salida'+(a.sin===1?'':'s')+' <b>SIN SKU</b> (de cualquier fecha) recibirán el SKU y unidades = packs × '+(m?fmt(m.factor):'unidades por pack')+'.'
+      ? 'Hay <b>'+a.sin+'</b> salida'+(a.sin===1?'':'s')+' que quedó'+(a.sin===1?'':'ron')+' <b>SIN SKU</b>. Se les pondrá el SKU'+(m?' <b>'+esc(m.sku)+'</b>':'')+' y las unidades se calcularán (packs × '+(m?fmt(m.factor):'unidades por pack')+').'
       : 'No hay salidas SIN SKU para actualizar.')+
   '</div>';
-  html+='<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer">'+
-    '<input type="checkbox" id="mae-ap-incluir" '+(a.incluir?'checked':'')+' onchange="_MAE_AP.incluir=this.checked;_maeDibujarAplicar()" style="margin-top:2px"/>'+
-    '<span>También corregir las salidas que <b>ya tienen SKU</b> pero con otro SKU o cantidad distinta, desde '+
-      '<input type="date" id="mae-ap-desde" value="'+esc(a.desde)+'" onchange="_maeCambioDesde(this.value)" class="inp" style="padding:2px 6px;font-size:12px;display:inline-block;width:auto"/> '+
-      '(<b>'+a.dist+'</b> salida'+(a.dist===1?'':'s')+')</span></label>';
+  // Opcional: salidas que ya tenían un SKU/cantidad distinto al del maestro (solo se ofrece si existen)
+  if(a.dist>0 || a.verMas){
+    html+='<div style="border-top:1px solid var(--border);padding-top:10px;font-size:12.5px;color:var(--text2)">'+
+      (a.dist>0
+        ? 'Además hay <b>'+a.dist+'</b> salida'+(a.dist===1?'':'s')+' <b>que ya tiene'+(a.dist===1?'':'n')+' SKU</b>, pero con un SKU o unas unidades distintas a las del maestro (desde el '
+        : 'No hay salidas con SKU distinto al del maestro (desde el ')+
+      '<input type="date" id="mae-ap-desde" value="'+esc(a.desde)+'" onchange="_maeCambioDesde(this.value)" class="inp" style="padding:2px 6px;font-size:12px;display:inline-block;width:auto"/>).'+
+      (a.dist>0
+        ? '<label style="display:flex;gap:8px;align-items:center;margin-top:8px;cursor:pointer"><input type="checkbox" id="mae-ap-incluir" '+(a.incluir?'checked':'')+' onchange="_MAE_AP.incluir=this.checked;_maeDibujarAplicar()"/> <span>Corregirlas también con el maestro</span></label>'
+        : '')+
+    '</div>';
+  } else {
+    html+='<a href="#" style="font-size:12px;color:var(--accent)" onclick="_MAE_AP.verMas=true;_maeDibujarAplicar();return false">¿Buscar también salidas anteriores que tengan otro SKU o cantidad?</a>';
+  }
   document.getElementById('modal-aplicar-body').innerHTML=html;
   var ok=document.getElementById('modal-aplicar-ok');
   ok.disabled=!k;
