@@ -2949,6 +2949,9 @@ input.filter-inp:focus{
       <button class="sb-item sb-store-only" id="nav-cancelados" data-tip="Cancelados" onclick="navTo('cancelados',this)">
         <span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></span><span class="sb-item-label">Cancelados</span>
       </button>
+      <button class="sb-item sb-store-only" id="nav-maestro" data-tip="Maestro de productos" onclick="navTo('maestro',this)">
+        <span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span class="sb-item-label">Maestro</span>
+      </button>
       <div class="sb-section sb-store-only">Operaciones</div>
       <button class="sb-item sb-store-only" id="nav-validacion" data-tip="Validación" onclick="navTo('validacion',this)">
         <span class="ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span class="sb-item-label">Validación</span>
@@ -3022,6 +3025,11 @@ input.filter-inp:focus{
       <!-- CANCELADOS -->
       <div id="p-cancelados" class="page">
         <div id="cancelados-root"><div class="loading"><div class="loader-wrapper"><span class="loader-letter">C</span><span class="loader-letter">a</span><span class="loader-letter">r</span><span class="loader-letter">g</span><span class="loader-letter">a</span><span class="loader-letter">n</span><span class="loader-letter">d</span><span class="loader-letter">o</span><div class="loader"></div></div></div></div>
+      </div>
+
+      <!-- MAESTRO -->
+      <div id="p-maestro" class="page">
+        <div id="maestro-root"><div class="loading"><div class="loader-wrapper"><span class="loader-letter">C</span><span class="loader-letter">a</span><span class="loader-letter">r</span><span class="loader-letter">g</span><span class="loader-letter">a</span><span class="loader-letter">n</span><span class="loader-letter">d</span><span class="loader-letter">o</span><div class="loader"></div></div></div></div>
       </div>
 
       <!-- CONTEO -->
@@ -3697,7 +3705,7 @@ function doLogout(){
   if(_sessionPingInterval){clearInterval(_sessionPingInterval);_sessionPingInterval=null;}
   if(window.TadaRealtime) TadaRealtime.detener();
   S={};DATA={stock:[],salidas:[],entradas:[],mt:[],conteo:[],cancelados:[],oc:[]};window.sal_rango=null;window.ent_rango=null;window.cnt_rango=null;window.mt_rango=null;window.canc_rango=null;
-  PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,conteo:false,validacion:false,oc:false};
+  PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,conteo:false,validacion:false,oc:false};
   clearSession();
   document.getElementById('s-app').classList.remove('active');
   document.getElementById('s-login').classList.add('active');
@@ -3743,8 +3751,8 @@ function initApp(){
 /* ── AUTO-RESTORE SESSION ON LOAD ── */
 
 /* NAV state — declarado ANTES del auto-restore para evitar undefined si GAS responde rápido */
-var PAGE_TITLES={'dashboard':'Dashboard','stock':'Stock Actual','entradas':'Entradas','salidas':'Salidas','mt':'Mermas & Traslados','cancelados':'Pedidos Cancelados','conteo':'Conteo de Inventario','validacion':'Validación de Inventario','oc':'Órdenes de Compra'};
-var PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,conteo:false,validacion:false,oc:false};
+var PAGE_TITLES={'dashboard':'Dashboard','stock':'Stock Actual','entradas':'Entradas','salidas':'Salidas','mt':'Mermas & Traslados','cancelados':'Pedidos Cancelados','maestro':'Maestro de Productos','conteo':'Conteo de Inventario','validacion':'Validación de Inventario','oc':'Órdenes de Compra'};
+var PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,conteo:false,validacion:false,oc:false};
 
 (function(){
   var saved=loadSession();
@@ -3773,7 +3781,7 @@ var CURRENT_PAGE = '';
 
 function navTo(name,btn){
   CURRENT_PAGE = name;
-  ['dashboard','stock','entradas','salidas','mt','cancelados','conteo','validacion','oc'].forEach(function(n){
+  ['dashboard','stock','entradas','salidas','mt','cancelados','maestro','conteo','validacion','oc'].forEach(function(n){
     document.getElementById('p-'+n).classList.remove('active');
     document.getElementById('nav-'+n).classList.remove('active');
   });
@@ -3814,6 +3822,8 @@ function renderTopbarActions(name){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirNuevoMT()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar M-T</span></button>'+btnExport+btnRefresh;
   } else if(name==='cancelados'){
     el.innerHTML=btnExport+btnRefresh;
+  } else if(name==='maestro'){
+    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMaestroForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar al maestro</span></button>'+btnExport+btnRefresh;
   } else if(name==='conteo'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirConteo()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar conteo</span></button>'+btnExport+
       '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Actualizar" onclick="reloadConteoForce()">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>';
@@ -3891,6 +3901,7 @@ function loadPage(name){
   if(name==='entradas')   loadEntradas();
   if(name==='mt')         loadMT();
   if(name==='cancelados') loadCancelados();
+  if(name==='maestro')    loadMaestro();
   if(name==='conteo')     loadConteo();
   if(name==='validacion') initValidacion();
   if(name==='oc')          loadOC();
@@ -6121,6 +6132,259 @@ function exportCancelados(){
     rows,
     function(r){return[r.fecha,r.hora,r.sku,r.nroPedido,r.desc,r.pack,r.unidad,r.marca||'',r.motorizado||'',r.envases||'',r.estado||'',r.revision||'',r.motivo||''];},
     'Cancelados','cancelados'
+  );
+}
+
+/* ══════════════════════════════════════
+   MAESTRO — descripción del pedido -> SKU y unidades por pack
+   (si un producto no está aquí, la salida entra como "SIN SKU")
+══════════════════════════════════════ */
+var MAESTRO={data:[],prod:{},sinSku:[],vista:[]};
+var _MAE_EDIT=null;   // descripción original de la fila que se edita (null = nueva)
+var _MAE_AP=null;     // estado del diálogo "Actualizar salidas"
+
+function loadMaestro(){
+  if(!S||!S.token){errBox('maestro-root','Sin sesión activa. Recarga la página.','maestro');PAGE_LOADING['maestro']=false;return;}
+  var t=(REQ_TOKEN.maestro=(REQ_TOKEN.maestro||0)+1);
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(t!==REQ_TOKEN.maestro) return;
+      PAGE_LOADING['maestro']=false;
+      renderMaestro(r);
+    })
+    .withFailureHandler(function(e){
+      if(t!==REQ_TOKEN.maestro) return;
+      PAGE_LOADING['maestro']=false;errBox('maestro-root',e.message,'maestro');
+    })
+    .getMaestroMBEES(S.token);
+}
+
+function renderMaestro(r){
+  if(_handleExpired(r,'maestro-root')) return;
+  if(!r||!r.ok){errBox('maestro-root',r&&r.error?r.error:'Error al cargar el maestro','maestro');return;}
+  MAESTRO.data=r.data;
+  DATA.maestro=r.data;
+  MAESTRO.prod={};
+  (r.productos||[]).forEach(function(p){ MAESTRO.prod[p.sku]=p.desc; });
+  MAESTRO.sinSku=(r.sinSku||[]).sort(function(a,b){return b.filas-a.filas;});
+
+  var enMaestro={};
+  MAESTRO.data.forEach(function(m){ enMaestro[m.descripcion]=true; });
+  var filasSin=MAESTRO.sinSku.reduce(function(a,x){return a+x.filas;},0);
+  var fueraStock=MAESTRO.data.filter(function(m){return m.sku && !MAESTRO.prod[m.sku];}).length;
+  var ico='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>';
+
+  var panel='';
+  if(MAESTRO.sinSku.length){
+    panel='<div style="background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:var(--r);padding:12px 14px;margin-bottom:16px">'+
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">'+
+        '<div style="font-size:13px;font-weight:700;color:var(--warn)">⚠ '+filasSin+' salida'+(filasSin===1?'':'s')+' SIN SKU ('+MAESTRO.sinSku.length+' producto'+(MAESTRO.sinSku.length===1?'':'s')+' distinto'+(MAESTRO.sinSku.length===1?'':'s')+')</div>'+
+        '<button class="btn btn-ghost btn-sm" onclick="maestroAplicarTodo()">Actualizar salidas con el maestro</button>'+
+      '</div>'+
+      '<div style="display:flex;flex-direction:column;gap:6px">'+
+      MAESTRO.sinSku.map(function(x,i){
+        var ya=enMaestro[x.descripcion];
+        return '<div style="display:flex;align-items:center;gap:10px;font-size:12.5px">'+
+          '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(x.descripcion)+'">'+esc(x.descripcion)+'</span>'+
+          '<span class="mono" style="color:var(--text3)">'+x.filas+' fila'+(x.filas===1?'':'s')+' · '+fmt(x.packs)+' pack</span>'+
+          (ya
+            ? '<button class="btn btn-ghost btn-sm" onclick="maestroAplicarSinSku('+i+')">Ya está en el maestro: aplicar</button>'
+            : '<button class="btn btn-primary btn-sm" onclick="maestroAsignar('+i+')">Asignar SKU</button>')+
+        '</div>';
+      }).join('')+
+      '</div>'+
+    '</div>';
+  }
+
+  document.getElementById('maestro-root').innerHTML=
+    panel+
+    '<div class="stats">'+
+      '<div class="stat-card"><div class="stat-ico">'+ico+'</div><div class="stat-label">Productos en el maestro</div><div class="stat-val-row"><div class="stat-val" id="mae-stat-total">'+MAESTRO.data.length+'</div><span class="stat-unit-pill">filas</span></div></div>'+
+      '<div class="stat-card"><div class="stat-ico">'+ico+'</div><div class="stat-label">Salidas SIN SKU</div><div class="stat-val-row"><div class="stat-val" style="color:'+(filasSin?'var(--warn)':'var(--ok,inherit)')+'">'+filasSin+'</div><span class="stat-unit-pill">filas</span></div></div>'+
+      '<div class="stat-card"><div class="stat-ico">'+ico+'</div><div class="stat-label">SKU que no están en Stock</div><div class="stat-val-row"><div class="stat-val" style="color:'+(fueraStock?'var(--warn)':'inherit')+'">'+fueraStock+'</div><span class="stat-unit-pill">filas</span></div></div>'+
+    '</div>'+
+    '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
+      '<input class="filter-inp" id="mae-busq" placeholder="Buscar descripción o SKU..." style="width:280px" oninput="filterMaestro()"/>'+
+      '<span class="result-count" id="mae-count"></span>'+
+    '</div>'+
+    '<div class="table-wrap"><table>'+
+      '<thead><tr><th>Descripción del pedido</th><th>SKU</th><th>Producto del SKU (Stock)</th><th class="r">Und. por pack</th><th class="c">Acciones</th></tr></thead>'+
+      '<tbody id="maestro-tbody"></tbody>'+
+    '</table></div>';
+  filterMaestro();
+}
+
+function filterMaestro(){
+  var q=((document.getElementById('mae-busq')||{}).value||'').toLowerCase().trim();
+  var rows=MAESTRO.data.filter(function(m){
+    return !q||m.descripcion.toLowerCase().indexOf(q)>-1||m.sku.toLowerCase().indexOf(q)>-1;
+  });
+  var MAX=500, total=rows.length;
+  if(rows.length>MAX) rows=rows.slice(0,MAX);
+  MAESTRO.vista=rows;
+  var el=document.getElementById('mae-count');
+  if(el) el.textContent=total>MAX ? ('Mostrando '+MAX+' de '+total+' — usa el buscador') : (total+' registros');
+  var html=rows.map(function(m,i){
+    var nombre=MAESTRO.prod[m.sku];
+    var celdaProd=nombre
+      ? '<span title="'+esc(nombre)+'">'+esc(nombre)+'</span>'
+      : '<span style="color:var(--warn)" title="Este SKU no existe en el Stock de la sede">⚠ SKU no está en Stock</span>';
+    return '<tr>'+
+      '<td class="td-desc" title="'+esc(m.descripcion)+'">'+esc(m.descripcion)+'</td>'+
+      '<td class="mono" style="font-weight:600">'+esc(m.sku||'—')+'</td>'+
+      '<td class="td-desc" style="font-size:12px;color:var(--text3)">'+celdaProd+'</td>'+
+      '<td class="r">'+fmt(m.factor)+'</td>'+
+      '<td class="c" style="white-space:nowrap">'+
+        '<button class="btn btn-ghost btn-sm" onclick="abrirMaestroForm('+i+')">Editar</button> '+
+        '<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="eliminarMaestro('+i+')">Eliminar</button>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+  var t=document.getElementById('maestro-tbody');
+  if(t) t.innerHTML=html||'<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:40px">Sin resultados</td></tr>';
+}
+
+/* idx = posición en la vista filtrada; null = nuevo; prefill = descripción sugerida para un nuevo */
+function abrirMaestroForm(idx,prefill){
+  var m=(idx===null||idx===undefined)?null:MAESTRO.vista[idx];
+  _MAE_EDIT=m?m.descripcion:null;
+  document.getElementById('fs-maestro-title').textContent=m?'Editar maestro':'Agregar al maestro';
+  document.getElementById('mae-desc').value=m?m.descripcion:(prefill||'');
+  document.getElementById('mae-sku').value=m?m.sku:'';
+  document.getElementById('mae-factor').value=m?m.factor:1;
+  document.getElementById('mae-err').textContent='';
+  maestroSkuCambio();
+  openFS('fs-maestro');
+  setTimeout(function(){document.getElementById(m||prefill?'mae-sku':'mae-desc').focus();},120);
+}
+function maestroAsignar(i){ abrirMaestroForm(null,MAESTRO.sinSku[i].descripcion); }
+
+function maestroSkuCambio(){
+  var sku=(document.getElementById('mae-sku').value||'').trim();
+  var el=document.getElementById('mae-sku-info');
+  if(!sku){el.innerHTML='';return;}
+  var n=MAESTRO.prod[sku];
+  el.innerHTML=n
+    ? '<span style="color:var(--text3)">→ '+esc(n)+'</span>'
+    : '<span style="color:var(--warn)">⚠ Este SKU no está en el Stock de la sede. Puedes guardarlo, pero la salida no aparecerá en Stock hasta crearlo con "Nuevo SKU".</span>';
+}
+
+function guardarMaestro(){
+  var desc=(document.getElementById('mae-desc').value||'').trim();
+  var sku =(document.getElementById('mae-sku').value ||'').trim();
+  var fac =parseInt(document.getElementById('mae-factor').value,10);
+  var err =document.getElementById('mae-err');
+  if(!desc){err.textContent='La descripción es obligatoria';return;}
+  if(!sku){err.textContent='El SKU es obligatorio';return;}
+  if(!(fac>=1)){err.textContent='Las unidades por pack deben ser 1 o más';return;}
+  err.textContent='';
+  var btn=document.getElementById('btn-mae-save');
+  btn.disabled=true;btn.textContent='Guardando...';
+  google.script.run
+    .withSuccessHandler(function(r){
+      btn.disabled=false;btn.textContent='Guardar';
+      if(!r.ok){err.textContent=r.error;return;}
+      closeFS('fs-maestro');
+      showToast('Maestro actualizado','ok');
+      loadMaestro();
+      _maePreguntarAplicar(desc,{sku:sku,factor:fac});
+    })
+    .withFailureHandler(function(e){btn.disabled=false;btn.textContent='Guardar';err.textContent=e.message;})
+    .guardarMBEES(S.token,{descripcionOriginal:_MAE_EDIT,descripcion:desc,sku:sku,factor:fac});
+}
+
+function eliminarMaestro(i){
+  var m=MAESTRO.vista[i]; if(!m) return;
+  _confirmDialog('Eliminar del maestro',
+    '"'+m.descripcion+'" se quitará del maestro. Las salidas ya registradas no cambian; los próximos pedidos con esta descripción entrarán como SIN SKU.',
+    function(){
+      google.script.run
+        .withSuccessHandler(function(r){
+          if(!r.ok){showToast(r.error||'No se pudo eliminar','err');return;}
+          showToast('Eliminado del maestro','ok');
+          loadMaestro();
+        })
+        .withFailureHandler(function(e){showToast(e.message,'err');})
+        .eliminarMBEES(S.token,m.descripcion);
+    },'Eliminar');
+}
+
+/* ── Actualizar salidas ya registradas con lo que dice el maestro ── */
+function maestroAplicarSinSku(i){ _maePreguntarAplicar(MAESTRO.sinSku[i].descripcion); }
+function maestroAplicarTodo(){ _maePreguntarAplicar(null); }
+
+function _maeHoyISO(){
+  var d=new Date(), p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+  return p;
+}
+function _maePreguntarAplicar(desc,valores){
+  _MAE_AP={desc:desc,desde:_maeHoyISO(),incluir:false,sin:0,dist:0,m:valores||null};
+  _maeContar(function(){
+    if(desc!==null && !_MAE_AP.sin && !_MAE_AP.dist) return; // nada que actualizar: no molestar
+    _maeDibujarAplicar();
+    document.getElementById('modal-aplicar').style.display='flex';
+  });
+}
+function _maeContar(cb){
+  var a=_MAE_AP;
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r||!r.ok){showToast((r&&r.error)||'No se pudo revisar las salidas','err');return;}
+      a.sin=r.sin_sku; a.dist=r.distintas;
+      if(cb) cb();
+    })
+    .withFailureHandler(function(e){showToast(e.message,'err');})
+    .aplicarMaestro(S.token,{descripcion:a.desc,incluirConSku:false,desde:a.desde,ejecutar:false});
+}
+function _maeDibujarAplicar(){
+  var a=_MAE_AP, k=a.sin+(a.incluir?a.dist:0);
+  var m=a.m||(a.desc?MAESTRO.data.filter(function(x){return x.descripcion===a.desc;})[0]:null);
+  var html='';
+  if(a.desc) html+='<div style="font-size:12.5px;color:var(--text2)"><b>'+esc(a.desc)+'</b>'+(m?'<br><span class="mono">SKU '+esc(m.sku)+' · '+fmt(m.factor)+' und. por pack</span>':'')+'</div>';
+  else html+='<div style="font-size:12.5px;color:var(--text2)">Se revisarán todas las salidas con el maestro actual.</div>';
+  html+='<div style="font-size:13px">'+
+    (a.sin
+      ? '<b>'+a.sin+'</b> salida'+(a.sin===1?'':'s')+' <b>SIN SKU</b> (de cualquier fecha) recibirán el SKU y unidades = packs × '+(m?fmt(m.factor):'unidades por pack')+'.'
+      : 'No hay salidas SIN SKU para actualizar.')+
+  '</div>';
+  html+='<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer">'+
+    '<input type="checkbox" id="mae-ap-incluir" '+(a.incluir?'checked':'')+' onchange="_MAE_AP.incluir=this.checked;_maeDibujarAplicar()" style="margin-top:2px"/>'+
+    '<span>También corregir las salidas que <b>ya tienen SKU</b> pero con otro SKU o cantidad distinta, desde '+
+      '<input type="date" id="mae-ap-desde" value="'+esc(a.desde)+'" onchange="_maeCambioDesde(this.value)" class="inp" style="padding:2px 6px;font-size:12px;display:inline-block;width:auto"/> '+
+      '(<b>'+a.dist+'</b> salida'+(a.dist===1?'':'s')+')</span></label>';
+  document.getElementById('modal-aplicar-body').innerHTML=html;
+  var ok=document.getElementById('modal-aplicar-ok');
+  ok.disabled=!k;
+  ok.textContent=k?('Actualizar '+k+' salida'+(k===1?'':'s')):'Nada que actualizar';
+}
+function _maeCambioDesde(v){
+  if(!v) return;
+  _MAE_AP.desde=v;
+  _maeContar(_maeDibujarAplicar);
+}
+function _maeAplicarCancelar(){ document.getElementById('modal-aplicar').style.display='none'; _MAE_AP=null; }
+function _maeAplicarOk(){
+  var a=_MAE_AP; if(!a) return;
+  var ok=document.getElementById('modal-aplicar-ok');
+  ok.disabled=true; ok.textContent='Actualizando...';
+  google.script.run
+    .withSuccessHandler(function(r){
+      _maeAplicarCancelar();
+      if(!r||!r.ok){showToast((r&&r.error)||'No se pudo actualizar','err');return;}
+      showToast(r.actualizadas+' salida'+(r.actualizadas===1?'':'s')+' actualizada'+(r.actualizadas===1?'':'s'),'ok');
+      PAGE_LOADED['salidas']=false; PAGE_LOADED['stock']=false;
+      loadMaestro();
+    })
+    .withFailureHandler(function(e){_maeAplicarCancelar();showToast(e.message,'err');})
+    .aplicarMaestro(S.token,{descripcion:a.desc,incluirConSku:a.incluir,desde:a.desde,ejecutar:true});
+}
+
+function exportMaestro(){
+  _exportXLSX(
+    ['Descripción','SKU','Producto del SKU','Und. por pack'],
+    MAESTRO.data,
+    function(m){return[m.descripcion,m.sku,MAESTRO.prod[m.sku]||'',m.factor];},
+    'Maestro','maestro'
   );
 }
 
@@ -9420,6 +9684,52 @@ function guardarEditarSkuFila(){
   <div class="fs-footer">
     <button class="btn btn-ghost" onclick="closeFS('fs-sku')">Cancelar</button>
     <button class="btn btn-primary" id="btn-sku-save" onclick="guardarSKU()">Guardar</button>
+  </div>
+</div>
+
+<!-- ══ FORM: MAESTRO ══ -->
+<div class="fscreen" id="fs-maestro">
+  <div class="fs-header">
+    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-maestro')">← Volver</button>
+    <div class="fs-title" id="fs-maestro-title">Agregar al maestro</div>
+  </div>
+  <div class="fs-body">
+    <div class="fs-section">Producto del pedido</div>
+    <div style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:16px;font-family:var(--font-mono)">
+      Cuando llega un pedido, la descripción se busca aquí para ponerle el SKU y calcular las unidades (packs × unidades por pack). Si no está, la salida entra como "SIN SKU".
+    </div>
+    <div class="form-grid">
+      <div class="form-field span2">
+        <div class="form-label">Descripción del pedido <span class="req">*</span></div>
+        <input class="inp" id="mae-desc" placeholder="Tal como llega en el pedido (igual al texto de la salida)"/>
+      </div>
+      <div class="form-field">
+        <div class="form-label">SKU <span class="req">*</span></div>
+        <input class="inp" id="mae-sku" placeholder="Ej: 10000086" oninput="maestroSkuCambio()" style="font-family:var(--font-mono);font-weight:600"/>
+        <div id="mae-sku-info" style="font-size:12px;margin-top:4px"></div>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Unidades por pack <span class="req">*</span></div>
+        <input class="inp" id="mae-factor" type="number" min="1" step="1" value="1"/>
+      </div>
+    </div>
+    <div id="mae-err" class="err-msg" style="margin-top:12px"></div>
+  </div>
+  <div class="fs-footer">
+    <button class="btn btn-ghost" onclick="closeFS('fs-maestro')">Cancelar</button>
+    <button class="btn btn-primary" id="btn-mae-save" onclick="guardarMaestro()">Guardar</button>
+  </div>
+</div>
+
+<!-- Diálogo: actualizar salidas con el maestro -->
+<div id="modal-aplicar" style="display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
+  <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--r2);padding:24px 28px;width:460px;max-width:94vw;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:14px">
+    <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)">Actualizar salidas con el maestro</div>
+    <div id="modal-aplicar-body" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="_maeAplicarCancelar()">Ahora no</button>
+      <button class="btn btn-primary btn-sm" id="modal-aplicar-ok" onclick="_maeAplicarOk()">Actualizar</button>
+    </div>
   </div>
 </div>
 

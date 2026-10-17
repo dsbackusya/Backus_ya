@@ -518,6 +518,72 @@
     };
   });
 
+  /* ── MAESTRO (MBEES): descripción del pedido -> SKU y unidades por pack ── */
+  API.getMaestroMBEES = guard(async function (p) {
+    var sede = exigirSede(p, null);
+    var res = await Promise.all([
+      todas(function () { return sb.from('mbees').select('descripcion,sku,factor').eq('sede_id', sede).order('descripcion'); }),
+      todas(function () { return sb.from('sede_productos').select('sku,descripcion').eq('sede_id', sede).order('sku'); }),
+      todas(function () { return sb.from('salidas').select('descripcion,pack').eq('sede_id', sede).in('sku', ['SIN SKU', '']).order('id'); })
+    ]);
+    var pend = {};
+    res[2].forEach(function (r) {
+      var d = str(r.descripcion);
+      var x = pend[d] || (pend[d] = { descripcion: d, filas: 0, packs: 0 });
+      x.filas++; x.packs += num(r.pack);
+    });
+    return {
+      ok: true,
+      data: res[0].map(function (r) { return { descripcion: str(r.descripcion), sku: str(r.sku), factor: num(r.factor) || 1 }; }),
+      productos: res[1].map(function (r) { return { sku: str(r.sku), desc: str(r.descripcion) }; }),
+      sinSku: Object.keys(pend).map(function (k) { return pend[k]; })
+    };
+  });
+
+  API.guardarMBEES = guard(async function (p, f) {
+    var sede = exigirSede(p, null);
+    var desc = str(f.descripcion), sku = str(f.sku), factor = parseInt(f.factor, 10);
+    if (!desc) return { ok: false, error: 'La descripción es obligatoria' };
+    if (!sku) return { ok: false, error: 'El SKU es obligatorio' };
+    if (!(factor >= 1)) return { ok: false, error: 'Las unidades por pack deben ser un número mayor a 0' };
+    var orig = str(f.descripcionOriginal);
+    var r;
+    if (orig) {
+      r = await sb.from('mbees').update({ descripcion: desc, sku: sku, factor: factor })
+        .eq('sede_id', sede).eq('descripcion', orig).select('descripcion');
+      if (!r.error && !r.data.length) return { ok: false, error: 'No se encontró la fila a editar. Actualiza la pantalla.' };
+    } else {
+      r = await sb.from('mbees').insert({ sede_id: sede, descripcion: desc, sku: sku, factor: factor });
+    }
+    if (r.error) {
+      if (r.error.code === '23505') return { ok: false, error: 'Ya existe esa descripción en el maestro.' };
+      throw r.error;
+    }
+    return { ok: true };
+  });
+
+  API.eliminarMBEES = guard(async function (p, descripcion) {
+    var sede = exigirSede(p, null);
+    var r = await sb.from('mbees').delete().eq('sede_id', sede).eq('descripcion', str(descripcion)).select('descripcion');
+    if (r.error) throw r.error;
+    return { ok: true, eliminados: r.data.length };
+  });
+
+  // opts: { descripcion (null = todo el maestro), incluirConSku, desde (dd/mm/aaaa o ISO), ejecutar }
+  API.aplicarMaestro = guard(async function (p, opts) {
+    var sede = exigirSede(p, null);
+    opts = opts || {};
+    var r = await sb.rpc('aplicar_maestro', {
+      p_sede: sede,
+      p_descripcion: opts.descripcion ? str(opts.descripcion) : null,
+      p_incluir_con_sku: !!opts.incluirConSku,
+      p_desde: opts.desde ? parseFecha(opts.desde) : null,
+      p_ejecutar: !!opts.ejecutar
+    });
+    if (r.error) throw r.error;
+    return r.data;
+  });
+
   function mapMConteo(r) {
     return { ok: true, ean: str(r.ean), sku: str(r.sku), sap: str(r.sap), producto: str(r.producto), multiplicador: Number(r.multiplicador || 1) };
   }
