@@ -2693,6 +2693,7 @@ function renderCancelados(r){
         '<th class="r">Pack</th><th class="r">Und.</th><th>Marca</th>'+
         '<th class="c">Motor.</th><th class="r">Envases</th>'+
         '<th class="c">Estado</th><th class="c">Revisión</th><th>Motivo</th>'+
+        (S&&S.rol==='store'?'<th class="c"></th>':'')+
       '</tr></thead>'+
       '<tbody id="cancelados-tbody"></tbody>'+
     '</table></div>';
@@ -2733,10 +2734,46 @@ function _filterCancelados(){
       '<td class="c"><span style="background:var(--danger-bg);color:var(--danger);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600">'+esc(r.estado||'Cancelado')+'</span></td>'+
       '<td class="c" style="font-size:12px;color:var(--text3)">'+esc(r.revision||'—')+'</td>'+
       '<td style="font-size:12px" title="'+esc(r.motivo)+'">'+esc(r.motivo||'—')+'</td>'+
+      (S&&S.rol==='store'&&r.nroPedido?'<td class="c" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" title="Devolver este pedido a Salidas" data-nro="'+esc(r.nroPedido)+'" onclick="anularCancAbrir(this.dataset.nro)">↩ Anular</button></td>':(S&&S.rol==='store'?'<td></td>':''))+
     '</tr>';
   }).join('');
   var t=document.getElementById('cancelados-tbody');
-  if(t)t.innerHTML=tbody||'<tr><td colspan="13" style="text-align:center;color:var(--text3);padding:40px">Sin cancelados</td></tr>';
+  if(t)t.innerHTML=tbody||'<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:40px">Sin cancelados</td></tr>';
+}
+
+/* ── Anular una cancelación (el pedido vuelve a Salidas) ── */
+var _ANUL_NRO=null;
+function anularCancAbrir(nro){
+  var filas=(DATA.cancelados||[]).filter(function(r){return r.nroPedido===nro;});
+  if(!filas.length){showToast('Recarga la página — los datos están desactualizados.','err');return;}
+  _ANUL_NRO=nro;
+  var und=filas.reduce(function(a,x){return a+(Number(x.unidad)||0);},0);
+  document.getElementById('modal-anular-canc-info').innerHTML=
+    'El pedido <b class="mono">'+esc(nro)+'</b> ('+filas.length+' producto'+(filas.length===1?'':'s')+', '+fmt(und)+' und.) volverá a <b>Salidas</b> con su fecha y hora originales, y dejará de estar cancelado. '+
+    (filas[0].motivo?'Motivo con que se canceló: <i>'+esc(filas[0].motivo)+'</i>.':'');
+  document.getElementById('modal-anular-canc-preview').innerHTML=
+    '<table style="width:100%"><tbody>'+filas.map(function(x){
+      return '<tr><td class="mono" style="padding:6px 10px">'+esc(x.sku)+'</td><td style="padding:6px 10px">'+esc(x.desc)+'</td><td class="r" style="padding:6px 10px">'+fmt(x.unidad)+' und.</td></tr>';
+    }).join('')+'</tbody></table>';
+  document.getElementById('modal-anular-canc-err').textContent='';
+  var b=document.getElementById('btn-anular-canc'); b.disabled=false; b.textContent='Devolver a Salidas';
+  document.getElementById('modal-anular-canc').style.display='flex';
+}
+function anularCancCerrar(){ document.getElementById('modal-anular-canc').style.display='none'; _ANUL_NRO=null; }
+function anularCancConfirmar(){
+  var nro=_ANUL_NRO; if(!nro) return;
+  var b=document.getElementById('btn-anular-canc'), err=document.getElementById('modal-anular-canc-err');
+  b.disabled=true; b.textContent='Restaurando...'; err.textContent='';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r||!r.ok){b.disabled=false;b.textContent='Devolver a Salidas';err.textContent=(r&&r.error)||'No se pudo anular la cancelación';return;}
+      anularCancCerrar();
+      showToast('Pedido '+nro+' devuelto a Salidas ('+r.filas+' producto'+(r.filas===1?'':'s')+')','ok');
+      PAGE_LOADED['salidas']=false; PAGE_LOADED['stock']=false;
+      reloadPage('cancelados');
+    })
+    .withFailureHandler(function(e){b.disabled=false;b.textContent='Devolver a Salidas';err.textContent=e.message;})
+    .anularCancelado(S.token,nro);
 }
 
 function exportCancelados(){

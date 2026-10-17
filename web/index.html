@@ -617,6 +617,21 @@ window.addEventListener('load', function(){
   </div>
 </div>
 
+<div id="modal-anular-canc" style="display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
+  <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--r2);padding:28px;width:480px;max-width:96vw;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:16px">
+    <div>
+      <div style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:4px">↩ Anular cancelación</div>
+      <div style="font-size:13px;color:var(--text2)" id="modal-anular-canc-info"></div>
+    </div>
+    <div id="modal-anular-canc-preview" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);font-size:12px"></div>
+    <div id="modal-anular-canc-err" class="err-msg"></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="anularCancCerrar()">No, volver</button>
+      <button class="btn btn-primary btn-sm" id="btn-anular-canc" onclick="anularCancConfirmar()">Devolver a Salidas</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL CONFIRMACIÓN GENÉRICO — reemplaza confirm() nativo ══ -->
 <!-- ══ MODAL: REEMPLAZAR SKU MASIVO ══ -->
 <div id="modal-reemplazar-sku" style="display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(3px)">

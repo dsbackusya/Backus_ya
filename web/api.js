@@ -449,6 +449,14 @@
     return { ok: true, data: data, rango: rg };
   });
 
+  // Anula una cancelación hecha por error: el pedido completo vuelve de Cancelados a Salidas.
+  API.anularCancelado = guard(async function (p, nroPedido) {
+    var sede = exigirSede(p, null);
+    var r = await sb.rpc('anular_cancelado', { p_sede: sede, p_nro_pedido: str(nroPedido) });
+    if (r.error) throw r.error;
+    return r.data;
+  });
+
   /* ── ENTRADAS ── */
   function fVencTxt(v) {
     if (!v) return '';
