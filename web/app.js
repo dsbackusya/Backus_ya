@@ -4042,12 +4042,6 @@ function acSelectConteo(idx){
   }
 }
 
-// Sube o baja packs/sueltas con los botones − / + (nunca por debajo de 0)
-function cntStep(id,d){
-  var el=document.getElementById(id); if(!el) return;
-  el.value=Math.max(0,Math.floor(Number(el.value||0))+d);
-  calcTotalConteo();
-}
 // El botón de guardar se pone de color cuando hay producto y cantidad
 function _cntListo(total){
   var b=document.getElementById('btn-guardar-siguiente');

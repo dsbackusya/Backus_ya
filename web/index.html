@@ -831,12 +831,10 @@ window.addEventListener('load', function(){
         <div class="cnt-rw">
           <span class="cnt-lab">Packs</span>
           <input class="cnt-val" id="cnt-packs" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()"/>
-          <div class="cnt-stp"><button onclick="cntStep('cnt-packs',-1)" aria-label="Menos">−</button><button onclick="cntStep('cnt-packs',1)" aria-label="Más">+</button></div>
         </div>
         <div class="cnt-rw">
           <span class="cnt-lab">Sueltas</span>
           <input class="cnt-val" id="cnt-und-sueltas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()"/>
-          <div class="cnt-stp"><button onclick="cntStep('cnt-und-sueltas',-1)" aria-label="Menos">−</button><button onclick="cntStep('cnt-und-sueltas',1)" aria-label="Más">+</button></div>
         </div>
         <div class="cnt-rw cnt-tot">
           <span class="cnt-lab" style="color:var(--text2)">Total</span>
