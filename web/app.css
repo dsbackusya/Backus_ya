@@ -2825,7 +2825,8 @@ input.filter-inp:focus{
 
 /* ══════════════════════════════════════════════════════════════
    REGISTRAR CONTEO — estilo iOS con los colores de la app
-   Solo afecta a #fs-conteo. Los ids y la lógica no cambian.
+   Cámara en panel, historial reciente y entrada de packs al detectar.
+   Solo afecta a #fs-conteo. Estado: la clase .cnt-det se pone cuando hay un producto detectado.
    ══════════════════════════════════════════════════════════════ */
 #fs-conteo{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",system-ui,sans-serif;
@@ -2842,51 +2843,76 @@ input.filter-inp:focus{
   justify-self:start;display:flex;align-items:center;gap:0;background:transparent;border:0;
   color:var(--accent2);font-size:17px;font-family:inherit;cursor:pointer;padding:8px 6px 8px 0;min-height:40px;
 }
-#fs-conteo .fs-body{padding:12px 16px 24px;max-width:none}
+#fs-conteo .fs-body{padding:8px 16px 24px;max-width:none}
 #fs-conteo .cnt-wrap{max-width:440px;margin:0 auto}
 #fs-conteo .cnt-grp{background:var(--surface2);border:1px solid var(--border2);border-radius:14px;overflow:hidden}
 #fs-conteo .cnt-grp:focus-within{border-color:rgba(139,107,255,.45)}
 #fs-conteo .cnt-rw{display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px}
-#fs-conteo .cnt-rw + .cnt-rw{border-top:.5px solid rgba(167,159,201,.16)}
-#fs-conteo .cnt-scan{min-height:58px;padding-right:10px}
+#fs-conteo .cnt-rw + .cnt-rw,#fs-conteo .cnt-prod + .cnt-rw{border-top:.5px solid rgba(167,159,201,.16)}
+#fs-conteo .cnt-scan{min-height:54px;padding-right:12px}
 #fs-conteo .cnt-ico{color:var(--text3);flex:none}
-#fs-conteo #cnt-ean,#fs-conteo .cnt-plain{
-  flex:1;min-width:0;width:100%;background:transparent;border:0;outline:none;box-shadow:none;
-  color:var(--text);font-size:17px;font-family:inherit;padding:0;height:44px;
+#fs-conteo input#cnt-ean,#fs-conteo input.cnt-plain,#fs-conteo input.cnt-val{
+  background:transparent !important;border:0 !important;box-shadow:none !important;border-radius:0 !important;padding:0 !important;outline:none;
+}
+#fs-conteo input#cnt-ean,#fs-conteo input.cnt-plain{
+  flex:1;min-width:0;width:100%;color:var(--text);font-size:17px;font-family:inherit;height:44px;
 }
 #fs-conteo #cnt-ean::placeholder,#fs-conteo .cnt-plain::placeholder{color:var(--text4)}
+#fs-conteo .cnt-go{background:transparent;border:0;color:var(--accent2);font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;padding:8px 2px;flex:none}
+
+/* Cámara en panel (poco menos de la mitad de la pantalla) */
 #fs-conteo .cnt-cam{
-  width:40px;height:40px;border-radius:12px;background:#7B52FF;border:0;color:#fff;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;flex:none;
+  position:relative;margin-top:12px;height:clamp(150px,30vh,240px);border-radius:18px;overflow:hidden;
+  background:#161129;border:1px solid var(--border2);
 }
-#fs-conteo .cnt-cam:active{opacity:.8}
-#fs-conteo .cnt-prod{padding:12px 16px;background:rgba(123,82,255,.10);border-top:.5px solid rgba(167,159,201,.16)}
+#fs-conteo .cnt-cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+#fs-conteo .cnt-cb{position:absolute;width:26px;height:26px;border:0 solid #B79CFF;pointer-events:none}
+#fs-conteo .cnt-tl{left:16px;top:16px;border-top-width:3px;border-left-width:3px;border-radius:8px 0 0 0}
+#fs-conteo .cnt-tr{right:16px;top:16px;border-top-width:3px;border-right-width:3px;border-radius:0 8px 0 0}
+#fs-conteo .cnt-bl{left:16px;bottom:16px;border-bottom-width:3px;border-left-width:3px;border-radius:0 0 0 8px}
+#fs-conteo .cnt-br{right:16px;bottom:16px;border-bottom-width:3px;border-right-width:3px;border-radius:0 0 8px 0}
+#fs-conteo .cnt-line{position:absolute;left:30px;right:30px;top:50%;height:2px;background:#7B52FF;opacity:.85;pointer-events:none}
+#fs-conteo .cnt-cam-msg{position:absolute;left:12px;right:12px;bottom:14px;text-align:center;font-size:13px;color:#E4DEFF;text-shadow:0 1px 3px rgba(0,0,0,.8);pointer-events:none}
+#fs-conteo .cnt-flash{
+  position:absolute;right:12px;top:12px;width:40px;height:40px;border-radius:50%;border:0;cursor:pointer;
+  background:rgba(0,0,0,.5);color:#fff;display:flex;align-items:center;justify-content:center;
+}
+#fs-conteo .cnt-flash.on{background:#F5B94C;color:#1A1530}
+#fs-conteo .cnt-cam-off{
+  position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;text-align:center;padding:0 16px;cursor:pointer;
+}
+#fs-conteo.cnt-det .cnt-cam-off{cursor:default}
+#fs-conteo .cnt-off-code{font-family:var(--font-mono);font-size:14px;color:var(--text)}
+#fs-conteo .cnt-off-sub{font-size:12px;color:#7E76A3}
+
+#fs-conteo .cnt-prod{padding:12px 16px;background:rgba(123,82,255,.10)}
 #fs-conteo .cnt-prod-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 #fs-conteo .cnt-nombre{font-size:17px;font-weight:600;letter-spacing:-.01em;line-height:1.3;color:var(--text)}
-#fs-conteo .cnt-x{background:transparent;border:0;color:var(--text3);font-size:24px;line-height:1;cursor:pointer;padding:0 2px;flex:none}
+#fs-conteo .cnt-x{background:transparent;border:0;color:var(--text3);font-size:26px;line-height:1;cursor:pointer;padding:0 4px;flex:none}
 #fs-conteo .cnt-sub{font-size:14px;color:var(--text2);margin-top:3px}
 #fs-conteo .cnt-sub .mono{font-family:var(--font-mono);font-size:13px}
-#fs-conteo .cnt-foot{font-size:13px;color:var(--text2);padding:8px 16px 0;line-height:1.35;min-height:0;font-family:inherit}
-#fs-conteo .cnt-foot:empty{display:none}
-#fs-conteo #cnt-ean-status:not(:empty) + #cnt-hint{display:none}
-#fs-conteo .cnt-grp:has(#cnt-producto-card[style*="block"]) ~ #cnt-hint{display:none}
+#fs-conteo .cnt-foot{font-size:13px;color:var(--text2);padding:8px 16px 0;line-height:1.35;font-family:inherit}
+#fs-conteo #cnt-ean-status:empty{display:none}
 #fs-conteo .cnt-err{color:var(--danger);min-height:20px;display:block}
-#fs-conteo .cnt-err:empty{display:block}
 #fs-conteo .cnt-lab{font-size:17px;letter-spacing:-.01em;width:70px;flex:none}
-#fs-conteo .cnt-val{
-  flex:1;min-width:0;background:transparent;border:0;outline:none;box-shadow:none;color:var(--text);
-  text-align:right;font-size:28px;font-weight:600;letter-spacing:-.02em;font-family:inherit;padding:0;height:56px;
-  -moz-appearance:textfield;
+#fs-conteo input.cnt-val{
+  flex:1;min-width:0;color:var(--text);text-align:right;font-size:28px;font-weight:600;letter-spacing:-.02em;
+  font-family:inherit;height:56px;-moz-appearance:textfield;
 }
 #fs-conteo .cnt-val::placeholder{color:var(--text4)}
 #fs-conteo .cnt-val::-webkit-outer-spin-button,#fs-conteo .cnt-val::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-#fs-conteo .cnt-stp{display:flex;background:var(--surface3);border-radius:9px;height:32px;overflow:hidden;flex:none}
-#fs-conteo .cnt-stp button{width:46px;border:0;background:transparent;color:var(--text);font-size:20px;line-height:1;cursor:pointer;font-family:inherit}
-#fs-conteo .cnt-stp button + button{border-left:.5px solid rgba(167,159,201,.2)}
-#fs-conteo .cnt-stp button:active{opacity:.5}
 #fs-conteo .cnt-tot{min-height:52px;background:rgba(123,82,255,.07)}
 #fs-conteo .cnt-totv{flex:1;text-align:right;font-size:17px;color:var(--text2)}
 #fs-conteo .cnt-totv b{font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--text4);transition:color .15s}
+
+/* Estados: escaneando (cámara + historial) / producto detectado (entrada + guardar) */
+#fs-conteo #cnt-entry{display:none;margin-top:12px}
+#fs-conteo.cnt-det #cnt-entry{display:block}
+#fs-conteo.cnt-det #cnt-history-container{display:none !important}
+#fs-conteo.cnt-det #cnt-ean-status,#fs-conteo.cnt-det #cnt-manual-wrap{display:none !important}
+#fs-conteo:not(.cnt-det) .fs-footer{display:none}
+
 #fs-conteo .fs-footer{
   background:var(--bg);border-top:0;justify-content:center;
   padding:10px 16px calc(14px + env(safe-area-inset-bottom,0));
@@ -2898,16 +2924,21 @@ input.filter-inp:focus{
 }
 #fs-conteo .cnt-save.listo{background:#7B52FF;color:#fff}
 #fs-conteo .cnt-save:disabled{opacity:.6;cursor:default}
-#fs-conteo .cnt-pend{margin-top:22px}
-#fs-conteo .cnt-pend-h{display:flex;justify-content:space-between;font-size:13px;color:#F59E0B;padding:0 16px 8px}
-#fs-conteo #cnt-history-list{display:flex;flex-direction:column;gap:6px}
+
+/* Historial reciente */
+#fs-conteo .cnt-hist{margin-top:18px}
+#fs-conteo .cnt-hist-h{display:flex;justify-content:space-between;align-items:baseline;padding:0 16px 8px;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+#fs-conteo .cnt-h{display:flex;align-items:center;gap:10px;padding:11px 16px}
+#fs-conteo .cnt-h + .cnt-h{border-top:.5px solid rgba(167,159,201,.16)}
+#fs-conteo .cnt-h-main{flex:1;min-width:0}
+#fs-conteo .cnt-h-n{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+#fs-conteo .cnt-h-s{font-size:13px;color:var(--text2);margin-top:1px}
+#fs-conteo .cnt-h-s .pend{color:#F59E0B}
+#fs-conteo .cnt-h-t{font-size:17px;font-weight:600;color:var(--text);white-space:nowrap}
+#fs-conteo .cnt-h-t small{font-size:12px;font-weight:400;color:var(--text2);margin-left:3px}
+#fs-conteo .cnt-h-b{display:flex;gap:6px;flex:none}
+#fs-conteo .cnt-h-b button{background:var(--surface3);border:0;color:var(--text);border-radius:8px;font-size:12px;padding:6px 10px;cursor:pointer;font-family:inherit}
 @media (max-width:900px){
   #fs-conteo .fs-header{padding:calc(8px + env(safe-area-inset-top,0)) 10px 8px}
-  #fs-conteo .fs-body{padding:12px 14px 20px}
+  #fs-conteo .fs-body{padding:8px 14px 20px}
 }
-/* Los inputs de esta pantalla van "sin caja" (la caja es la fila); se fuerza por encima de los estilos globales de input */
-#fs-conteo input.cnt-val,#fs-conteo input#cnt-ean,#fs-conteo input.cnt-plain{
-  background:transparent !important;border:0 !important;box-shadow:none !important;border-radius:0 !important;
-}
-#fs-conteo input.cnt-val{padding:0 !important}
-#fs-conteo input#cnt-ean,#fs-conteo input.cnt-plain{padding:0 !important}

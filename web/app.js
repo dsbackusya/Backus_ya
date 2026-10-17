@@ -2569,6 +2569,7 @@ function openFS(id){
   setTimeout(function(){el.classList.add('open');},10);
 }
 function closeFS(id){
+  if(id==='fs-conteo') _cntCamDetener();
   var el=document.getElementById(id);
   el.classList.remove('open');
   setTimeout(function(){el.style.display='none';},200);
@@ -3165,10 +3166,8 @@ function openScanner(skuId, descId, marcaId){
   _scannerTarget = {skuId:skuId, descId:descId, marcaId:marcaId, conteoMode:false};
   _abrirPopupScanner(skuId || 'scan', 'Escanea el código SKU / EAN');
 }
-function openScannerConteo(){
-  _scannerTarget = {skuId:'cnt-sku', descId:'cnt-producto-h', marcaId:'', conteoMode:true};
-  _abrirPopupScanner('cnt-ean', 'Escanea el EAN del producto');
-}
+// En la pantalla de conteo la cámara va dentro del propio panel (ver _cntCamIniciar)
+function openScannerConteo(){ _cntCamIniciar(); }
 
 function _abrirPopupScanner(targetId, title) {
   // window.top = Netlify (el único que tiene permisos de cámara)
@@ -3306,9 +3305,10 @@ function _scannerNativo(targetId, title){
 }
 
 // Respaldo para navegadores sin BarcodeDetector (iPhone/Safari, Firefox): librería ZXing
-function _scannerZXing(video, entregar, msg){
+function _scannerZXing(video, entregar, msg, est){
+  est = est || _scanNat;
   function lanzar(){
-    if (!_scanNat.activo) return;
+    if (!est.activo) return;
     var hints = new Map();
     hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
       ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
@@ -3318,10 +3318,10 @@ function _scannerZXing(video, entregar, msg){
     var reader = new ZXing.MultiFormatReader();
     reader.setHints(hints);
     var cv = document.createElement('canvas'), cx = cv.getContext('2d');
-    _scanNat.zx = { reset: function(){ clearTimeout(this.t); this.parar = true; } };
+    est.zx = { reset: function(){ clearTimeout(this.t); this.parar = true; } };
     (function paso(){
-      var z = _scanNat.zx;
-      if (!_scanNat.activo || !z || z.parar) return;
+      var z = est.zx;
+      if (!est.activo || !z || z.parar) return;
       if (video.readyState >= 2 && video.videoWidth) {
         cv.width = video.videoWidth; cv.height = video.videoHeight;
         cx.drawImage(video, 0, 0);
@@ -3341,6 +3341,163 @@ function _scannerZXing(video, entregar, msg){
   s.onerror = function(){ msg.textContent = 'No se pudo cargar el lector. Escribe el código abajo.'; };
   document.head.appendChild(s);
 }
+
+/* ── CÁMARA INTEGRADA EN LA PANTALLA DE CONTEO ──
+   Escanea dentro del propio panel. Al detectar un código el panel se pone negro (cámara apagada, sigue ahí)
+   y aparecen packs/sueltas con el botón de guardar; al guardar o cancelar la cámara se enciende de nuevo. */
+var _cntCam = { stream:null, raf:0, zx:null, activo:false, iniciando:false, track:null, torch:false, error:false };
+
+function _cntCamAbierta(){
+  var fs = document.getElementById('fs-conteo');
+  return !!(fs && fs.classList.contains('open'));
+}
+function _cntCamDetener(){
+  _cntCam.activo = false; _cntCam.iniciando = false;
+  if (_cntCam.raf) cancelAnimationFrame(_cntCam.raf);
+  _cntCam.raf = 0;
+  if (_cntCam.zx) { try { _cntCam.zx.reset(); } catch(e){} _cntCam.zx = null; }
+  if (_cntCam.stream) { _cntCam.stream.getTracks().forEach(function(t){ t.stop(); }); _cntCam.stream = null; }
+  _cntCam.track = null; _cntCam.torch = false;
+  var v = document.getElementById('cnt-cam-v'); if (v) { try { v.srcObject = null; } catch(e){} }
+  var f = document.getElementById('cnt-flash'); if (f) { f.style.display = 'none'; f.classList.remove('on'); }
+}
+// html = contenido de la capa negra; null = ocultarla y mostrar el visor
+function _cntCamNegro(html){
+  var off = document.getElementById('cnt-cam-off'); if (!off) return;
+  var vivo = !html;
+  off.style.display = vivo ? 'none' : 'flex';
+  if (!vivo) off.innerHTML = html;
+  var l = document.getElementById('cnt-cam-line'); if (l) l.style.display = vivo ? '' : 'none';
+  var m = document.getElementById('cnt-cam-msg');  if (m) m.style.display = vivo ? '' : 'none';
+}
+function _cntCamPausar(codigo){
+  _cntCamDetener();
+  _cntCamNegro((codigo ? '<div class="cnt-off-code">'+esc(codigo)+'</div>' : '') + '<div class="cnt-off-sub">Cámara en pausa</div>');
+}
+function _cntCamNoEncontrado(){
+  if (_cntCam.activo) return; // el código se escribió a mano con la cámara encendida: no se toca el visor
+  _cntCamNegro('<div style="font-size:15px;color:#FF8A8A">Código no encontrado</div><div class="cnt-off-sub">Toca para escanear otra vez</div>');
+}
+function _cntCamSinCamara(texto){
+  _cntCamDetener();
+  _cntCamNegro('<div style="font-size:13px;color:#E4DEFF">'+esc(texto)+'</div><div class="cnt-off-sub">Toca para reintentar</div>');
+  var e = document.getElementById('cnt-ean'); if (e && _cntCamAbierta()) e.focus();
+}
+// Toque sobre el panel negro: si no hay producto detectado, vuelve a escanear
+function cntCamToque(){
+  var fs = document.getElementById('fs-conteo');
+  if (fs && fs.classList.contains('cnt-det')) return;
+  _cntCam.error = false;
+  var e = document.getElementById('cnt-ean'); if (e) e.value = '';
+  var s = document.getElementById('cnt-ean-status'); if (s) s.textContent = '';
+  var mw = document.getElementById('cnt-manual-wrap'); if (mw) mw.style.display = 'none';
+  _cntCamNegro(null);
+  _cntCamIniciar();
+}
+function cntFlash(){
+  var t = _cntCam.track; if (!t) return;
+  _cntCam.torch = !_cntCam.torch;
+  t.applyConstraints({ advanced: [{ torch: _cntCam.torch }] }).catch(function(){});
+  var f = document.getElementById('cnt-flash'); if (f) f.classList.toggle('on', _cntCam.torch);
+}
+
+function _cntCamIniciar(){
+  if (_cntCam.activo || _cntCam.iniciando) return;
+  var fs = document.getElementById('fs-conteo');
+  if (!fs || !fs.classList.contains('open') || fs.classList.contains('cnt-det')) return;
+  var video = document.getElementById('cnt-cam-v'), msg = document.getElementById('cnt-cam-msg');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    _cntCam.error = true;
+    _cntCamSinCamara('La cámara solo funciona con la app abierta por https (o instalada). Escribe el código arriba.');
+    return;
+  }
+  _cntCamNegro(null);
+  msg.textContent = 'Iniciando cámara…';
+  _cntCam.iniciando = true;
+
+  function entregar(code){
+    if (!_cntCam.activo) return;
+    code = String(code || '').trim();
+    if (!code) return;
+    _scanBeep();
+    _cntCamPausar(code);
+    var eanEl = document.getElementById('cnt-ean'); if (eanEl) eanEl.value = code;
+    resolverEAN();
+  }
+
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+    audio: false
+  })
+    .then(function(stream){
+      _cntCam.iniciando = false;
+      var f2 = document.getElementById('fs-conteo');
+      if (!_cntCamAbierta() || !f2 || f2.classList.contains('cnt-det')) { stream.getTracks().forEach(function(t){ t.stop(); }); return; }
+      _cntCam.stream = stream; _cntCam.activo = true; _cntCam.error = false;
+      video.srcObject = stream;
+      msg.textContent = 'Apunta al código de barras';
+
+      var track = stream.getVideoTracks()[0];
+      _cntCam.track = track;
+      try {
+        var caps = track.getCapabilities ? track.getCapabilities() : {};
+        if (caps.focusMode && caps.focusMode.indexOf('continuous') >= 0) track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(function(){});
+        var fl = document.getElementById('cnt-flash');
+        if (fl) { fl.style.display = caps.torch ? 'flex' : 'none'; fl.classList.remove('on'); }
+      } catch(e){}
+
+      return video.play().then(function(){
+        var conBD = 'BarcodeDetector' in window;
+        var iniciarDetector = conBD && BarcodeDetector.getSupportedFormats
+          ? BarcodeDetector.getSupportedFormats().then(function(f){ return _SCAN_FORMATOS.filter(function(x){ return f.indexOf(x) >= 0; }); })
+          : Promise.resolve(conBD ? _SCAN_FORMATOS : []);
+        return iniciarDetector.then(function(formatos){
+          if (!_cntCam.activo) return;
+          if (conBD && formatos.length) {
+            var detector = new BarcodeDetector({ formats: formatos });
+            var ultimo = 0;
+            (function tick(t){
+              if (!_cntCam.activo) return;
+              if (t - ultimo < 90 || video.readyState < 2) { _cntCam.raf = requestAnimationFrame(tick); return; }
+              ultimo = t;
+              detector.detect(video).then(function(r){
+                if (r && r.length) entregar(r[0].rawValue); else _cntCam.raf = requestAnimationFrame(tick);
+              }).catch(function(){ _cntCam.raf = requestAnimationFrame(tick); });
+            })(0);
+          } else {
+            _scannerZXing(video, entregar, msg, _cntCam);
+          }
+        });
+      });
+    })
+    .catch(function(err){
+      _cntCam.iniciando = false; _cntCam.error = true;
+      var n = err && err.name;
+      _cntCamSinCamara(
+        n === 'NotAllowedError'  ? 'Permiso de cámara denegado. Actívalo en los ajustes del navegador o de la app, o escribe el código arriba.'
+      : n === 'NotFoundError'    ? 'Este equipo no tiene cámara. Escribe el código arriba.'
+      : n === 'NotReadableError' ? 'La cámara está en uso por otra aplicación. Escribe el código arriba.'
+      :                            'No se pudo abrir la cámara. Escribe el código arriba.');
+    });
+}
+
+// Estado de la pantalla de conteo: con producto detectado se pausa la cámara y aparece la entrada de packs;
+// sin producto la cámara está encendida y se ve el historial. Se llama cada vez que cambia el producto.
+function _cntVista(){
+  var fs = document.getElementById('fs-conteo'); if (!fs) return;
+  var card = document.getElementById('cnt-producto-card');
+  var det = !!(card && card.style.display === 'block');
+  fs.classList.toggle('cnt-det', det);
+  if (det) {
+    _cntCamPausar((typeof _cnt !== 'undefined' && _cnt && (_cnt.ean || _cnt.sku)) || '');
+  } else if (_cntCamAbierta() && !_cntCam.activo && !_cntCam.iniciando && !_cntCam.error) {
+    _cntCamIniciar();
+  }
+}
+document.addEventListener('visibilitychange', function(){
+  if (!_cntCamAbierta()) return;
+  if (document.visibilityState === 'hidden') _cntCamDetener(); else _cntVista();
+});
 
 // Listener global permanente — recibe resultado desde Netlify
 // Netlify responde via e.source guardado del mensaje OPEN_SCANNER,
@@ -3750,6 +3907,7 @@ function editarConteoRow(rowNum, packs, unds, sku, ean, producto, mult){
     var sueltasEl=document.getElementById('cnt-und-sueltas');
     if(sueltasEl){ sueltasEl.value=Number(unds)||0; }
     calcTotalConteo();
+    _cntVista();
     if(packsEl){ packsEl.focus(); packsEl.select(); }
   }, 150);
 }
@@ -3888,6 +4046,7 @@ function limpiarFormConteo(){
   document.getElementById('cnt-manual-wrap').style.display='none';
   document.getElementById('cnt-total-display').textContent='0';
   _cntListo(0);
+  _cntVista();
 }
 
 var _eanTimer = null;
@@ -3915,6 +4074,7 @@ function resolverEAN(){
       st.textContent = 'No encontrado: EAN ' + normEAN + ' no está en MCONTEO';
       st.style.color = 'var(--danger)';
       document.getElementById('cnt-manual-wrap').style.display = 'block';
+      _cntCamNoEncontrado();
       return;
     }
     st.textContent = '';
@@ -3934,7 +4094,7 @@ function resolverEAN(){
         st.textContent = 'Buscando en servidor...';
         google.script.run
           .withSuccessHandler(function(r) {
-            if (!r.ok) { st.textContent = 'No encontrado: ' + r.error; st.style.color = 'var(--danger)'; document.getElementById('cnt-manual-wrap').style.display = 'block'; return; }
+            if (!r.ok) { st.textContent = 'No encontrado: ' + r.error; st.style.color = 'var(--danger)'; document.getElementById('cnt-manual-wrap').style.display = 'block'; _cntCamNoEncontrado(); return; }
             st.textContent = '';
             setProductoConteo(r.ean, r.sku, r.sap || '', r.producto, r.multiplicador, r.stock);
             document.getElementById('cnt-packs').focus();
@@ -3973,6 +4133,7 @@ function setProductoConteo(ean,sku,sap,producto,multiplicador,stock){
   // Resetear packs solo si NO es una edición en curso
   if(!_cnt._editRow){ document.getElementById('cnt-packs').value=''; }
   calcTotalConteo();
+  _cntVista();
 }
 
 function limpiarProductoConteo(){
@@ -3992,7 +4153,7 @@ function limpiarProductoConteo(){
   if(label){label.textContent='— / — und.';}
   var hint=document.getElementById('cnt-progress-hint');
   if(hint){hint.textContent='';}
-  document.getElementById('cnt-ean').focus();
+  _cntVista();
 }
 
 // Wrapper delgado — delega en acSearch con handler de selección propio (acSelectConteo)
@@ -4177,38 +4338,36 @@ function _renderConteoHistoryNow() {
   // Sincronizar el badge mini (si aún lo usaras)
   _actualizarContadorBuffer();
 
-  // La pantalla de conteo solo muestra lo que aún NO llegó al servidor (sin _row):
-  // lo ya guardado se ve y se edita en la tabla de Conteo.
-  var pendientes = (_conteoBuffer || []).filter(function(it){ return !it._row; });
-  if (pendientes.length === 0) {
+  // Historial reciente de ESTE equipo (últimas 24 h), del más nuevo al más antiguo.
+  // Los conteos que aún no llegaron al servidor (sin _row) se marcan y permiten editar o quitar.
+  var items = _conteoBuffer || [];
+  if (items.length === 0) {
     container.style.display = 'none';
     list.innerHTML = '';
     return;
   }
 
   container.style.display = 'block';
-  badge.textContent = pendientes.length;
+  badge.textContent = items.length;
 
   var html = '';
-  // Mostrar los más recientes arriba
-  var reversedBuffer = _conteoBuffer.slice().reverse();
-  reversedBuffer.forEach(function(item, revIdx) {
-    if (item._row) return;
-    var idx = _conteoBuffer.length - 1 - revIdx; // Índice real en _conteoBuffer
-    html += '<div style="background:var(--surface2); border:1px solid var(--border2); border-radius:14px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">'+
-      '<div style="min-width:0; flex:1;">'+
-        '<div style="font-family:var(--font-mono); font-size:10px; color:var(--text3);">SKU: '+esc(item.sku)+' | EAN: '+(item.ean||'—')+'</div>'+
-        '<div style="font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+esc(item.producto)+'">'+esc(item.producto)+'</div>'+
-        '<div style="font-size:11px; color:var(--text2); margin-top:2px;">'+
-          '<strong>'+item.packs+'</strong> packs × '+item.multiplicador+' = <strong>'+((item.packs||0)*(item.multiplicador||1))+'</strong>'+(item.sueltas>0?' + <strong>'+item.sueltas+'</strong> sueltas':'')+' = <strong style="color:var(--ok)">'+item.total+' und</strong>'+
-        '</div>'+
-      '</div>'+
-      '<div style="display:flex; gap:6px;">'+
-        '<button class="btn btn-ghost btn-sm" onclick="editBufferItem('+idx+')" style="padding:6px 10px; font-size:11px;">Editar</button>'+
-        '<button class="btn btn-danger btn-sm" onclick="deleteBufferItem('+idx+')" style="padding:6px 10px; font-size:11px;">✕</button>'+
-      '</div>'+
+  for (var i = items.length - 1; i >= 0; i--) {
+    var item = items[i];
+    var packs = Number(item.packs) || 0, sueltas = Number(item.sueltas) || 0;
+    var desc = (packs ? packs + (packs === 1 ? ' pack' : ' packs') : '') +
+               (packs && sueltas ? ' + ' : '') +
+               (sueltas ? sueltas + (sueltas === 1 ? ' suelta' : ' sueltas') : '');
+    var hora = item._ts ? new Date(item._ts).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+    var pend = !item._row;
+    html += '<div class="cnt-h">' +
+      '<div class="cnt-h-main">' +
+        '<div class="cnt-h-n" title="' + esc(item.producto) + '">' + esc(item.producto) + '</div>' +
+        '<div class="cnt-h-s">' + esc(hora) + (hora && desc ? ' · ' : '') + esc(desc) + (pend ? ' · <span class="pend">Sin enviar</span>' : '') + '</div>' +
+      '</div>' +
+      (pend ? '<div class="cnt-h-b"><button onclick="editBufferItem(' + i + ')">Editar</button><button onclick="deleteBufferItem(' + i + ')" aria-label="Quitar">✕</button></div>' : '') +
+      '<div class="cnt-h-t">' + (Number(item.total) || 0) + '<small>und.</small></div>' +
     '</div>';
-  });
+  }
   list.innerHTML = html;
 }
 
@@ -4242,10 +4401,13 @@ function abrirConteo(){
   _MCONTEO_LOCAL=null; _MCONTEO_PENDING=[]; _MCONTEO_EAN_IDX={}; _MCONTEO_SKU_IDX={};
   var st = document.getElementById('cnt-ean-status');
   if (st) { st.style.color = 'var(--text3)'; st.textContent = 'Cargando catálogo de productos...'; }
+  _cntCam.error = false;
+  _cntCamNegro(null);
+  // La cámara arranca de inmediato (no espera al catálogo); el catálogo solo hace falta al detectar un código
+  setTimeout(_cntVista, 60);
   _cargarMConteo(function() {
     var st2 = document.getElementById('cnt-ean-status');
     if (st2 && st2.textContent === 'Cargando catálogo de productos...') st2.textContent = '';
-    setTimeout(function(){ document.getElementById('cnt-ean').focus(); }, 100);
   }, true);
 }
 
