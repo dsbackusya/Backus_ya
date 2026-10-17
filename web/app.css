@@ -2822,3 +2822,92 @@ input.filter-inp:focus{
 /* Pequeño "glow" ambiental detrás del input (sin tocar el DOM) */
 .filters{ position: relative; }
 
+
+/* ══════════════════════════════════════════════════════════════
+   REGISTRAR CONTEO — estilo iOS con los colores de la app
+   Solo afecta a #fs-conteo. Los ids y la lógica no cambian.
+   ══════════════════════════════════════════════════════════════ */
+#fs-conteo{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+#fs-conteo .fs-header{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;
+  padding:calc(8px + env(safe-area-inset-top,0)) 12px 8px;
+  background:var(--bg);border-bottom:0;
+}
+#fs-conteo .fs-title{font-family:inherit;font-size:17px;font-weight:600;text-align:center;letter-spacing:-.01em}
+#fs-conteo .cnt-sp{display:block}
+#fs-conteo .cnt-back{
+  justify-self:start;display:flex;align-items:center;gap:0;background:transparent;border:0;
+  color:var(--accent2);font-size:17px;font-family:inherit;cursor:pointer;padding:8px 6px 8px 0;min-height:40px;
+}
+#fs-conteo .fs-body{padding:12px 16px 24px;max-width:none}
+#fs-conteo .cnt-wrap{max-width:440px;margin:0 auto}
+#fs-conteo .cnt-grp{background:var(--surface2);border:1px solid var(--border2);border-radius:14px;overflow:hidden}
+#fs-conteo .cnt-grp:focus-within{border-color:rgba(139,107,255,.45)}
+#fs-conteo .cnt-rw{display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px}
+#fs-conteo .cnt-rw + .cnt-rw{border-top:.5px solid rgba(167,159,201,.16)}
+#fs-conteo .cnt-scan{min-height:58px;padding-right:10px}
+#fs-conteo .cnt-ico{color:var(--text3);flex:none}
+#fs-conteo #cnt-ean,#fs-conteo .cnt-plain{
+  flex:1;min-width:0;width:100%;background:transparent;border:0;outline:none;box-shadow:none;
+  color:var(--text);font-size:17px;font-family:inherit;padding:0;height:44px;
+}
+#fs-conteo #cnt-ean::placeholder,#fs-conteo .cnt-plain::placeholder{color:var(--text4)}
+#fs-conteo .cnt-cam{
+  width:40px;height:40px;border-radius:12px;background:#7B52FF;border:0;color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex:none;
+}
+#fs-conteo .cnt-cam:active{opacity:.8}
+#fs-conteo .cnt-prod{padding:12px 16px;background:rgba(123,82,255,.10);border-top:.5px solid rgba(167,159,201,.16)}
+#fs-conteo .cnt-prod-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+#fs-conteo .cnt-nombre{font-size:17px;font-weight:600;letter-spacing:-.01em;line-height:1.3;color:var(--text)}
+#fs-conteo .cnt-x{background:transparent;border:0;color:var(--text3);font-size:24px;line-height:1;cursor:pointer;padding:0 2px;flex:none}
+#fs-conteo .cnt-sub{font-size:14px;color:var(--text2);margin-top:3px}
+#fs-conteo .cnt-sub .mono{font-family:var(--font-mono);font-size:13px}
+#fs-conteo .cnt-foot{font-size:13px;color:var(--text2);padding:8px 16px 0;line-height:1.35;min-height:0;font-family:inherit}
+#fs-conteo .cnt-foot:empty{display:none}
+#fs-conteo #cnt-ean-status:not(:empty) + #cnt-hint{display:none}
+#fs-conteo .cnt-grp:has(#cnt-producto-card[style*="block"]) ~ #cnt-hint{display:none}
+#fs-conteo .cnt-err{color:var(--danger);min-height:20px;display:block}
+#fs-conteo .cnt-err:empty{display:block}
+#fs-conteo .cnt-lab{font-size:17px;letter-spacing:-.01em;width:70px;flex:none}
+#fs-conteo .cnt-val{
+  flex:1;min-width:0;background:transparent;border:0;outline:none;box-shadow:none;color:var(--text);
+  text-align:right;font-size:28px;font-weight:600;letter-spacing:-.02em;font-family:inherit;padding:0;height:56px;
+  -moz-appearance:textfield;
+}
+#fs-conteo .cnt-val::placeholder{color:var(--text4)}
+#fs-conteo .cnt-val::-webkit-outer-spin-button,#fs-conteo .cnt-val::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#fs-conteo .cnt-stp{display:flex;background:var(--surface3);border-radius:9px;height:32px;overflow:hidden;flex:none}
+#fs-conteo .cnt-stp button{width:46px;border:0;background:transparent;color:var(--text);font-size:20px;line-height:1;cursor:pointer;font-family:inherit}
+#fs-conteo .cnt-stp button + button{border-left:.5px solid rgba(167,159,201,.2)}
+#fs-conteo .cnt-stp button:active{opacity:.5}
+#fs-conteo .cnt-tot{min-height:52px;background:rgba(123,82,255,.07)}
+#fs-conteo .cnt-totv{flex:1;text-align:right;font-size:17px;color:var(--text2)}
+#fs-conteo .cnt-totv b{font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--text4);transition:color .15s}
+#fs-conteo .fs-footer{
+  background:var(--bg);border-top:0;justify-content:center;
+  padding:10px 16px calc(14px + env(safe-area-inset-bottom,0));
+}
+#fs-conteo .cnt-save{
+  width:100%;max-width:440px;height:54px;border-radius:14px;border:0;cursor:pointer;
+  font-family:inherit;font-size:17px;font-weight:600;letter-spacing:-.01em;
+  background:var(--surface3);color:var(--text2);transition:background .15s,color .15s;
+}
+#fs-conteo .cnt-save.listo{background:#7B52FF;color:#fff}
+#fs-conteo .cnt-save:disabled{opacity:.6;cursor:default}
+#fs-conteo .cnt-pend{margin-top:22px}
+#fs-conteo .cnt-pend-h{display:flex;justify-content:space-between;font-size:13px;color:#F59E0B;padding:0 16px 8px}
+#fs-conteo #cnt-history-list{display:flex;flex-direction:column;gap:6px}
+@media (max-width:900px){
+  #fs-conteo .fs-header{padding:calc(8px + env(safe-area-inset-top,0)) 10px 8px}
+  #fs-conteo .fs-body{padding:12px 14px 20px}
+}
+/* Los inputs de esta pantalla van "sin caja" (la caja es la fila); se fuerza por encima de los estilos globales de input */
+#fs-conteo input.cnt-val,#fs-conteo input#cnt-ean,#fs-conteo input.cnt-plain{
+  background:transparent !important;border:0 !important;box-shadow:none !important;border-radius:0 !important;
+}
+#fs-conteo input.cnt-val{padding:0 !important}
+#fs-conteo input#cnt-ean,#fs-conteo input.cnt-plain{padding:0 !important}

@@ -3887,6 +3887,7 @@ function limpiarFormConteo(){
   document.getElementById('cnt-producto-card').style.display='none';
   document.getElementById('cnt-manual-wrap').style.display='none';
   document.getElementById('cnt-total-display').textContent='0';
+  _cntListo(0);
 }
 
 var _eanTimer = null;
@@ -3984,6 +3985,7 @@ function limpiarProductoConteo(){
   document.getElementById('cnt-packs').value='';
   document.getElementById('cnt-und-sueltas').value='';
   document.getElementById('cnt-total-display').textContent='0';
+  _cntListo(0);
   var bar=document.getElementById('cnt-progress-bar');
   if(bar){bar.style.width='0%';}
   var label=document.getElementById('cnt-progress-label');
@@ -4040,12 +4042,27 @@ function acSelectConteo(idx){
   }
 }
 
+// Sube o baja packs/sueltas con los botones − / + (nunca por debajo de 0)
+function cntStep(id,d){
+  var el=document.getElementById(id); if(!el) return;
+  el.value=Math.max(0,Math.floor(Number(el.value||0))+d);
+  calcTotalConteo();
+}
+// El botón de guardar se pone de color cuando hay producto y cantidad
+function _cntListo(total){
+  var b=document.getElementById('btn-guardar-siguiente');
+  if(b) b.classList.toggle('listo', !!(_cnt&&_cnt.sku)&&total>0);
+  var t=document.getElementById('cnt-total-display');
+  if(t) t.style.color=total>0?'#C4B0FF':'';
+}
+
 function calcTotalConteo(){
   var packs=Number(document.getElementById('cnt-packs').value||0);
   var sueltas=Number(document.getElementById('cnt-und-sueltas').value||0);
   var mult=_cnt.multiplicador||1;
   var total=packs*mult+sueltas;
   document.getElementById('cnt-total-display').textContent=total;
+  _cntListo(total);
 
   // Progress bar vs stock — sumar conteos previos del mismo SKU en el buffer
   var stock=_cnt._stock;
@@ -4166,21 +4183,25 @@ function _renderConteoHistoryNow() {
   // Sincronizar el badge mini (si aún lo usaras)
   _actualizarContadorBuffer();
 
-  if (!_conteoBuffer || _conteoBuffer.length === 0) {
+  // La pantalla de conteo solo muestra lo que aún NO llegó al servidor (sin _row):
+  // lo ya guardado se ve y se edita en la tabla de Conteo.
+  var pendientes = (_conteoBuffer || []).filter(function(it){ return !it._row; });
+  if (pendientes.length === 0) {
     container.style.display = 'none';
     list.innerHTML = '';
     return;
   }
 
   container.style.display = 'block';
-  badge.textContent = _conteoBuffer.length + ' por guardar';
+  badge.textContent = pendientes.length;
 
   var html = '';
   // Mostrar los más recientes arriba
   var reversedBuffer = _conteoBuffer.slice().reverse();
   reversedBuffer.forEach(function(item, revIdx) {
+    if (item._row) return;
     var idx = _conteoBuffer.length - 1 - revIdx; // Índice real en _conteoBuffer
-    html += '<div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">'+
+    html += '<div style="background:var(--surface2); border:1px solid var(--border2); border-radius:14px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">'+
       '<div style="min-width:0; flex:1;">'+
         '<div style="font-family:var(--font-mono); font-size:10px; color:var(--text3);">SKU: '+esc(item.sku)+' | EAN: '+(item.ean||'—')+'</div>'+
         '<div style="font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="'+esc(item.producto)+'">'+esc(item.producto)+'</div>'+
@@ -4209,6 +4230,7 @@ function editBufferItem(idx) {
   _cnt._editRow = item._row || null;
   setProductoConteo(item.ean, item.sku, item.sap, item.producto, item.multiplicador);
   document.getElementById('cnt-packs').value = item.packs;
+  document.getElementById('cnt-und-sueltas').value = item.sueltas || '';
   calcTotalConteo();
 
   // 3. Subir el scroll hasta arriba
@@ -4273,7 +4295,7 @@ function guardarYContinuar(){
   google.script.run
     .withSuccessHandler(function(r){
       btn.disabled = false;
-      btn.textContent = '+ Guardar y Escanear Siguiente';
+      btn.textContent = 'Guardar y escanear siguiente';
       if(!r.ok){
         if(r.retryable){
           // Falla transitoria (ej. otro usuario contando a la vez) — no se pierde el
@@ -4284,7 +4306,7 @@ function guardarYContinuar(){
           _actualizarBannerPendientes();
           _CNT_EDIT_ROW = null;
           var btnR=document.getElementById('btn-guardar-siguiente');
-          if(btnR) btnR.textContent='+ Guardar y Escanear Siguiente';
+          if(btnR) btnR.textContent='Guardar y escanear siguiente';
           limpiarFormConteo();
           setTimeout(_intentarSyncOffline, 3000);
           setTimeout(function() { openScannerConteo(); }, 400);
@@ -4302,7 +4324,7 @@ function guardarYContinuar(){
       showToast('Guardado: ' + packs + ' packs de ' + sku, 'ok');
       _CNT_EDIT_ROW = null;
       var btn2=document.getElementById('btn-guardar-siguiente');
-      if(btn2) btn2.textContent='+ Guardar y Escanear Siguiente';
+      if(btn2) btn2.textContent='Guardar y escanear siguiente';
 
       // Agregar a tabla principal local — sin deduplicar
       if(!DATA.conteo) DATA.conteo=[];
@@ -4317,11 +4339,11 @@ function guardarYContinuar(){
     .withFailureHandler(function(e){
       // Fallback offline si el internet falla justo al guardar
       btn.disabled = false;
-      btn.textContent = '+ Guardar y Escanear Siguiente';
+      btn.textContent = 'Guardar y escanear siguiente';
       showToast('Sin red. Guardado en historial, se sincronizará luego.', 'warn');
       _CNT_EDIT_ROW = null;
       var btn2=document.getElementById('btn-guardar-siguiente');
-      if(btn2) btn2.textContent='+ Guardar y Escanear Siguiente';
+      if(btn2) btn2.textContent='Guardar y escanear siguiente';
       
       _conteoBuffer.push(Object.assign({}, fila, { _ts: Date.now() }));
       saveConteoBuffer();

@@ -783,100 +783,77 @@ window.addEventListener('load', function(){
 <!-- FORM: CONTEO -->
 <div class="fscreen" id="fs-conteo">
   <div class="fs-header">
-    <button class="btn btn-ghost btn-sm" onclick="_cerrarFormConteo()">Volver</button>
-    <div class="fs-title">Registrar Conteo</div>
+    <button class="cnt-back" onclick="_cerrarFormConteo()" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg><span>Atrás</span></button>
+    <div class="fs-title">Conteo</div>
+    <span class="cnt-sp"></span>
   </div>
   <div class="fs-body">
-    <div class="fs-section">Escanear producto</div>
-    <div class="form-grid cols1">
-      <div class="form-field">
-        <div class="form-label">EAN / Codigo de barras</div>
-        <div style="display:flex;gap:6px">
-          <input class="inp" id="cnt-ean" placeholder="Escanea o escribe EAN..." style="flex:1;font-family:var(--font-mono)"
+    <div class="cnt-wrap">
+
+      <div class="cnt-grp">
+        <div class="cnt-rw cnt-scan">
+          <svg class="cnt-ico" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14"/><path d="M7 5v14"/><path d="M11 5v14"/><path d="M15 5v14"/><path d="M19 5v14"/><path d="M21 5v14"/></svg>
+          <input id="cnt-ean" placeholder="Código de barras" inputmode="numeric" autocomplete="off"
             onkeydown="if(event.key==='Enter'){event.preventDefault();resolverEAN();}"
             oninput="autoResolverEAN()"/>
-          <button class="ean-btn" onclick="resolverEAN()">Buscar</button>
-          <button class="cam-btn" title="Escanear" onclick="openScannerConteo()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="11"/></svg></button>
+          <button class="cnt-cam" onclick="openScannerConteo()" aria-label="Escanear con la cámara"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
         </div>
-        <div id="cnt-ean-status" style="font-size:11px;font-family:var(--font-mono);color:var(--text3);min-height:16px;margin-top:4px"></div>
+        <div id="cnt-producto-card" class="cnt-prod" style="display:none">
+          <div class="cnt-prod-top">
+            <div class="cnt-nombre" id="cnt-producto-nombre">-</div>
+            <button class="cnt-x" onclick="limpiarProductoConteo()" aria-label="Cambiar producto">×</button>
+          </div>
+          <div class="cnt-sub">1 pack = <span id="cnt-mult-und">?</span> unidades · <span class="mono" id="cnt-sku-display">-</span></div>
+          <div id="cnt-progress-wrap" style="display:none"><span id="cnt-progress-label"></span><div id="cnt-progress-bar"></div><div id="cnt-progress-hint"></div></div>
+        </div>
       </div>
-    </div>
+      <div id="cnt-ean-status" class="cnt-foot"></div>
+      <div id="cnt-hint" class="cnt-foot">Escanea el producto con la cámara o escribe su código.</div>
 
-    <div id="cnt-producto-card" style="display:none;background:var(--ok-bg);border:1.5px solid var(--ok-border);border-radius:var(--r2);padding:14px 16px;margin-bottom:8px">
-      <!-- Fila superior: info producto + botón cerrar -->
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ok);margin-bottom:4px">Producto encontrado</div>
-          <div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="cnt-producto-nombre">-</div>
-          <div style="display:flex;gap:16px">
-            <div>
-              <div style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);margin-bottom:2px">SKU</div>
-              <div style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text)" id="cnt-sku-display">-</div>
-            </div>
-            <div>
-              <div style="font-size:10px;font-weight:600;text-transform:uppercase;color:var(--text3);margin-bottom:2px">1 pack =</div>
-              <div style="font-size:13px;font-weight:600;color:var(--text)"><span id="cnt-mult-und">?</span> und.</div>
+      <div id="cnt-manual-wrap" style="display:none">
+        <div class="cnt-foot" style="padding-top:12px">No está en el catálogo. Búscalo por SKU o nombre:</div>
+        <div class="cnt-grp" style="margin-top:6px">
+          <div class="cnt-rw">
+            <div class="autocomplete-wrap" style="flex:1">
+              <input id="cnt-sku-manual" class="cnt-plain" placeholder="Escribe SKU o nombre..." oninput="acSearchConteo()" autocomplete="off"/>
+              <div class="ac-list" id="ac-cnt"></div>
             </div>
           </div>
         </div>
-        <button onclick="limpiarProductoConteo()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:0 2px;line-height:1;flex-shrink:0">×</button>
       </div>
-      <!-- Progress vs stock removido -->
-      <div id="cnt-progress-wrap" style="display:none"><span id="cnt-progress-label"></span><div id="cnt-progress-bar"></div><div id="cnt-progress-hint"></div></div>
-    </div>
 
-    <div id="cnt-manual-wrap" style="display:none;margin-bottom:8px">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">EAN no encontrado - busca por SKU:</div>
-      <div style="display:flex;gap:6px;align-items:flex-start">
-        <div class="autocomplete-wrap" style="flex:1">
-          <input class="inp" id="cnt-sku-manual" placeholder="Escribe SKU o nombre..." oninput="acSearchConteo()"/>
-          <div class="ac-list" id="ac-cnt"></div>
+      <input type="hidden" id="cnt-sku"/>
+      <input type="hidden" id="cnt-sap"/>
+      <input type="hidden" id="cnt-mult"/>
+      <input type="hidden" id="cnt-producto-h"/>
+
+      <div class="cnt-grp" style="margin-top:22px">
+        <div class="cnt-rw">
+          <span class="cnt-lab">Packs</span>
+          <input class="cnt-val" id="cnt-packs" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()"/>
+          <div class="cnt-stp"><button onclick="cntStep('cnt-packs',-1)" aria-label="Menos">−</button><button onclick="cntStep('cnt-packs',1)" aria-label="Más">+</button></div>
         </div>
-        <button class="cam-btn" title="Escanear" onclick="openScanner('cnt-sku-manual','cnt-producto-h','')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="11"/></svg></button>
-      </div>
-    </div>
-
-    <input type="hidden" id="cnt-sku"/>
-    <input type="hidden" id="cnt-sap"/>
-    <input type="hidden" id="cnt-mult"/>
-    <input type="hidden" id="cnt-producto-h"/>
-
-    <div class="fs-section">Cantidades</div>
-    <div class="form-grid" style="gap:12px;align-items:end;grid-template-columns:1fr 1fr 1fr">
-      <div class="form-field">
-        <div class="form-label">Packs contados <span class="req">*</span></div>
-        <input class="inp" id="cnt-packs" type="number" min="0" placeholder="0"
-          style="font-size:28px;font-weight:600;text-align:center;padding:14px;border-color:var(--accent);border-width:2px;color:var(--text)"
-          oninput="calcTotalConteo()"/>
-      </div>
-      <div class="form-field">
-        <div class="form-label">Unidades sueltas</div>
-        <input class="inp" id="cnt-und-sueltas" type="number" min="0" placeholder="0"
-          style="font-size:28px;font-weight:600;text-align:center;padding:14px;color:var(--text)"
-          oninput="calcTotalConteo()"/>
-      </div>
-      <div class="form-field">
-        <div class="form-label">Unidades totales</div>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:14px;display:flex;align-items:center;justify-content:center;height:64px">
-          <span id="cnt-total-display" style="font-size:28px;font-weight:600;color:var(--text)">0</span>
-          <span style="font-size:13px;color:var(--text3);margin-left:6px;font-weight:500">und.</span>
+        <div class="cnt-rw">
+          <span class="cnt-lab">Sueltas</span>
+          <input class="cnt-val" id="cnt-und-sueltas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()"/>
+          <div class="cnt-stp"><button onclick="cntStep('cnt-und-sueltas',-1)" aria-label="Menos">−</button><button onclick="cntStep('cnt-und-sueltas',1)" aria-label="Más">+</button></div>
+        </div>
+        <div class="cnt-rw cnt-tot">
+          <span class="cnt-lab" style="color:var(--text2)">Total</span>
+          <span class="cnt-totv"><b id="cnt-total-display">0</b> <span>unidades</span></span>
         </div>
       </div>
-    </div>
-    <div id="cnt-err" class="err-msg" style="margin-top:12px"></div>
+      <div id="cnt-err" class="cnt-foot cnt-err"></div>
 
-    <div id="cnt-history-container" style="margin-top:24px;background:var(--surface2);padding:12px 14px;border-radius:var(--r2);border:1px solid var(--border)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)">Historial de sesión</span>
-        <span class="badge badge-neutral" id="cnt-history-badge">0 pendientes</span>
+      <div id="cnt-history-container" class="cnt-pend" style="display:none">
+        <div class="cnt-pend-h"><span>Pendientes de enviar</span><span id="cnt-history-badge">0</span></div>
+        <div id="cnt-history-list"></div>
       </div>
-      <div id="cnt-history-list" style="display:flex;flex-direction:column;gap:6px"></div>
-    </div>
 
+    </div>
   </div>
-  <div class="fs-footer" style="flex-direction:row; gap:10px; justify-content:flex-end;">
-    <button class="btn btn-ghost" onclick="_cerrarFormConteo()" style="min-width:100px; justify-content:center;">Cancelar</button>
-    <button class="btn btn-primary" id="btn-guardar-siguiente" onclick="guardarYContinuar()" style="padding:10px 20px; font-size:14px; box-shadow: 0 4px 12px rgba(123,82,255,.25);">+ Guardar y Escanear Siguiente</button>
+  <div class="fs-footer">
+    <button class="cnt-save" id="btn-guardar-siguiente" onclick="guardarYContinuar()">Guardar y escanear siguiente</button>
   </div>
 </div>
 
