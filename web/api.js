@@ -286,11 +286,15 @@
     };
   }
 
-  API.getSalidas = guard(async function (p) {
+  // Solo trae el rango pedido (por defecto, hoy): el historial completo se pide cuando el usuario elige fechas.
+  API.getSalidas = guard(async function (p, force, rango) {
+    var hoy = hoyISO();
+    var desde = parseFecha(rango && rango.desde) || hoy;
+    var hasta = parseFecha(rango && rango.hasta) || (rango && rango.desde ? hoy : desde);
     var filas = await todas(function () {
-      return filtroSede(sb.from('v_salidas').select('*'), p).order('id');
+      return filtroSede(sb.from('v_salidas').select('*'), p).gte('fecha', desde).lte('fecha', hasta).order('id');
     });
-    return { ok: true, data: filas.map(mapSalida), hoyStr: fmtFecha(hoyISO()) };
+    return { ok: true, data: filas.map(mapSalida), hoyStr: fmtFecha(hoy), rango: { desde: desde, hasta: hasta } };
   });
 
   API.registrarSalida = guard(async function (p, fila) {

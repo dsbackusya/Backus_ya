@@ -3685,7 +3685,7 @@ document.getElementById('inp-p').addEventListener('keydown',function(e){if(e.key
 function doLogout(){
   google.script.run.cerrarSesion(S.token);
   if(_sessionPingInterval){clearInterval(_sessionPingInterval);_sessionPingInterval=null;}
-  S={};DATA={stock:[],salidas:[],entradas:[],mt:[],conteo:[],cancelados:[],oc:[]};
+  S={};DATA={stock:[],salidas:[],entradas:[],mt:[],conteo:[],cancelados:[],oc:[]};window.sal_rango=null;
   PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,conteo:false,validacion:false,oc:false};
   clearSession();
   document.getElementById('s-app').classList.remove('active');
@@ -4502,7 +4502,7 @@ function loadSalidas(){
       if(t !== REQ_TOKEN.salidas) return;
       PAGE_LOADING['salidas']=false; errBox('salidas-root',e.message,'salidas');
     })
-    .getSalidas(S.token, force);
+    .getSalidas(S.token, force, window.sal_rango||null);
 }
 
 function renderSalidas(r){
@@ -4520,7 +4520,7 @@ function renderSalidas(r){
     '</div>'+
     '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
       '<input class="filter-inp" id="sal-busq" placeholder="Buscar SKU, pedido, descripción..." style="width:240px" oninput="filterSalidas()"/>'+
-      _fechaFiltroHTML('sal','filterSalidas')+
+      _fechaFiltroHTML('sal','filterSalidas','salRangoCambio')+
       '<span class="result-count" id="sal-count"></span>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
@@ -4535,7 +4535,7 @@ function renderSalidas(r){
     '</table></div>';
 
   // Estado inicial: activar filtro "Hoy" por defecto
-  _initFiltroFecha('sal','filterSalidas');
+  _initFiltroFecha('sal','filterSalidas',{page:'salidas'});
   filterSalidas();
 }
 
@@ -5035,22 +5035,39 @@ function _parseISO(str){
 }
 // Devuelve el bloque HTML de filtros de fecha reutilizable por prefijo
 // prefix ej: 'ent', 'mt', 'canc' — fnFilter: nombre de la función JS de filtro
-function _fechaFiltroHTML(prefix, fnFilter){
+function _fechaFiltroHTML(prefix, fnFilter, rangoFn){
+  var evt = rangoFn ? 'onchange="'+rangoFn+'()"' : 'oninput="'+fnFilter+'()"';
   return '<button id="'+prefix+'-btn-hoy" onclick="'+prefix+'ToggleHoy()" style="'+
       'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r);border:1px solid var(--accent);'+
       'background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">'+
       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'+
       'Hoy</button>'+
     '<div id="'+prefix+'-rango-wrap" style="display:none;align-items:center;gap:6px;font-size:12px;color:var(--text2)">'+
-      '<input type="date" id="'+prefix+'-fecha-desde" class="inp" style="padding:5px 8px;font-size:12px;width:140px" oninput="'+fnFilter+'()"/>'+
+      '<input type="date" id="'+prefix+'-fecha-desde" class="inp" style="padding:5px 8px;font-size:12px;width:140px" '+evt+'/>'+
       '<span style="color:var(--text3)">→</span>'+
-      '<input type="date" id="'+prefix+'-fecha-hasta" class="inp" style="padding:5px 8px;font-size:12px;width:140px" oninput="'+fnFilter+'()"/>'+
+      '<input type="date" id="'+prefix+'-fecha-hasta" class="inp" style="padding:5px 8px;font-size:12px;width:140px" '+evt+'/>'+
       '<button onclick="'+prefix+'LimpiarFechas()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;line-height:1;padding:0 2px" title="Volver a Hoy">×</button>'+
     '</div>';
 }
 // Inicializa el estado "Hoy activo" y las funciones toggle/limpiar para un prefijo
-function _initFiltroFecha(prefix, fnFilter){
+function _initFiltroFecha(prefix, fnFilter, opts){
+  var pagina = opts && opts.page;
   window[prefix+'_filtroHoy']=true;
+  // Rango remoto: la pantalla solo tiene cargado lo que cubre window[prefix+'_rango'] (null = solo hoy)
+  var recargarSiHabiaRango=function(){
+    if(pagina && window[prefix+'_rango']){ window[prefix+'_rango']=null; reloadPage(pagina); return true; }
+    return false;
+  };
+  window[prefix+'RangoCambio']=function(){
+    var d=(document.getElementById(prefix+'-fecha-desde')||{}).value||'';
+    var h=(document.getElementById(prefix+'-fecha-hasta')||{}).value||'';
+    if(!d&&!h){ if(!recargarSiHabiaRango()) window[fnFilter](); return; }
+    var hoy=_hoyISO();
+    var desde=d||h, hasta=h||(d>hoy?d:hoy);
+    if(desde>hasta){ var t=desde; desde=hasta; hasta=t; }
+    window[prefix+'_rango']={desde:desde,hasta:hasta};
+    reloadPage(pagina);
+  };
   window[prefix+'ToggleHoy']=function(){
     window[prefix+'_filtroHoy']=!window[prefix+'_filtroHoy'];
     var btn=document.getElementById(prefix+'-btn-hoy');
@@ -5062,6 +5079,7 @@ function _initFiltroFecha(prefix, fnFilter){
       var d=document.getElementById(prefix+'-fecha-desde');
       var h=document.getElementById(prefix+'-fecha-hasta');
       if(d)d.value=''; if(h)h.value='';
+      if(recargarSiHabiaRango()) return;
     } else {
       // Rango activo: ghost, mostrar rango
       if(btn){btn.style.background='var(--surface)';btn.style.color='var(--text2)';btn.style.borderColor='var(--border2)';}
@@ -5079,8 +5097,19 @@ function _initFiltroFecha(prefix, fnFilter){
     var d=document.getElementById(prefix+'-fecha-desde');
     var h=document.getElementById(prefix+'-fecha-hasta');
     if(d)d.value=''; if(h)h.value='';
+    if(recargarSiHabiaRango()) return;
     window[fnFilter]();
   };
+  // Tras recargar con un rango elegido, restaurar el estado visual del filtro
+  var rg=window[prefix+'_rango'];
+  if(pagina && rg){
+    window[prefix+'_filtroHoy']=false;
+    var b0=document.getElementById(prefix+'-btn-hoy'), w0=document.getElementById(prefix+'-rango-wrap');
+    if(b0){b0.style.background='var(--surface)';b0.style.color='var(--text2)';b0.style.borderColor='var(--border2)';}
+    if(w0)w0.style.display='flex';
+    var d0=document.getElementById(prefix+'-fecha-desde'), h0=document.getElementById(prefix+'-fecha-hasta');
+    if(d0)d0.value=rg.desde; if(h0)h0.value=rg.hasta;
+  }
 }
 // Aplica filtro de fecha a un array de filas (que tienen campo .fecha en dd/MM/yyyy)
 function _applyFiltroFecha(prefix, rows){
