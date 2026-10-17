@@ -1425,7 +1425,7 @@ function pedAgregarLinea(){
     '<div id="pl-sel-'+id+'" style="font-size:12px;color:var(--text3)">Elige un producto de la lista</div>'+
     '<div style="display:flex;gap:10px">'+
       '<div style="flex:1"><div class="form-label">Pack <span class="req">*</span></div><input class="inp" id="pl-pack-'+id+'" type="number" min="1" step="1" value="1" oninput="pedCambioPack('+id+')"/></div>'+
-      '<div style="flex:1"><div class="form-label">Unidades <span class="req">*</span></div><input class="inp" id="pl-und-'+id+'" type="number" min="1" step="1" oninput="pedCambioUnd('+id+')"/></div>'+
+      '<div style="flex:1"><div class="form-label">Unidades <span class="req">*</span></div><input class="inp" id="pl-und-'+id+'" type="number" readonly tabindex="-1" placeholder="Se calcula solo" style="opacity:.8;cursor:default"/></div>'+
     '</div>';
   document.getElementById('ped-lineas').appendChild(d);
 }
@@ -1439,7 +1439,8 @@ function pedQuitarLinea(id){
 function pedBuscar(id){
   var l=PED.lineas[id]; if(!l) return;
   // Si vuelve a escribir, la selección anterior ya no vale
-  l.sku=''; l.desc=''; l.undManual=false;
+  l.sku=''; l.desc='';
+  document.getElementById('pl-und-'+id).value='';
   document.getElementById('pl-sel-'+id).textContent='Elige un producto de la lista';
   clearTimeout(PED.timers[id]);
   var q=document.getElementById('pl-q-'+id).value.trim();
@@ -1466,22 +1467,20 @@ function pedBuscar(id){
 
 function pedElegir(id,i){
   var x=(PED.res[id]||[])[i], l=PED.lineas[id]; if(!x||!l) return;
-  l.sku=x.sku; l.desc=x.desc; l.factor=x.factor||1; l.undManual=false;
+  l.sku=x.sku; l.desc=x.desc; l.factor=x.factor||1;
   document.getElementById('pl-q-'+id).value=x.desc||x.sku;
   document.getElementById('pl-ac-'+id).classList.remove('open');
   document.getElementById('pl-sel-'+id).textContent='SKU '+x.sku+(x.fuente==='maestro'
     ? ' · '+fmt(x.factor)+' und. por pack (maestro)'
-    : ' · producto del Stock, no está en el maestro: revisa las unidades');
+    : ' · producto del Stock, no está en el maestro: se cuenta 1 unidad por pack');
   pedCambioPack(id);
 }
 
 function pedCambioPack(id){
   var l=PED.lineas[id]; if(!l) return;
-  if(l.undManual) return;
   var p=parseInt(document.getElementById('pl-pack-'+id).value,10);
   document.getElementById('pl-und-'+id).value=(p>0&&l.sku)?p*l.factor:'';
 }
-function pedCambioUnd(id){ var l=PED.lineas[id]; if(l) l.undManual=true; }
 
 function guardarPedidoManual(){
   var err=document.getElementById('ped-err');
