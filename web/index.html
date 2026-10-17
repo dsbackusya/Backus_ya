@@ -3826,7 +3826,7 @@ function renderTopbarActions(name){
   } else if(name==='stock'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirSKUForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Nuevo SKU</span></button>'+btnExport+btnRefresh;
   } else if(name==='salidas'){
-    el.innerHTML='<button class="btn btn-ghost btn-sm" onclick="abrirReemplazarSKU()" style="border-color:var(--accent);color:var(--accent)"><span class="tb-btn-plus">⇄</span><span class="tb-btn-label"> Reemplazar SKU</span></button>'+btnExport+btnRefresh;
+    el.innerHTML=btnExport+btnRefresh;
   } else if(name==='entradas'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirEntrada()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar entrada</span></button>'+btnExport+btnRefresh;
   } else if(name==='mt'){
