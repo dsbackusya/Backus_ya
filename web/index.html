@@ -3696,7 +3696,7 @@ function doLogout(){
   google.script.run.cerrarSesion(S.token);
   if(_sessionPingInterval){clearInterval(_sessionPingInterval);_sessionPingInterval=null;}
   if(window.TadaRealtime) TadaRealtime.detener();
-  S={};DATA={stock:[],salidas:[],entradas:[],mt:[],conteo:[],cancelados:[],oc:[]};window.sal_rango=null;window.ent_rango=null;window.cnt_rango=null;
+  S={};DATA={stock:[],salidas:[],entradas:[],mt:[],conteo:[],cancelados:[],oc:[]};window.sal_rango=null;window.ent_rango=null;window.cnt_rango=null;window.mt_rango=null;window.canc_rango=null;
   PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,conteo:false,validacion:false,oc:false};
   clearSession();
   document.getElementById('s-app').classList.remove('active');
@@ -5579,7 +5579,7 @@ function loadMT(){
       if(t !== REQ_TOKEN.mt) return;
       PAGE_LOADING['mt']=false; errBox('mt-root',e.message,'mt');
     })
-    .getMT(S.token, force);
+    .getMT(S.token, force, window.mt_rango||null);
 }
 
 function renderMT(r){
@@ -5607,7 +5607,7 @@ function renderMT(r){
         '<option value="MERMA">Merma</option>'+
         '<option value="TRASLADO">Traslado</option>'+
       '</select>'+
-      _fechaFiltroHTML('mt','filterMT')+
+      _fechaFiltroHTML('mt','filterMT','mtRangoCambio')+
       '<span class="result-count" id="mt-count"></span>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
@@ -5619,7 +5619,7 @@ function renderMT(r){
       '</tr></thead>'+
       '<tbody id="mt-tbody"></tbody>'+
     '</table></div>';
-  _initFiltroFecha('mt','filterMT');
+  _initFiltroFecha('mt','filterMT',{page:'mt'});
   filterMT();
 }
 
@@ -6026,7 +6026,7 @@ function loadCancelados(){
             if(t !== REQ_TOKEN.cancelados) return;
             errBox('cancelados-root',e2.message,'cancelados');
           })
-          .getCancelados(S.token, true);
+          .getCancelados(S.token, true, window.canc_rango||null);
         return;
       }
       renderCancelados(r);
@@ -6035,7 +6035,7 @@ function loadCancelados(){
       if(t !== REQ_TOKEN.cancelados) return;
       PAGE_LOADING['cancelados']=false;errBox('cancelados-root',e.message,'cancelados');
     })
-    .getCancelados(S.token, force);
+    .getCancelados(S.token, force, window.canc_rango||null);
 }
 
 function renderCancelados(r){
@@ -6059,7 +6059,7 @@ function renderCancelados(r){
     '</div>'+
     '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
       '<input class="filter-inp" id="canc-busq" placeholder="Buscar SKU, pedido, descripción..." style="width:240px" oninput="filterCancelados()"/>'+
-      _fechaFiltroHTML('canc','filterCancelados')+
+      _fechaFiltroHTML('canc','filterCancelados','cancRangoCambio')+
       '<span class="result-count" id="canc-count"></span>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
@@ -6071,7 +6071,7 @@ function renderCancelados(r){
       '</tr></thead>'+
       '<tbody id="cancelados-tbody"></tbody>'+
     '</table></div>';
-  _initFiltroFecha('canc','filterCancelados');
+  _initFiltroFecha('canc','filterCancelados',{page:'cancelados'});
   filterCancelados();
 }
 

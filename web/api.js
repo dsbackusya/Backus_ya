@@ -381,11 +381,13 @@
   });
 
   /* ── CANCELADOS ── */
-  API.getCancelados = guard(async function (p) {
-    var r = await filtroSede(sb.from('cancelados').select('*', { count: 'exact' }), p)
-      .order('id', { ascending: false }).limit(500);
-    if (r.error) throw r.error;
-    var data = r.data.slice().reverse().map(function (x) {
+  // Solo trae el rango pedido (por defecto, hoy)
+  API.getCancelados = guard(async function (p, force, rango) {
+    var rg = rangoPantalla(rango);
+    var filas = await todas(function () {
+      return filtroSede(sb.from('cancelados').select('*'), p).gte('fecha', rg.desde).lte('fecha', rg.hasta).order('id');
+    });
+    var data = filas.map(function (x) {
       return {
         _row: x.id, fecha: fmtFecha(x.fecha), hora: fmtHora(x.hora), sku: str(x.sku), nroPedido: str(x.nro_pedido),
         desc: str(x.descripcion), pack: num(x.pack), unidad: num(x.unidad), marca: str(x.marca),
@@ -393,7 +395,7 @@
         revision: str(x.revision), motivo: str(x.motivo)
       };
     });
-    return { ok: true, data: data, total: r.count };
+    return { ok: true, data: data, rango: rg };
   });
 
   /* ── ENTRADAS ── */
@@ -451,12 +453,15 @@
   });
 
   /* ── M-T ── */
-  API.getMT = guard(async function (p) {
+  // Solo trae el rango pedido (por defecto, hoy)
+  API.getMT = guard(async function (p, force, rango) {
+    var rg = rangoPantalla(rango);
     var filas = await todas(function () {
-      return filtroSede(sb.from('v_mt').select('*'), p).order('id');
+      return filtroSede(sb.from('v_mt').select('*'), p).gte('fecha', rg.desde).lte('fecha', rg.hasta).order('id');
     });
     return {
       ok: true,
+      rango: rg,
       data: filas.map(function (r) {
         return {
           _row: r.id, fecha: fmtFecha(r.fecha), sku: str(r.sku), desc: str(r.descripcion), cant: num(r.cantidad),
