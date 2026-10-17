@@ -266,6 +266,18 @@
     return { ok: true, results: results };
   });
 
+  // Qué SKUs de una lista existen en el Stock de la sede (devuelve {sku: descripción}); lo usa la lectura de la OC en PDF.
+  API.skusEnStock = guard(async function (p, skus) {
+    var sede = exigirSede(p, null);
+    var lista = (skus || []).map(str).filter(Boolean);
+    if (!lista.length) return { ok: true, data: {} };
+    var r = await sb.from('sede_productos').select('sku,descripcion').eq('sede_id', sede).in('sku', lista);
+    if (r.error) throw r.error;
+    var m = {};
+    r.data.forEach(function (x) { m[str(x.sku)] = str(x.descripcion); });
+    return { ok: true, data: m };
+  });
+
   API.getMaestroCompleto = guard(async function () {
     var filas = await todas(function () { return sb.from('maestro_sku').select('*').order('sku'); });
     return {

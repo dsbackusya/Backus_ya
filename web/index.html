@@ -432,7 +432,7 @@ window.addEventListener('load', function(){
       </div>
     </div>
 
-    <div class="fs-section">Archivo Excel (OC)</div>
+    <div class="fs-section">Archivo de la OC (Excel o PDF)</div>
     <div id="drop-zone" style="border:2px dashed var(--border2);border-radius:var(--r2);padding:36px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2)"
          onclick="document.getElementById('arch-file-inp').click()"
          ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-s)'"
@@ -440,9 +440,10 @@ window.addEventListener('load', function(){
          ondrop="handleDrop(event)">
       <div style="font-size:28px;margin-bottom:8px">📂</div>
       <div style="font-weight:600;color:var(--text);margin-bottom:4px">Arrastra tu archivo aquí</div>
-      <div style="font-size:12px;color:var(--text3)">o haz click para seleccionar · .xlsx / .xls</div>
-      <input type="file" id="arch-file-inp" accept=".xlsx,.xls" style="display:none" onchange="handleFileSelect(this.files[0])"/>
+      <div style="font-size:12px;color:var(--text3)">o haz click para seleccionar · .xlsx / .xls / .pdf</div>
+      <input type="file" id="arch-file-inp" accept=".xlsx,.xls,.pdf,application/pdf" style="display:none" onchange="handleFileSelect(this.files[0])"/>
     </div>
+    <div id="arch-ocr-estado" style="display:none;margin-top:12px;font-size:13px;color:var(--text2)"></div>
 
     <!-- Preview tabla -->
     <div id="arch-preview" class="hidden" style="margin-top:20px">

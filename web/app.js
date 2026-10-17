@@ -2037,7 +2037,9 @@ function handleFileSelect(file){
   if(!file)return;
   var err=document.getElementById('arch-err');
   err.textContent='';
-  if(!file.name.match(/\.xlsx?$/i)){err.textContent='Solo se aceptan archivos .xlsx o .xls';return;}
+  _archEstado('');
+  if(/\.pdf$/i.test(file.name) || file.type==='application/pdf'){ leerPDFdeOC(file); return; }
+  if(!file.name.match(/\.xlsx?$/i)){err.textContent='Solo se aceptan archivos .xlsx, .xls o .pdf';return;}
 
   var reader=new FileReader();
   reader.onload=function(e){
@@ -2070,11 +2072,18 @@ function renderPreview(){
   document.getElementById('arch-preview-title').textContent=
     'Vista previa — '+ARCH_ROWS.length+' producto(s) encontrados';
   var tbody=ARCH_ROWS.map(function(r){
+    // Las filas leídas de un PDF se pueden corregir aquí (SKU y cantidad); las de Excel se muestran tal cual
+    var skuCell=r.editable
+      ? '<input class="inp" value="'+esc(r.sku)+'" onchange="editArch('+r.idx+',\'sku\',this.value)" style="width:112px;padding:4px 8px;font-family:var(--font-mono)"/>'
+      : esc(r.sku);
+    var cantCell=r.editable
+      ? '<input class="inp" type="number" min="0" value="'+esc(r.cant)+'" onchange="editArch('+r.idx+',\'cant\',this.value)" style="width:84px;padding:4px 8px;text-align:right;font-weight:600"/>'
+      : fmt(r.cant);
     return '<tr id="prev-row-'+r.idx+'">'+
       '<td class="mono" style="font-size:11px;color:var(--text3)">'+r.idx+'</td>'+
-      '<td class="mono">'+r.sku+'</td>'+
-      '<td class="td-desc">'+r.desc+'</td>'+
-      '<td class="r" style="font-weight:600">'+fmt(r.cant)+'</td>'+
+      '<td class="mono">'+skuCell+'</td>'+
+      '<td class="td-desc">'+esc(r.desc)+(r.aviso?'<div style="font-size:11px;color:var(--warn);white-space:normal">'+esc(r.aviso)+'</div>':'')+'</td>'+
+      '<td class="r" style="font-weight:600">'+cantCell+'</td>'+
       '<td class="c"><input type="checkbox" '+(r.incluir?'checked':'')+ 
         ' onchange="toggleArch('+r.idx+',this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"/></td>'+
     '</tr>';
@@ -2088,8 +2097,160 @@ function toggleArch(idx,val){
   if(row)row.incluir=val;
 }
 
+/* ── LEER LA OC DESDE UN PDF ──
+   Los PDF de la OC son imágenes (sin texto), así que se leen con OCR en el propio navegador
+   (pdf.js dibuja cada página y Tesseract la lee). Todo se descarga solo la primera vez que se usa.
+   El resultado va a la misma vista previa que el Excel, donde se puede corregir antes de importar. */
+function _archEstado(txt){
+  var el=document.getElementById('arch-ocr-estado'); if(!el) return;
+  el.style.display=txt?'block':'none';
+  el.textContent=txt||'';
+}
+function _ocrScript(src){
+  return new Promise(function(ok,ko){
+    var s=document.createElement('script'); s.src=src;
+    s.onload=ok; s.onerror=function(){ ko(new Error('No se pudo cargar '+src)); };
+    document.head.appendChild(s);
+  });
+}
+var _ocrLibs=null;
+function _ocrCargarLibs(){
+  if(!_ocrLibs){
+    _ocrLibs=Promise.all([_ocrScript('vendor/pdfjs/pdf.min.js'),_ocrScript('vendor/ocr/tesseract.min.js')]).then(function(){
+      pdfjsLib.GlobalWorkerOptions.workerSrc='vendor/pdfjs/pdf.worker.min.js';
+    });
+  }
+  return _ocrLibs.catch(function(e){ _ocrLibs=null; throw e; });
+}
+
+// Convierte el texto leído por OCR (todas las páginas) en { oc, items:[{linea,sku,desc,cant,aviso}] }
+function _parsearOCTexto(paginas){
+  var oc='';
+  var items=[], ultimaLinea=0;
+  var reItem=/^[\s|~_.\-]*(\d{1,3})\s+(\d{6,10})\s+(.*?)\s*(\d{2}\/\d{2}\/\d{4})\s+(\d[\d.]*,\d{2}|\d+)\s+[A-Za-z]{2,4}\b/;
+  var reItemFlojo=/^[\s|~_.\-]*(\d{1,3})\s+(\d{6,10})\s+(.*)$/;
+  var reFinTabla=/Monto del|subtotal|^\s*Moneda|Impuesto/i;
+  function limpiar(s){ return String(s||'').replace(/[~_|]+/g,' ').replace(/\s+/g,' ').trim(); }
+  paginas.forEach(function(texto){
+    var lineas=String(texto||'').split(/\r?\n/);
+    if(!oc){
+      var m=String(texto).match(/[O0]C-\d{5,}(?:-\d+)?/);
+      if(m) oc=m[0].replace(/^0C/,'OC');
+    }
+    var dentro=false, actual=null;
+    lineas.forEach(function(l){
+      if(!dentro){ if(/de\s+l[ií]nea/i.test(l)) dentro=true; return; }
+      if(reFinTabla.test(l)){ dentro=false; actual=null; return; }
+      var m=l.match(reItem);
+      if(m){
+        var cant=Number(String(m[5]).replace(/\./g,'').replace(',','.'));
+        actual={linea:Number(m[1]),sku:m[2],desc:limpiar(m[3]),cant:cant,aviso:''};
+        items.push(actual); ultimaLinea=Math.max(ultimaLinea,actual.linea); return;
+      }
+      var f=l.match(reItemFlojo);
+      if(f){
+        // Línea con código pero sin cantidad legible: se muestra para corregirla a mano
+        actual={linea:Number(f[1]),sku:f[2],desc:limpiar(f[3]),cant:0,aviso:'No se pudo leer la cantidad: escríbela'};
+        items.push(actual); ultimaLinea=Math.max(ultimaLinea,actual.linea); return;
+      }
+      // Continuación de la descripción (la descripción ocupa varias líneas en el PDF)
+      var t=limpiar(l);
+      if(actual && t) actual.desc=(actual.desc+' '+t).trim();
+    });
+  });
+  // Si faltan números de línea (1..N seguidos), alguna fila no se leyó
+  var vistas={}; items.forEach(function(it){ vistas[it.linea]=true; });
+  var faltan=[];
+  for(var n=1;n<=ultimaLinea;n++){ if(!vistas[n]) faltan.push(n); }
+  return {oc:oc.replace(/(OC-\d+)-\d+$/,'$1'), items:items, faltan:faltan};
+}
+
+async function leerPDFdeOC(file){
+  var err=document.getElementById('arch-err');
+  var worker=null;
+  try{
+    _archEstado('Preparando el lector de PDF… (la primera vez descarga unos 7 MB)');
+    await _ocrCargarLibs();
+    var buf=await file.arrayBuffer();
+    var pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+    var base=new URL('vendor/ocr/',location.href).href;
+    worker=await Tesseract.createWorker('eng',1,{workerPath:base+'worker.min.js',corePath:base,langPath:base,gzip:true});
+    var paginas=[];
+    for(var i=1;i<=pdf.numPages;i++){
+      _archEstado('Leyendo el PDF… página '+i+' de '+pdf.numPages);
+      var pg=await pdf.getPage(i);
+      var vp=pg.getViewport({scale:2.5});
+      var cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height;
+      await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+      var res=await worker.recognize(cv);
+      paginas.push(res.data.text||'');
+    }
+    await worker.terminate(); worker=null;
+
+    var r=_parsearOCTexto(paginas);
+    if(!r.items.length){
+      _archEstado('');
+      err.textContent='No se encontraron productos en el PDF. Si es otro formato, usa el Excel o la carga manual.';
+      return;
+    }
+    ARCH_ROWS=r.items.map(function(it,i){
+      return {idx:i+1,sku:it.sku,desc:it.desc,cant:it.cant,incluir:it.cant>0,editable:true,aviso:it.aviso,descOCR:it.desc};
+    });
+    var ocEl=document.getElementById('arch-oc');
+    if(r.oc && ocEl && !ocEl.value.trim()) ocEl.value=r.oc;
+
+    // Verificar cada SKU contra el Stock de la sede y usar su descripción oficial
+    _archEstado('Comprobando los SKU con tu Stock…');
+    google.script.run
+      .withSuccessHandler(function(s){
+        var mapa=(s&&s.ok&&s.data)||{};
+        ARCH_ROWS.forEach(function(row){ _archAplicarStock(row,mapa); });
+        _archEstado('PDF leído'+(r.oc?' · '+r.oc:'')+' · revisa la vista previa antes de importar'+
+          (r.faltan.length?' · ⚠ no se leyeron las líneas: '+r.faltan.join(', '):''));
+        renderPreview();
+      })
+      .withFailureHandler(function(){
+        _archEstado('PDF leído · no se pudo comprobar el Stock, revisa los SKU a mano');
+        renderPreview();
+      })
+      .skusEnStock(S.token, ARCH_ROWS.map(function(x){return x.sku;}));
+  }catch(ex){
+    if(worker){ try{ await worker.terminate(); }catch(e){} }
+    _archEstado('');
+    err.textContent='No se pudo leer el PDF: '+(ex&&ex.message?ex.message:ex)+'. Usa el Excel o la carga manual.';
+  }
+}
+
+function _archAplicarStock(row,mapa){
+  var d=mapa[String(row.sku).trim()];
+  if(d){
+    row.desc=d; row.aviso=row.cant>0?'':row.aviso; row.noStock=false;
+    if(row.cant>0) row.incluir=true;
+  } else {
+    row.desc=row.descOCR||row.desc; row.noStock=true;
+    row.aviso='No está en el Stock de tu sede: corrige el SKU, o marca ¿Incluir? si es un producto nuevo';
+    row.incluir=false;
+  }
+}
+
+function editArch(idx,campo,valor){
+  var row=ARCH_ROWS.find(function(r){return r.idx===idx;}); if(!row) return;
+  if(campo==='cant'){
+    var n=Math.floor(Number(valor)); row.cant=(n>=0)?n:0;
+    if(row.cant>0 && !row.noStock) row.incluir=true;
+    if(row.cant>0 && row.aviso && /cantidad/i.test(row.aviso)) row.aviso='';
+    renderPreview(); return;
+  }
+  row.sku=String(valor||'').trim();
+  google.script.run
+    .withSuccessHandler(function(s){ _archAplicarStock(row,(s&&s.ok&&s.data)||{}); renderPreview(); })
+    .withFailureHandler(function(){ renderPreview(); })
+    .skusEnStock(S.token,[row.sku]);
+}
+
 function clearFile(){
   ARCH_ROWS=[];
+  _archEstado('');
   document.getElementById('arch-file-inp').value='';
   document.getElementById('arch-preview').classList.add('hidden');
   document.getElementById('arch-err').textContent='';
