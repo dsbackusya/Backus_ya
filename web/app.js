@@ -288,6 +288,7 @@ function navTo(name,btn){
   document.getElementById('pg-title').textContent=PAGE_TITLES[name]||name;
   renderTopbarActions(name);
   if(name==='cancelados'){PAGE_LOADED[name]=false;} // siempre fresco al entrar
+  if(name==='validacion' && PAGE_LOADED[name]) _valFechaHoy();
   if(!PAGE_LOADED[name]){PAGE_LOADED[name]=true;loadPage(name);}
   // Sync bottom nav + cerrar mobile menu si está abierto
   syncBottomNav(name);
@@ -5173,11 +5174,21 @@ var VAL_MARCA='';    // filtro por marca
 var VAL_MAESTRO={};  // mapa lovis→precio para costo desvíos
 var VAL_TREE_SEL={cat:null,marca:null}; // selección activa del árbol de descomposición
 
+// Fecha de hoy en Lima (YYYY-MM-DD), sin depender de la zona horaria del teléfono
+function _hoyLima(){
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+}
+var VAL_FECHA_MANUAL=false; // true si el usuario eligió otra fecha a mano
 function initValidacion(){
-  // Fecha default: ayer
-  var ayer=new Date(); ayer.setDate(ayer.getDate()-1);
-  VAL_FECHA=ayer.toISOString().split('T')[0];
+  // Fecha por defecto: hoy. Después se puede cambiar, pero al volver a entrar aparece la actual.
+  VAL_FECHA=_hoyLima(); VAL_FECHA_MANUAL=false;
   renderValidacionShell();
+}
+// Al volver a la pantalla (o si la app quedó abierta de un día para otro) la fecha vuelve a hoy, salvo que se haya elegido otra
+function _valFechaHoy(){
+  if(VAL_FECHA_MANUAL) return;
+  var hoy=_hoyLima(), el=document.getElementById('val-fecha');
+  if(el && VAL_FECHA!==hoy){ VAL_FECHA=hoy; el.value=hoy; }
 }
 
 function renderValidacionShell(){
@@ -5216,7 +5227,7 @@ function renderValidacionShell(){
     '</div>'+
     '<div id="val-body"></div>'+
     '</div>';
-  document.getElementById('val-fecha').addEventListener('change',function(e){VAL_FECHA=e.target.value;});
+  document.getElementById('val-fecha').addEventListener('change',function(e){VAL_FECHA=e.target.value;VAL_FECHA_MANUAL=(VAL_FECHA!==_hoyLima());});
   VAL_SEARCH=''; VAL_MARCA='';
   renderValBody();
 }
