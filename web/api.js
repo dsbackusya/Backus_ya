@@ -6,7 +6,7 @@
 
   var CFG = window.TADA_CONFIG;
   var sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, storage: window.sessionStorage }
+    auth: { persistSession: true, autoRefreshToken: true, storage: window.localStorage }
   });
   window.tadaSupabase = sb;
 
@@ -190,6 +190,8 @@
   API.pingSession = async function () {
     try {
       var r = await sb.auth.getUser();
+      // Sin red (o servidor caído) no es sesión vencida: se propaga para que la app no cierre la sesión
+      if (r.error && (r.error.name === 'AuthRetryableFetchError' || !r.error.status || r.error.status >= 500)) throw r.error;
       if (r.error || !r.data.user) return { ok: false, expired: true };
       var p = await contexto();
       if (!p) return { ok: false, expired: true };

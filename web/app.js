@@ -134,24 +134,24 @@ var _STOCK_ESTADO_FILTRO = ''; // '', 'con', 'sin', 'neg'
 
 
 /* ── SESSION STORAGE ──
-   sessionStorage únicamente — el token no persiste al cerrar el navegador.
-   Clave versionada (_v2) para evitar colisiones con versiones anteriores. */
+   localStorage: la sesión sobrevive al cerrar la app o el navegador (celular/PWA) y solo termina
+   con "Cerrar sesión" o si el servidor la invalida. Clave versionada (_v2). */
 var _SESSION_KEY = 'ds_session_v2';
 
 function saveSession(data){
-  try{sessionStorage.setItem(_SESSION_KEY, JSON.stringify(data));}catch(e){}
+  try{localStorage.setItem(_SESSION_KEY, JSON.stringify(data));}catch(e){}
 }
 function loadSession(){
   try{
-    var ss = sessionStorage.getItem(_SESSION_KEY);
+    var ss = localStorage.getItem(_SESSION_KEY);
     if(ss) return JSON.parse(ss);
   }catch(e){}
   return null;
 }
 function clearSession(){
-  try{sessionStorage.removeItem(_SESSION_KEY);}catch(e){}
-  // Limpiar claves legacy de versiones anteriores (v1 y localStorage)
   try{localStorage.removeItem(_SESSION_KEY);}catch(e){}
+  // Limpiar claves legacy de versiones anteriores
+  try{sessionStorage.removeItem(_SESSION_KEY);}catch(e){}
   try{sessionStorage.removeItem('ds_session');}catch(e){}
   try{localStorage.removeItem('ds_session');}catch(e){}
 }
@@ -234,6 +234,7 @@ function initApp(){
   if(av)av.textContent=sede.charAt(0).toUpperCase();
   _startSessionPing();
   _salVivoIniciar();
+  _backIniciar();
   var esAdmin=S.rol==='admin'||S.rol==='invitado';
   document.querySelectorAll('.sb-store-only').forEach(function(el){ el.style.display=esAdmin?'none':''; });
   document.querySelectorAll('.sb-admin-only').forEach(function(el){ el.style.display=esAdmin?'':'none'; });
@@ -266,7 +267,11 @@ var PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:fal
       S=saved;
       showLoadingAndInit(true);
     })
-    .withFailureHandler(function(){clearSession();backToLogin();})
+    .withFailureHandler(function(){
+      // Sin red al abrir la app: se conserva la sesión (los conteos pendientes siguen en cola)
+      S=saved;
+      showLoadingAndInit(true);
+    })
     .pingSession(saved.token);
 })();
 
@@ -4846,6 +4851,73 @@ function toggleMobileMenu(force){
   var open = typeof force==='boolean' ? force : !sb.classList.contains('mobile-open');
   sb.classList.toggle('mobile-open', open);
   bd.classList.toggle('show', open);
+}
+/* ── BOTÓN "ATRÁS" DEL CELULAR ──
+   Sin esto, "atrás" sacaba al usuario de la app. Ahora: primero cierra lo que esté abierto
+   (modal, formulario como Conteo, menú), luego vuelve a la pantalla inicial y solo sale con
+   un segundo "atrás" seguido. */
+var _backArmado = false, _backSalir = false, _backAviso = false;
+function _backInicio(){ return (S.rol==='admin'||S.rol==='invitado') ? 'dashboard' : 'stock'; }
+function _backArmar(){
+  try{ history.pushState({tada:'app'}, '', location.href); }catch(e){}
+}
+function _backCapa(){
+  var mods = Array.prototype.filter.call(document.querySelectorAll('[id^="modal-"]'), function(el){
+    return el.style.position==='fixed' && el.style.display && el.style.display!=='none';
+  });
+  if(mods.length){
+    mods.sort(function(a,b){ return (parseInt(b.style.zIndex,10)||0)-(parseInt(a.style.zIndex,10)||0); });
+    return {tipo:'modal', el:mods[0]};
+  }
+  var fs = document.querySelectorAll('.fscreen.open');
+  if(fs.length) return {tipo:'fs', el:fs[fs.length-1]};
+  var sb = document.getElementById('sidebar');
+  if(sb && sb.classList.contains('mobile-open')) return {tipo:'menu'};
+  return null;
+}
+function _backCerrarModal(el){
+  var f = {'modal-confirm':'_confirmCancel','modal-input':'_modalInputCancel','modal-cancelar':'closeModalCancelar',
+    'modal-anular-canc':'anularCancCerrar','modal-mov':'cerrarModalMov','modal-reemplazar-sku':'cerrarModalRSKU',
+    'modal-editar-sku-fila':'cerrarModalESKU'}[el.id];
+  if(f && typeof window[f]==='function') window[f]();
+  if(el.style.display!=='none') el.style.display='none';
+}
+function _backPop(){
+  if(_backSalir || !document.getElementById('s-app').classList.contains('active')){ return; }
+  var capa = _backCapa();
+  if(capa){
+    if(capa.tipo==='modal') _backCerrarModal(capa.el);
+    else if(capa.tipo==='fs') closeFS(capa.el.id);
+    else toggleMobileMenu(false);
+    _backArmar(); return;
+  }
+  var home = _backInicio();
+  if(CURRENT_PAGE && CURRENT_PAGE!==home){
+    navTo(home, document.getElementById('nav-'+home));
+    _backArmar(); return;
+  }
+  if(!_backAviso){
+    _backAviso = true;
+    showToast('Presiona atrás otra vez para salir','info');
+    setTimeout(function(){ _backAviso=false; }, 2200);
+    _backArmar(); return;
+  }
+  _backSalir = true;
+  history.back();
+}
+function _backIniciar(){
+  if(_backArmado) return;
+  _backArmado = true;
+  // Se arma con el primer toque: el navegador ignora las entradas de historial creadas sin interacción
+  var armar = function(){
+    document.removeEventListener('pointerdown', armar, true);
+    document.removeEventListener('keydown', armar, true);
+    try{ history.replaceState({tada:'base'}, '', location.href); }catch(e){}
+    _backArmar();
+    window.addEventListener('popstate', _backPop);
+  };
+  document.addEventListener('pointerdown', armar, true);
+  document.addEventListener('keydown', armar, true);
 }
 function navToMobile(name){
   toggleMobileMenu(false);
