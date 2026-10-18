@@ -2426,107 +2426,6 @@ select.filter-select option{ background:var(--surface); color:var(--text); }
 /* Toggle interno Manual/Subir archivo */
 #tab-archivo{ color:var(--text3) !important; }
 
-/* ═════════════════════════════════════════════════════════════
-   LOADER «Actualizando» — adaptado de Uiverse.io by dexter-st
-   Box-shadow glow rotativo + letras con animación escalonada.
-   Colores Ta·Da Purple.
-   ════════════════════════════════════════════════════════════ */
-.loader-wrapper{
-  position:relative;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:170px;
-  height:170px;
-  font-family:var(--font-ui);
-  font-size:15px;
-  font-weight:500;
-  color:var(--text);
-  border-radius:50%;
-  background-color:transparent;
-  user-select:none;
-  margin:8px auto;
-  letter-spacing:.02em;
-}
-.loader{
-  position:absolute;
-  top:0; left:0;
-  width:100%;
-  aspect-ratio:1 / 1;
-  border-radius:50%;
-  background-color:transparent;
-  animation:loader-rotate 2s linear infinite;
-  z-index:0;
-  pointer-events:none;
-}
-@keyframes loader-rotate{
-  0%{
-    transform:rotate(90deg);
-    box-shadow:
-      0 8px 16px 0 rgba(255,255,255,.85) inset,
-      0 16px 24px 0 #A392EE inset,
-      0 50px 50px 0 #4B2BB8 inset;
-  }
-  50%{
-    transform:rotate(270deg);
-    box-shadow:
-      0 8px 16px 0 rgba(255,255,255,.85) inset,
-      0 16px 8px 0 #C770FF inset,
-      0 34px 50px 0 #2E0E6B inset;
-  }
-  100%{
-    transform:rotate(450deg);
-    box-shadow:
-      0 8px 16px 0 rgba(255,255,255,.85) inset,
-      0 16px 24px 0 #A392EE inset,
-      0 50px 50px 0 #4B2BB8 inset;
-  }
-}
-.loader-letter{
-  display:inline-block;
-  opacity:.4;
-  transform:translateY(0);
-  animation:loader-letter-anim 2s infinite;
-  z-index:1;
-  position:relative;
-}
-.loader-letter:nth-child(1){ animation-delay:0s; }
-.loader-letter:nth-child(2){ animation-delay:.08s; }
-.loader-letter:nth-child(3){ animation-delay:.16s; }
-.loader-letter:nth-child(4){ animation-delay:.24s; }
-.loader-letter:nth-child(5){ animation-delay:.32s; }
-.loader-letter:nth-child(6){ animation-delay:.40s; }
-.loader-letter:nth-child(7){ animation-delay:.48s; }
-.loader-letter:nth-child(8){ animation-delay:.56s; }
-.loader-letter:nth-child(9){ animation-delay:.64s; }
-.loader-letter:nth-child(10){ animation-delay:.72s; }
-.loader-letter:nth-child(11){ animation-delay:.80s; }
-.loader-letter:nth-child(12){ animation-delay:.88s; }
-@keyframes loader-letter-anim{
-  0%,100%{ opacity:.4; transform:translateY(0); }
-  20%{ opacity:1; transform:scale(1.15); }
-  40%{ opacity:.7; transform:translateY(0); }
-}
-
-/* Ajuste mobile: loader más pequeño + animación más lenta */
-@media (max-width:480px){
-  .loader-wrapper{ width:140px; height:140px; font-size:13px; }
-  .loader{ animation-duration:3.4s !important; }
-  .loader-letter{ animation-duration:3.4s !important; }
-  .loader-letter:nth-child(1){ animation-delay:0s !important; }
-  .loader-letter:nth-child(2){ animation-delay:.14s !important; }
-  .loader-letter:nth-child(3){ animation-delay:.28s !important; }
-  .loader-letter:nth-child(4){ animation-delay:.42s !important; }
-  .loader-letter:nth-child(5){ animation-delay:.56s !important; }
-  .loader-letter:nth-child(6){ animation-delay:.70s !important; }
-  .loader-letter:nth-child(7){ animation-delay:.84s !important; }
-  .loader-letter:nth-child(8){ animation-delay:.98s !important; }
-  .loader-letter:nth-child(9){ animation-delay:1.12s !important; }
-  .loader-letter:nth-child(10){ animation-delay:1.26s !important; }
-  .loader-letter:nth-child(11){ animation-delay:1.40s !important; }
-  .loader-letter:nth-child(12){ animation-delay:1.54s !important; }
-}
-
 /* Skeleton / loading */
 .skeleton, .shimmer{ background:linear-gradient(90deg, var(--surface2) 0%, var(--surface3) 50%, var(--surface2) 100%) !important; }
 
@@ -3329,3 +3228,22 @@ input.filter-inp:focus{
 .bn-item.active{background:rgba(148,128,232,.16) !important;color:var(--accent2) !important;box-shadow:inset 0 0 0 1px rgba(148,128,232,.34) !important}
 .fh-btn.on,.fh-btn.on:hover,.tbl-pages button.active{box-shadow:none !important}
 .topbar-actions .btn-primary,.fs-footer .btn-primary,.sku-foot .btn-primary{box-shadow:none !important}
+
+/* ══════════════════════════════════════════════════════════════
+   LOADER — anillo lavanda con texto (Cargando / Actualizando)
+   ══════════════════════════════════════════════════════════════ */
+.loading.ld{flex-direction:column;gap:16px;padding:90px 20px;min-height:260px;letter-spacing:0;text-transform:none}
+.ld-ring,.spinner{
+  width:44px;height:44px;border-radius:50%;flex:none;
+  border:3px solid rgba(148,128,232,.16);border-top-color:#B7A8F3;
+  animation:ldspin .9s cubic-bezier(.5,.1,.5,.9) infinite;
+}
+.spinner{width:16px;height:16px;border-width:2px}
+@keyframes ldspin{to{transform:rotate(360deg)}}
+.ld-txt{font:500 13px 'DM Sans',sans-serif;color:var(--text2);letter-spacing:.01em}
+.ld-dots{display:inline-block;width:1.2em;text-align:left}
+.ld-dots::after{content:'';animation:lddots 1.4s steps(4,end) infinite}
+@keyframes lddots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+.ld-mini{display:flex;align-items:center;gap:9px;padding:12px;font-size:12px;color:var(--text3)}
+.ld-mini .ld-ring{width:14px;height:14px;border-width:2px}
+@media (prefers-reduced-motion:reduce){.ld-ring,.spinner{animation-duration:2.4s}.ld-dots::after{animation:none;content:'…'}}

@@ -156,6 +156,16 @@ var EDIT_ROW=null;
 var _STOCK_ESTADO_FILTRO = ''; // '', 'con', 'sin', 'neg'
 
 
+/* ── LOADER — anillo lavanda + texto (único para todas las pantallas) ── */
+var _LD_NOM={dashboard:'dashboard',stock:'stock',entradas:'entradas',salidas:'salidas',mt:'mermas y traslados',cancelados:'cancelados',maestro:'maestro',conteo:'conteo',validacion:'validación'};
+function LD(txt){
+  return '<div class="loading ld"><div class="ld-ring"></div><div class="ld-txt">'+esc(txt)+'<span class="ld-dots"></span></div></div>';
+}
+
+function LDm(txt){
+  return '<div class="ld-mini"><span class="ld-ring"></span>'+esc(txt)+'<span class="ld-dots"></span></div>';
+}
+
 /* ── SESSION STORAGE ──
    localStorage: la sesión sobrevive al cerrar la app o el navegador (celular/PWA) y solo termina
    con "Cerrar sesión" o si el servidor la invalida. Clave versionada (_v2). */
@@ -385,7 +395,7 @@ function reloadPage(name){
   if(name==='cancelados'){
     skRoot.innerHTML=skeletonCancelados();
   } else {
-    skRoot.innerHTML='<div class="loading"><div class="loader-wrapper"><span class="loader-letter">A</span><span class="loader-letter">c</span><span class="loader-letter">t</span><span class="loader-letter">u</span><span class="loader-letter">a</span><span class="loader-letter">l</span><span class="loader-letter">i</span><span class="loader-letter">z</span><span class="loader-letter">a</span><span class="loader-letter">n</span><span class="loader-letter">d</span><span class="loader-letter">o</span><div class="loader"></div></div></div>';
+    skRoot.innerHTML=LD('Actualizando '+(_LD_NOM[name]||name));
   }
   loadPage(name);
 }
@@ -4383,7 +4393,7 @@ function reloadConteoForce(){
   PAGE_LOADING['conteo']=true;
   _FORCE_REFRESH['conteo']=true; // bypass caché del servidor
   var root=document.getElementById('conteo-root');
-  if(root) root.innerHTML='<div class="loading"><div class="loader-wrapper"><span class="loader-letter">A</span><span class="loader-letter">c</span><span class="loader-letter">t</span><span class="loader-letter">u</span><span class="loader-letter">a</span><span class="loader-letter">l</span><span class="loader-letter">i</span><span class="loader-letter">z</span><span class="loader-letter">a</span><span class="loader-letter">n</span><span class="loader-letter">d</span><span class="loader-letter">o</span><div class="loader"></div></div></div>';
+  if(root) root.innerHTML=LD('Actualizando conteo');
   loadConteo();
 }
 
@@ -5350,7 +5360,7 @@ function correrValidacion(force){
   VAL_FECHA=fecha;
   var st=document.getElementById('val-status');
   st.textContent='Calculando...';
-  document.getElementById('val-body').innerHTML='<div class="loading"><div class="spinner"></div>Cruzando datos...</div>';
+  document.getElementById('val-body').innerHTML=LD('Cruzando datos');
   // Cargar maestro (precios) y validación en paralelo
   var _maestroOk=false, _valOk=false, _maestroData=null, _valData=null;
   function _tryRender(){
@@ -6176,7 +6186,7 @@ function _isoToDDMMYYYY(iso){
 
 function loadRecepcionesPorTienda(fechaISO){
   var grid=document.getElementById('oc-recep-grid');
-  if(grid) grid.innerHTML='<div class="stat-card"><div class="stat-label">Cargando...</div></div>';
+  if(grid) grid.innerHTML=LD('Cargando');
   google.script.run
     .withSuccessHandler(function(r){DASH.rec=r;renderRecepcionesPorTienda(r);})
     .withFailureHandler(function(e){
@@ -6227,7 +6237,7 @@ function renderRecepcionesPorTienda(r){
 function abrirDetalleEntradaOC(tienda, oc){
   document.getElementById('detalle-oc-title').textContent='OC '+oc;
   document.getElementById('detalle-oc-subtitle').textContent=tienda+' · cargando...';
-  document.getElementById('detalle-oc-body').innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:12px">Cargando...</div>';
+  document.getElementById('detalle-oc-body').innerHTML=LD('Cargando detalle');
   document.getElementById('btn-detalle-oc-export').style.display='none';
   document.getElementById('modal-detalle-oc').style.display='flex';
   google.script.run
@@ -6243,7 +6253,7 @@ function abrirDetalleEntradaOC(tienda, oc){
 function abrirDetalleEntradaOCGlobal(oc){
   document.getElementById('detalle-oc-title').textContent='OC '+oc;
   document.getElementById('detalle-oc-subtitle').textContent='Buscando en todas las tiendas...';
-  document.getElementById('detalle-oc-body').innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:12px">Cargando...</div>';
+  document.getElementById('detalle-oc-body').innerHTML=LD('Cargando detalle');
   document.getElementById('btn-detalle-oc-export').style.display='none';
   document.getElementById('modal-detalle-oc').style.display='flex';
   google.script.run
@@ -6590,7 +6600,7 @@ function buscarRSKU(tipo){
 
   if(_MAESTRO_LOCAL){ doSearch(); }
   else {
-    res.innerHTML='<div style="padding:10px;font-size:12px;color:var(--text3)">Cargando catálogo...</div>';
+    res.innerHTML=LDm('Cargando catálogo');
     res.style.display='block';
     _cargarMaestro(doSearch);
   }
@@ -6794,7 +6804,7 @@ function buscarESKU(){
 
   if(_MAESTRO_LOCAL){ doSearch(); }
   else {
-    res.innerHTML='<div style="padding:10px;font-size:12px;color:var(--text3)">Cargando catálogo...</div>';
+    res.innerHTML=LDm('Cargando catálogo');
     res.style.display='block';
     _cargarMaestro(doSearch);
   }
