@@ -4656,6 +4656,16 @@ function _actualizarContadorBuffer(){
 
 
 
+// Agrega o reemplaza (por _row) una fila de conteo en la tabla local: editar no debe duplicar el registro
+function _conteoUpsertLocal(row){
+  if(!DATA.conteo) DATA.conteo=[];
+  var i=-1;
+  if(row && row._row!=null){
+    for(var k=0;k<DATA.conteo.length;k++){ if(DATA.conteo[k]._row===row._row){ i=k; break; } }
+  }
+  if(i>=0) DATA.conteo[i]=row; else DATA.conteo.push(row);
+}
+
 function guardarYContinuar(){
   var sku=_cnt.sku;
   var packs=Number(document.getElementById('cnt-packs').value||0);
@@ -4705,7 +4715,9 @@ function guardarYContinuar(){
       }
 
       // Agregar al historial — sin deduplicar por SKU (cada escaneo es un registro independiente)
+      // Si fue una edición, la fila ya existe en el historial: se reemplaza, no se agrega otra
       var itemHistorial = Object.assign({}, fila, { _ts: Date.now(), _row: r.inserted[0]._row });
+      _conteoBuffer = _conteoBuffer.filter(function(b){ return !(b._row && b._row === itemHistorial._row); });
       _conteoBuffer.push(itemHistorial);
       saveConteoBuffer();
 
@@ -4715,8 +4727,7 @@ function guardarYContinuar(){
       if(btn2) btn2.textContent='Guardar y escanear siguiente';
 
       // Agregar a tabla principal local — sin deduplicar
-      if(!DATA.conteo) DATA.conteo=[];
-      DATA.conteo.push(r.inserted[0]);
+      _conteoUpsertLocal(r.inserted[0]);
       if(typeof filterConteo==='function') filterConteo();
       _updateConteoStats();
 
@@ -4939,7 +4950,7 @@ function _intentarSyncOffline() {
       // Actualizar tabla de conteo si está visible
       if (r.inserted && r.inserted.length) {
         if (!DATA.conteo) DATA.conteo = [];
-        r.inserted.forEach(function(row) { DATA.conteo.push(row); });
+        r.inserted.forEach(function(row) { _conteoUpsertLocal(row); });
         if (typeof filterConteo === 'function') filterConteo();
         _updateConteoStats();
       }
