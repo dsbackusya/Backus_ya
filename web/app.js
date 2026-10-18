@@ -1036,6 +1036,19 @@ function _salVivoResync(){
   }).getSalidas(S.token, true, window.sal_rango||null);
 }
 
+// Al volver a la app (celular que estuvo en segundo plano / pantalla apagada) la conexión en vivo puede haberse
+// dormido: se vuelve a conectar y se relee el rango visible para no perder pedidos que llegaron mientras tanto.
+var _salVisUlt = 0;
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState!=='visible'||!S||!S.token||!window.TadaRealtime) return;
+  if(!document.getElementById('s-app').classList.contains('active')) return;
+  var ahora = Date.now();
+  if(ahora-_salVisUlt<5000) return;
+  _salVisUlt = ahora;
+  if(!TadaRealtime.vivo()) _salVivoIniciar();
+  _salVivoResync();
+});
+
 function loadSalidas(){
   if(!S||!S.token){errBox('salidas-root','Sin sesión activa. Recarga la página.','salidas');PAGE_LOADING['salidas']=false;return;}
   var force=!!_FORCE_REFRESH['salidas']; _FORCE_REFRESH['salidas']=false;

@@ -960,6 +960,8 @@
           _rt.visto = true;
         });
     },
+    // true si el canal está conectado (el celular puede dejarlo caído al volver de segundo plano)
+    vivo: function () { return !!(_rt.canal && _rt.canal.state === 'joined'); },
     detener: function () {
       clearTimeout(_rt.timer); _rt.cambios = {};
       if (_rt.canal) { try { sb.removeChannel(_rt.canal); } catch (e) { /* ignorar */ } _rt.canal = null; }
