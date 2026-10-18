@@ -1720,16 +1720,14 @@ function _parseISO(str){
 // prefix ej: 'ent', 'mt', 'canc' — fnFilter: nombre de la función JS de filtro
 function _fechaFiltroHTML(prefix, fnFilter, rangoFn){
   var evt = rangoFn ? 'onchange="'+rangoFn+'()"' : 'oninput="'+fnFilter+'()"';
-  return '<button id="'+prefix+'-btn-hoy" onclick="'+prefix+'ToggleHoy()" style="'+
-      'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r);border:1px solid var(--accent);'+
-      'background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">'+
+  return '<button id="'+prefix+'-btn-hoy" class="fh-btn on" onclick="'+prefix+'ToggleHoy()">'+
       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'+
       'Hoy</button>'+
-    '<div id="'+prefix+'-rango-wrap" style="display:none;align-items:center;gap:6px;font-size:12px;color:var(--text2)">'+
-      '<input type="date" id="'+prefix+'-fecha-desde" class="inp" style="padding:5px 8px;font-size:12px;width:140px" '+evt+'/>'+
-      '<span style="color:var(--text3)">'+ICO('right',14,'s')+'</span>'+
-      '<input type="date" id="'+prefix+'-fecha-hasta" class="inp" style="padding:5px 8px;font-size:12px;width:140px" '+evt+'/>'+
-      '<button onclick="'+prefix+'LimpiarFechas()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;line-height:1;padding:0 2px" title="Volver a Hoy">×</button>'+
+    '<div id="'+prefix+'-rango-wrap" class="fh-rng" style="display:none">'+
+      '<input type="date" id="'+prefix+'-fecha-desde" class="fh-in" '+evt+'/>'+
+      ICO('right',14,'s')+
+      '<input type="date" id="'+prefix+'-fecha-hasta" class="fh-in" '+evt+'/>'+
+      '<button class="fh-x" onclick="'+prefix+'LimpiarFechas()" title="Volver a Hoy" aria-label="Volver a Hoy">×</button>'+
     '</div>';
 }
 // Inicializa el estado "Hoy activo" y las funciones toggle/limpiar para un prefijo
@@ -1757,7 +1755,7 @@ function _initFiltroFecha(prefix, fnFilter, opts){
     var wrap=document.getElementById(prefix+'-rango-wrap');
     if(window[prefix+'_filtroHoy']){
       // Hoy activo: morado, ocultar rango, limpiar fechas
-      if(btn){btn.style.background='var(--accent)';btn.style.color='#fff';btn.style.borderColor='var(--accent)';}
+      if(btn)btn.classList.add('on');
       if(wrap)wrap.style.display='none';
       var d=document.getElementById(prefix+'-fecha-desde');
       var h=document.getElementById(prefix+'-fecha-hasta');
@@ -1765,7 +1763,7 @@ function _initFiltroFecha(prefix, fnFilter, opts){
       if(recargarSiHabiaRango()) return;
     } else {
       // Rango activo: ghost, mostrar rango
-      if(btn){btn.style.background='var(--surface)';btn.style.color='var(--text2)';btn.style.borderColor='var(--border2)';}
+      if(btn)btn.classList.remove('on');
       if(wrap)wrap.style.display='flex';
     }
     window[fnFilter]();
@@ -1775,7 +1773,7 @@ function _initFiltroFecha(prefix, fnFilter, opts){
     window[prefix+'_filtroHoy']=true;
     var btn=document.getElementById(prefix+'-btn-hoy');
     var wrap=document.getElementById(prefix+'-rango-wrap');
-    if(btn){btn.style.background='var(--accent)';btn.style.color='#fff';btn.style.borderColor='var(--accent)';}
+    if(btn)btn.classList.add('on');
     if(wrap)wrap.style.display='none';
     var d=document.getElementById(prefix+'-fecha-desde');
     var h=document.getElementById(prefix+'-fecha-hasta');
@@ -1788,7 +1786,7 @@ function _initFiltroFecha(prefix, fnFilter, opts){
   if(pagina && rg){
     window[prefix+'_filtroHoy']=false;
     var b0=document.getElementById(prefix+'-btn-hoy'), w0=document.getElementById(prefix+'-rango-wrap');
-    if(b0){b0.style.background='var(--surface)';b0.style.color='var(--text2)';b0.style.borderColor='var(--border2)';}
+    if(b0)b0.classList.remove('on');
     if(w0)w0.style.display='flex';
     var d0=document.getElementById(prefix+'-fecha-desde'), h0=document.getElementById(prefix+'-fecha-hasta');
     if(d0)d0.value=rg.desde; if(h0)h0.value=rg.hasta;
