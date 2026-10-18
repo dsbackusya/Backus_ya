@@ -3313,3 +3313,65 @@ input.filter-inp:focus{
   .mt2-m,.mt2-f{font-size:12px}
 }
 @media (max-width:520px){.sal2-sum.mt2-sum{grid-template-columns:1fr 1fr;gap:8px}.mt2-sum .mt2-money{grid-column:1/-1}.mt2-sum .sal2-card{padding:14px 16px}.mt2-sum .sal2-v{font-size:26px}}
+
+/* ══════════════════════════════════════════════════════════════
+   MENÚ LATERAL v2 — sede en tarjeta, iconos uniformes, activo tonal,
+   contador en Salidas y pie de una fila. "Sincronizado" solo aparece sin conexión.
+   ══════════════════════════════════════════════════════════════ */
+.sb2-head{display:flex;align-items:center;gap:8px;padding:14px 10px 6px;flex-shrink:0}
+.sb2-sede{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--surface);border:1px solid var(--border2)}
+.sb2-mark{width:34px;height:34px;border-radius:10px;background:rgba(148,128,232,.16);border:1px solid rgba(148,128,232,.38);color:var(--accent2);display:grid;place-items:center;font:700 13px var(--font-display);flex:none;letter-spacing:.02em}
+.sb2-name{font:600 14px var(--font-ui);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sb2-tg{width:28px;height:28px;padding:0;flex:none;display:grid;place-items:center;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text3);cursor:pointer;transition:background .15s,color .15s}
+.sb2-tg:hover{background:var(--surface3);color:var(--text)}
+.sidebar.collapsed .sb2-head{flex-direction:column;padding:14px 0 6px;gap:10px}
+.sidebar.collapsed .sb2-sede{flex:none;padding:0;background:none;border:0}
+.sidebar.collapsed .sb2-mark{cursor:pointer}
+.sidebar.collapsed .sb2-name{display:none}
+.sidebar.collapsed .sb2-tg svg{transform:rotate(180deg)}
+
+/* navegación */
+.sb-nav{padding:10px 10px;gap:2px}
+.sb-nav::before{display:none !important}
+.sb-section{font:600 10px var(--font-ui);letter-spacing:.16em;padding:16px 12px 6px}
+.sb-item{height:40px;padding:0 12px;border-radius:10px;border:0;font-size:13.5px;gap:12px}
+.sb-item:hover{background:rgba(255,255,255,.04) !important;color:var(--text) !important}
+.sb-item.active{background:rgba(148,128,232,.14) !important;color:var(--accent2) !important;border:0 !important;box-shadow:none !important}
+.sb-item.active::after{display:none !important}
+.sb-item.active::before{left:-10px !important;top:9px !important;bottom:9px !important;height:auto !important;transform:none !important;width:3px !important;border-radius:0 3px 3px 0 !important;background:var(--accent) !important;box-shadow:none !important;animation:none !important}
+.sb-item .ic{width:18px;font-size:inherit;opacity:.9}
+.sb-item.active .ic{color:var(--accent2) !important;opacity:1 !important}
+.sb2-bg{margin-left:auto;font:600 10.5px var(--font-mono);font-style:normal;padding:2px 7px;border-radius:99px;background:rgba(227,165,58,.14);color:#F0C27A;border:1px solid rgba(227,165,58,.3);line-height:1.3}
+.sidebar.collapsed .sb2-bg{position:absolute;top:6px;right:8px;margin:0;width:8px;height:8px;padding:0;font-size:0;border-radius:50%;background:var(--warn);border:2px solid var(--sb-bg)}
+.sidebar.collapsed .sb-item.active::before{left:-10px !important}
+
+/* sin conexión: único caso en que se muestra el estado */
+.sb-sync{display:none !important}
+.sb-sync.offline{display:flex !important;margin:6px 12px 0;padding:7px 10px;border-radius:10px;background:rgba(229,100,110,.10);border:1px solid rgba(229,100,110,.32);color:#FCA5A5;font:600 11px var(--font-ui)}
+.sidebar.collapsed .sb-sync.offline{justify-content:center;margin:6px 10px 0;padding:7px 0}
+.sidebar.collapsed .sb-sync.offline .sb-sync-label{display:none}
+
+/* pie: usuario en una fila */
+.sb-footer{padding:10px 12px 14px;gap:8px}
+.sb2-usr{display:flex;align-items:center;gap:10px;min-width:0}
+.sb2-usr .sb-user-avatar{width:34px;height:34px;font-size:13px;color:var(--text2)}
+.sb2-usr-info{flex:1;min-width:0;overflow:hidden;white-space:nowrap}
+.sb2-usr-info .sb-user-name{font-size:13px;font-weight:600;color:var(--text)}
+.sb2-usr-info .sb-user-role{font:400 11px var(--font-ui);color:var(--text3);letter-spacing:0;margin-top:1px}
+.sb2-out{width:32px;height:32px;padding:0;flex:none;display:grid;place-items:center;border-radius:9px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .15s}
+.sb2-out:hover{color:#FCA5A5;border-color:rgba(229,100,110,.45);background:rgba(229,100,110,.08)}
+.sidebar.collapsed .sb2-usr{flex-direction:column;gap:8px}
+.sidebar.collapsed .sb2-usr-info{display:none}
+
+@media (max-width:900px){
+  .sidebar .sb2-tg{display:none}
+  .sidebar.collapsed .sb2-head{flex-direction:row;padding:14px 10px 6px}
+  .sidebar.collapsed .sb2-sede{flex:1;padding:8px 10px;background:var(--surface);border:1px solid var(--border2)}
+  .sidebar.collapsed .sb2-name{display:block}
+  .sidebar.collapsed .sb2-usr{flex-direction:row}
+  .sidebar.collapsed .sb2-usr-info{display:block}
+  .sidebar .sb-item{height:44px;font-size:14px;padding:0 12px;border-radius:10px}
+  .sidebar .sb-item.active::before{left:-10px !important;top:10px !important;bottom:10px !important}
+  .sidebar .sb-section{padding:18px 12px 6px !important}
+  .sidebar.collapsed .sb2-bg{position:static;width:auto;height:auto;padding:2px 7px;font-size:10.5px;border-radius:99px;background:rgba(227,165,58,.14);border:1px solid rgba(227,165,58,.3);margin-left:auto}
+}

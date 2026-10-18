@@ -257,15 +257,53 @@ function toggleSidebar(){
   }catch(e){}
 })();
 
+/* ── Menú lateral: nombre e iniciales de la sede de la sesión ── */
+function _sedeBonita(n){
+  n=String(n||'').trim();
+  if(!n||n!==n.toUpperCase()) return n;
+  return n.split(/\s+/).map(function(w){ return w.length<=2?w:w.charAt(0)+w.slice(1).toLowerCase(); }).join(' ');
+}
+function _sedeIniciales(n){
+  var p=String(n||'').trim().split(/\s+/).filter(Boolean);
+  if(p.length>1&&p[0].toUpperCase()==='DS') p.shift();
+  if(!p.length) return '—';
+  return (p.length===1?p[0].slice(0,2):p[0].charAt(0)+p[1].charAt(0)).toUpperCase();
+}
+
+/* ── Contador de "Por confirmar" (hoy) junto a Salidas ── */
+var _sbSalTimer=null, _sbSalReq=0;
+function _sbSalidasRefrescar(){
+  clearTimeout(_sbSalTimer);
+  _sbSalTimer=setTimeout(function(){
+    if(!S||!S.token) return;
+    var t=++_sbSalReq;
+    google.script.run
+      .withSuccessHandler(function(r){
+        if(t!==_sbSalReq||!r||!r.ok) return;
+        var n=(r.data||[]).filter(function(x){return _salEstadoLinea(x)==='pen';}).length;
+        var b=document.getElementById('sb-badge-salidas');
+        if(!b) return;
+        b.textContent=n>99?'99+':n;
+        b.style.display=n>0?'':'none';
+        var it=document.getElementById('nav-salidas'); if(it) it.classList.toggle('con-badge',n>0);
+      })
+      .withFailureHandler(function(){})
+      .getSalidas(S.token,true,null);
+  },1200);
+}
+setInterval(function(){ if(document.visibilityState==='visible') _sbSalidasRefrescar(); },300000);
+
 /* ── INIT ── */
 function initApp(){
   document.getElementById('s-login').classList.remove('active');
   document.getElementById('s-app').classList.add('active');
-  var sede=S.usuario||'—';
+  var sede=_sedeBonita(S.usuario||'—');
   document.getElementById('sb-sede').textContent=sede;
   document.getElementById('sb-user-name').textContent=sede;
+  var mk=document.getElementById('sb-logomark'); if(mk) mk.textContent=_sedeIniciales(sede);
   var av=document.getElementById('sb-avatar');
   if(av)av.textContent=sede.charAt(0).toUpperCase();
+  _sbSalidasRefrescar();
   _startSessionPing();
   _salVivoIniciar();
   _backIniciar();
@@ -1080,6 +1118,7 @@ function _salVivoIniciar(){
   TadaRealtime.salidas(function(){ return window.sal_rango||null; }, _salVivoCambio, _salVivoResync);
 }
 function _salVivoCambio(c){
+  _sbSalidasRefrescar();
   if(!S||!S.token||!document.getElementById('salidas-tbody')) return; // pantalla no abierta: se cargará fresca al entrar
   var porId={}; (DATA.salidas||[]).forEach(function(r){ porId[r._row]=r; });
   var hubo=c.upserts.length>0;
@@ -1092,6 +1131,7 @@ function _salVivoCambio(c){
 }
 // Tras recuperar la conexión, vuelve a leer el rango visible sin tocar la pantalla
 function _salVivoResync(){
+  _sbSalidasRefrescar();
   if(!S||!S.token||!document.getElementById('salidas-tbody')) return;
   google.script.run.withSuccessHandler(function(r){
     if(r&&r.ok&&document.getElementById('salidas-tbody')){ DATA.salidas=r.data; filterSalidas(); }
