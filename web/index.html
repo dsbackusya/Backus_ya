@@ -867,40 +867,63 @@ window.addEventListener('load', function(){
     <div class="fs-title" id="fs-sku-title">Nuevo SKU</div>
   </div>
   <div class="fs-body">
-    <div class="fs-section">Datos del producto</div>
-    <div style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:16px;font-family:var(--font-mono)">
-      Solo se editan los campos de identificación. Entradas, Salidas, Stock y fórmulas no se modifican.
-    </div>
-    <!-- Selector de tienda visible solo para admin al crear nuevo SKU -->
-    <div id="sku-sede-wrap" style="display:none;margin-bottom:16px">
-      <div class="form-field">
-        <div class="form-label">Tienda destino <span class="req">*</span></div>
-        <select class="inp" id="sku-sede"></select>
+    <div class="sku-wrap">
+      <div class="sku-card" id="sku-form">
+        <div id="sku-sede-wrap" style="display:none;margin-bottom:18px">
+          <div class="sku-f">
+            <label><span>Tienda destino <b>*</b></span></label>
+            <select class="sku-in" id="sku-sede" onchange="skuEv()"></select>
+          </div>
+        </div>
+        <div class="sku-step"><i>1</i> Identificación</div>
+        <div class="sku-f">
+          <label><span>Código Lovis / SKU <b>*</b></span><em>Se escribe igual que en tu Maestro</em></label>
+          <input class="sku-in mono" id="sku-lovis" placeholder="Ej: 10000245" autocomplete="off" oninput="skuEv()"/>
+          <div id="sku-lovis-h"></div>
+        </div>
+        <div class="sku-f">
+          <label><span>Descripción <b>*</b></span><em id="sku-dcount">0 / 120</em></label>
+          <input class="sku-in" id="sku-desc" placeholder="Nombre completo del producto" maxlength="120" autocomplete="off" oninput="skuEv()"/>
+        </div>
+        <div class="sku-step" style="margin-top:26px"><i>2</i> Clasificación <span class="opt">· opcional</span></div>
+        <div class="sku-row2">
+          <div class="sku-f"><label><span>Marca</span></label>
+            <input class="sku-in" id="sku-marca" placeholder="Ej: Backus, Ambev…" autocomplete="off" oninput="skuEv()"/>
+            <div class="sku-chips" id="sku-chips-m"></div></div>
+          <div class="sku-f"><label><span>Categoría</span></label>
+            <input class="sku-in" id="sku-categoria" placeholder="Ej: Cervezas, Gaseosas…" autocomplete="off" oninput="skuEv()"/>
+            <div class="sku-chips" id="sku-chips-c"></div></div>
+        </div>
+        <div class="sku-note" id="sku-nota-edit" style="display:none"><span>ⓘ</span><span>Al editar solo cambian estos datos. Entradas, salidas y stock no se modifican.</span></div>
+        <div id="sku-err" class="err-msg" style="margin-top:8px"></div>
+      </div>
+
+      <div class="sku-prev" id="sku-prev">
+        <div class="sku-card">
+          <div class="sku-step" style="margin-bottom:12px">Así se verá en Stock</div>
+          <div class="sku-pv">
+            <div class="sku-pn empty" id="sku-pvn">Descripción del producto</div>
+            <div class="sku-ps"><span class="sk" id="sku-pvs">SKU</span><i class="dot"></i><span id="sku-pvm">Sin marca</span><i class="dot"></i><span id="sku-pvc">Sin categoría</span></div>
+            <div class="sku-pr"><span>Stock inicial</span><span class="sku-pill">0 · Sin stock</span></div>
+          </div>
+          <div class="sku-note"><span>ⓘ</span><span id="sku-pnote">El producto se crea con stock en cero. Para ingresar unidades registra una Entrada o haz un Conteo.</span></div>
+        </div>
+      </div>
+
+      <div class="sku-card sku-ok" id="sku-ok" style="display:none">
+        <div class="c">✓</div><b>SKU creado</b>
+        <div class="d">Ya aparece en Stock. ¿Quieres agregar otro?</div>
+        <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="closeFS('fs-sku')">Listo</button>
+          <button class="btn btn-primary" onclick="skuOtro()">Agregar otro SKU</button>
+        </div>
       </div>
     </div>
-    <div class="form-grid">
-      <div class="form-field">
-        <div class="form-label">Código Lovis / SKU <span class="req">*</span></div>
-        <input class="inp" id="sku-lovis" placeholder="Ej: LV-00123" style="font-family:var(--font-mono);font-weight:600"/>
-      </div>
-      <div class="form-field">
-        <div class="form-label">Marca</div>
-        <input class="inp" id="sku-marca" placeholder="Ej: Backus, Ambev..."/>
-      </div>
-      <div class="form-field span2">
-        <div class="form-label">Descripción <span class="req">*</span></div>
-        <input class="inp" id="sku-desc" placeholder="Nombre completo del producto"/>
-      </div>
-      <div class="form-field span2">
-        <div class="form-label">Categoría</div>
-        <input class="inp" id="sku-categoria" placeholder="Ej: Cervezas, Gaseosas..."/>
-      </div>
-    </div>
-    <div id="sku-err" class="err-msg" style="margin-top:12px"></div>
   </div>
-  <div class="fs-footer">
+  <div class="fs-footer" id="sku-foot">
+    <span class="sku-msg" id="sku-msg">Completa el código y la descripción para guardar</span>
     <button class="btn btn-ghost" onclick="closeFS('fs-sku')">Cancelar</button>
-    <button class="btn btn-primary" id="btn-sku-save" onclick="guardarSKU()">Guardar</button>
+    <button class="btn btn-primary" id="btn-sku-save" onclick="guardarSKU()" disabled>Guardar SKU</button>
   </div>
 </div>
 

@@ -821,20 +821,28 @@ function exportStock(){
 
 var SKU_EDIT_ROW=null;
 var SKU_SHEET_ID=null; // para admin: sheetId de la tienda del SKU
+var SKU_CACHE=[];      // productos conocidos al abrir el formulario: avisa códigos repetidos y sugiere marcas/categorías
 
 function abrirSKUForm(rowNum){
   SKU_EDIT_ROW=rowNum;
   SKU_SHEET_ID=null;
   var esEdicion=rowNum!==null;
+  SKU_CACHE=(DATA.stock||[]).map(function(r){return {sku:String(r.sku||''),desc:r.desc||'',marca:r.marca||'',categoria:r.categoria||'',_row:r._row,sede:r.sede||''};});
   document.getElementById('fs-sku-title').textContent=esEdicion?'Editar SKU':'Nuevo SKU';
   document.getElementById('sku-err').textContent='';
+  document.getElementById('sku-form').style.display='';
+  document.getElementById('sku-prev').style.display='';
+  document.getElementById('sku-ok').style.display='none';
+  document.getElementById('sku-foot').style.display='';
+  document.getElementById('sku-nota-edit').style.display=esEdicion?'flex':'none';
+  document.getElementById('sku-pnote').textContent=esEdicion?'El stock y los movimientos de este producto no cambian.':'El producto se crea con stock en cero. Para ingresar unidades registra una Entrada o haz un Conteo.';
+  document.getElementById('btn-sku-save').textContent=esEdicion?'Guardar cambios':'Guardar SKU';
 
   // Selector de sede para admin en modo nuevo
   var sedeWrap=document.getElementById('sku-sede-wrap');
   if(sedeWrap){
     if(S.rol==='admin' && !esEdicion){
-      // Poblar con tiendas disponibles desde DATA.stock
-      var tiendas=[...new Set(DATA.stock.map(function(r){return r.sede;}).filter(Boolean))].sort();
+      var tiendas=[...new Set((DATA.stock||[]).map(function(r){return r.sede;}).filter(Boolean))].sort();
       var opts=tiendas.map(function(t){return '<option value="'+esc(t)+'">'+esc(t)+'</option>';}).join('');
       document.getElementById('sku-sede').innerHTML='<option value="">Selecciona tienda...</option>'+opts;
       sedeWrap.style.display='';
@@ -844,7 +852,7 @@ function abrirSKUForm(rowNum){
   }
 
   if(esEdicion){
-    var row=DATA.stock.find(function(r){return r._row===rowNum;});
+    var row=(DATA.stock||[]).find(function(r){return r._row===rowNum;});
     if(!row)return;
     SKU_SHEET_ID=row.sheetId||null;
     document.getElementById('sku-lovis').value=row.sku;
@@ -857,8 +865,80 @@ function abrirSKUForm(rowNum){
     document.getElementById('sku-marca').value='';
     document.getElementById('sku-categoria').value='';
   }
+  skuEv();
   openFS('fs-sku');
   setTimeout(function(){document.getElementById('sku-lovis').focus();},120);
+}
+
+// Sugerencias de marca/categoría a partir de lo ya cargado
+function _skuChips(elId,campo,inpId){
+  var v=(document.getElementById(inpId).value||'').trim().toLowerCase(), vistos={}, lista=[];
+  SKU_CACHE.forEach(function(r){ var x=r[campo]; if(x&&!vistos[x]){vistos[x]=true;lista.push(x);} });
+  lista.sort();
+  var sug=lista.filter(function(x){return !v||x.toLowerCase().indexOf(v)>-1;}).slice(0,6);
+  document.getElementById(elId).innerHTML=sug.map(function(x){
+    return '<button type="button" class="'+(x.toLowerCase()===v?'on':'')+'" data-i="'+inpId+'" data-v="'+esc(x)+'" onclick="skuElegir(this)">'+esc(x)+'</button>';
+  }).join('');
+}
+function skuElegir(b){ document.getElementById(b.dataset.i).value=b.dataset.v; skuEv(); }
+
+// Valida en vivo: código repetido, formato, vista previa y estado del botón
+function skuEv(){
+  var sku=(document.getElementById('sku-lovis').value||'').trim();
+  var d=(document.getElementById('sku-desc').value||'').trim();
+  var ma=(document.getElementById('sku-marca').value||'').trim();
+  var ca=(document.getElementById('sku-categoria').value||'').trim();
+  var esEd=SKU_EDIT_ROW!==null;
+  document.getElementById('sku-dcount').textContent=document.getElementById('sku-desc').value.length+' / 120';
+
+  var sedeSel=(document.getElementById('sku-sede')||{}).value||'';
+  var ex=null;
+  if(sku){
+    ex=SKU_CACHE.filter(function(r){
+      return r.sku.toLowerCase()===sku.toLowerCase() && r._row!==SKU_EDIT_ROW && (!sedeSel||!r.sede||r.sede===sedeSel);
+    })[0]||null;
+  }
+  var formatoMal=sku&&!/^[A-Za-z0-9\-_.]+$/.test(sku);
+  var inp=document.getElementById('sku-lovis');
+  inp.className='sku-in mono'+((ex||formatoMal)?' bad':(sku?' good':''));
+  var h=document.getElementById('sku-lovis-h');
+  if(ex){
+    h.innerHTML='<div class="sku-dup"><b>Este SKU ya existe en tu Stock</b><br>'+esc(ex.desc)+(ex.marca?' · '+esc(ex.marca):'')+
+      (ex._row>0?'<br><button type="button" onclick="abrirSKUForm('+ex._row+')">Editar ese producto</button>':'')+'</div>';
+  } else if(formatoMal){
+    h.innerHTML='<div class="sku-hint err">Usa solo letras, números, guiones o puntos.</div>';
+  } else if(sku&&!esEd){
+    h.innerHTML='<div class="sku-hint ok">✓ Código disponible</div>';
+  } else { h.innerHTML=''; }
+
+  _skuChips('sku-chips-m','marca','sku-marca');
+  _skuChips('sku-chips-c','categoria','sku-categoria');
+
+  var pn=document.getElementById('sku-pvn'); pn.textContent=d||'Descripción del producto'; pn.className='sku-pn'+(d?'':' empty');
+  document.getElementById('sku-pvs').textContent=sku||'SKU';
+  document.getElementById('sku-pvm').textContent=ma||'Sin marca';
+  document.getElementById('sku-pvc').textContent=ca||'Sin categoría';
+
+  var sinSede=S.rol==='admin'&&!esEd&&!sedeSel;
+  var malo=!sku||!d||!!ex||formatoMal||sinSede;
+  document.getElementById('btn-sku-save').disabled=malo;
+  var msg=document.getElementById('sku-msg');
+  msg.textContent=ex?'Ese código ya existe: edítalo en lugar de crearlo':(sinSede?'Selecciona la tienda destino':(malo?'Completa el código y la descripción para guardar':'Todo listo'));
+  msg.style.color=ex?'var(--warn)':(malo?'var(--text3)':'var(--ok)');
+}
+
+function skuOtro(){
+  SKU_EDIT_ROW=null; SKU_SHEET_ID=null;
+  document.getElementById('sku-form').style.display='';
+  document.getElementById('sku-prev').style.display='';
+  document.getElementById('sku-ok').style.display='none';
+  document.getElementById('sku-foot').style.display='';
+  ['sku-lovis','sku-desc','sku-marca','sku-categoria'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('sku-err').textContent='';
+  document.getElementById('fs-sku-title').textContent='Nuevo SKU';
+  document.getElementById('btn-sku-save').textContent='Guardar SKU';
+  skuEv();
+  setTimeout(function(){document.getElementById('sku-lovis').focus();},60);
 }
 
 function guardarSKU(){
@@ -874,7 +954,6 @@ function guardarSKU(){
     var sedeEl=document.getElementById('sku-sede');
     var sedeName=sedeEl?sedeEl.value:'';
     if(!sedeName){err.textContent='Selecciona la tienda destino';return;}
-    // Buscar sheetId desde DATA.stock
     var match=DATA.stock.find(function(r){return r.sede===sedeName;});
     sheetId=match?match.sheetId:null;
     if(!sheetId){err.textContent='No se encontró el ID de la tienda';return;}
@@ -889,28 +968,33 @@ function guardarSKU(){
   };
   err.textContent='';
   var btn=document.getElementById('btn-sku-save');
+  var etiqueta=SKU_EDIT_ROW!==null?'Guardar cambios':'Guardar SKU';
   btn.disabled=true; btn.textContent='Guardando...';
   if(SKU_EDIT_ROW!==null){
     google.script.run
       .withSuccessHandler(function(r){
-        btn.disabled=false; btn.textContent='Guardar';
+        btn.textContent=etiqueta; btn.disabled=false;
         if(!r.ok){err.textContent=r.error;return;}
         showToast('SKU actualizado correctamente','ok');
         closeFS('fs-sku');
         reloadPage('stock');
       })
-      .withFailureHandler(function(e){btn.disabled=false;btn.textContent='Guardar';err.textContent=e.message;})
+      .withFailureHandler(function(e){btn.textContent=etiqueta;btn.disabled=false;err.textContent=e.message;})
       .editarSKU(S.token,SKU_EDIT_ROW,fila);
   } else {
     google.script.run
       .withSuccessHandler(function(r){
-        btn.disabled=false; btn.textContent='Guardar';
+        btn.textContent=etiqueta; btn.disabled=false;
         if(!r.ok){err.textContent=r.error;return;}
-        showToast('SKU registrado correctamente','ok');
-        closeFS('fs-sku');
+        // El código recién creado cuenta como repetido si se vuelve a escribir sin cerrar el formulario
+        SKU_CACHE.push({sku:lovis,desc:desc,marca:fila.marca,categoria:fila.categoria,_row:-1,sede:(document.getElementById('sku-sede')||{}).value||''});
+        document.getElementById('sku-form').style.display='none';
+        document.getElementById('sku-prev').style.display='none';
+        document.getElementById('sku-foot').style.display='none';
+        document.getElementById('sku-ok').style.display='';
         reloadPage('stock');
       })
-      .withFailureHandler(function(e){btn.disabled=false;btn.textContent='Guardar';err.textContent=e.message;})
+      .withFailureHandler(function(e){btn.textContent=etiqueta;btn.disabled=false;err.textContent=e.message;})
       .registrarSKU(S.token,fila);
   }
 }
