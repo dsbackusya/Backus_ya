@@ -3588,7 +3588,7 @@ function _scannerNativo(targetId, title){
     '</div>'+
     '<form id="scan-nativo-form" style="display:flex;gap:8px;padding:10px 12px;background:#111">'+
       '<input id="scan-nativo-man" inputmode="numeric" autocomplete="off" placeholder="…o escribe el código y pulsa Enter" style="flex:1;padding:10px;border-radius:8px;border:0;font-size:15px"/>'+
-      '<button type="submit" style="background:#9480E8;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:600">OK</button>'+
+      '<button type="submit" style="background:#B7A8F3;color:#1A1230;border:0;border-radius:8px;padding:10px 16px;font-weight:600">OK</button>'+
     '</form>';
   document.body.appendChild(ov);
   document.getElementById('scan-nativo-x').onclick = _scannerNativoCerrar;
