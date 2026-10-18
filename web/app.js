@@ -1878,66 +1878,133 @@ function _exportConSpinner(btnId,modulo,callback){
     .getExportMultiSede(S.token,modulo);
 }
 
+var _ENT_EST='';      // filtro de estado Dynamics: '', 'pen', 'par', 'reg'
+var _ENT_ABIERTOS={}; // recepciones desplegadas (se conservan al filtrar)
+var _ENT_GRUPOS=[];
+
 function renderEntradas(r){
   dbg('[ENTRADAS] renderEntradas() — r.ok='+( r&&r.ok)+' r.error='+(r&&r.error)+' data.length='+(r&&r.data&&r.data.length));
   if(_handleExpired(r,'entradas-root')) return;
   if(!r||!r.ok){PAGE_LOADED['entradas']=false;errBox('entradas-root',r?r.error:'Error desconocido','entradas');return;}
   DATA.entradas=r.data;
-  var total=r.data.reduce(function(a,x){return a+x.unidades;},0);
+  _ENT_EST=''; _ENT_ABIERTOS={};
+  var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
   document.getElementById('entradas-root').innerHTML=
-    '<div class="stats">'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div><div class="stat-label">Total registros</div><div class="stat-val-row"><div class="stat-val" id="ent-stat-total">'+r.data.length+'</div><span class="stat-unit-pill">filas</span></div></div>'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="stat-label">Unidades ingresadas</div><div class="stat-val-row"><div class="stat-val" id="ent-stat-und">'+fmt(total)+'</div><span class="stat-unit-pill">und.</span></div></div>'+
-    '</div>'+
-    '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
-      '<input class="filter-inp" id="ent-busq" placeholder="Buscar SKU, factura, descripción..." style="width:240px" oninput="filterEntradas()"/>'+
+    '<div class="ent-sum" id="ent-sum"></div>'+
+    '<div class="ent-fl">'+
+      '<div class="ent-srch">'+icoBuscar+'<input id="ent-busq" placeholder="Buscar factura, OC, proveedor o producto…" oninput="filterEntradas()"/></div>'+
       _fechaFiltroHTML('ent','filterEntradas','entRangoCambio')+
-      '<span class="result-count" id="ent-count"></span>'+
+      '<div class="ent-seg" id="ent-est"></div>'+
+      '<span class="ent-cnt" id="ent-count"></span>'+
     '</div>'+
-    '<div class="table-wrap"><table>'+
-      '<thead><tr>'+
-        '<th>Fecha</th><th class="col-hide-mobile">Factura</th><th>SKU</th><th>Descripción</th>'+
-        '<th class="r">Unidades</th><th class="col-hide-mobile">Proveedor</th><th class="col-hide-mobile">OC</th><th class="col-hide-mobile">Dynamics</th><th class="col-hide-mobile">Responsable</th>'+
-        '<th class="c">Dyn.</th>'+
-      '</tr></thead>'+
-      '<tbody id="entradas-tbody"></tbody>'+
-    '</table></div>';
+    '<div class="ent-tw">'+
+      '<div class="ent-hd"><span></span><span>Fecha</span><span>Factura · Proveedor</span><span>Orden de compra</span><span class="r">Productos</span><span class="r">Unidades</span><span>Dynamics</span><span>Responsable</span><span></span></div>'+
+      '<div id="ent-rows"></div>'+
+    '</div>'+
+    '<div class="ent-lst" id="ent-lst"></div>';
   _initFiltroFecha('ent','filterEntradas',{page:'entradas'});
   filterEntradas();
+}
+
+// Estado de Dynamics de una línea: reg (Registrado), car (Cargado), pen (Pendiente), sin (vacío o "--")
+function _entDyn(v){
+  v=String(v||'').trim().toLowerCase();
+  if(v==='registrado') return 'reg';
+  if(v==='cargado') return 'car';
+  if(v==='pendiente') return 'pen';
+  return 'sin';
+}
+function _entPillLinea(v){
+  var k=_entDyn(v);
+  if(k==='reg') return '<span class="ent-pill ok">Registrado</span>';
+  if(k==='car') return '<span class="ent-pill pa">Cargado</span>';
+  if(k==='pen') return '<span class="ent-pill wa">Pendiente</span>';
+  return '<span class="ent-pill no">Sin estado</span>';
+}
+// Estado de una recepción completa: pen / par / reg
+function _entEstadoGrupo(g){
+  var reg=g.items.filter(function(i){return _entDyn(i.dynamics)==='reg';}).length;
+  var pen=g.items.filter(function(i){var k=_entDyn(i.dynamics);return k==='pen'||k==='sin';}).length;
+  g.nReg=reg;
+  if(reg===g.items.length) return 'reg';
+  if(pen===g.items.length) return 'pen';
+  return 'par';
+}
+function _entPillGrupo(g){
+  if(g.est==='reg') return '<span class="ent-pill ok">Registrado</span>';
+  if(g.est==='pen') return '<span class="ent-pill wa">Pendiente</span>';
+  var todoCargado=g.items.every(function(i){return _entDyn(i.dynamics)==='car';});
+  return '<span class="ent-pill pa">'+(todoCargado?'Cargado':'Parcial '+g.nReg+'/'+g.items.length)+'</span>';
 }
 
 function _filterEntradas(){
   var q=((document.getElementById('ent-busq')||{}).value||'').toLowerCase();
   var rows=DATA.entradas.filter(function(r){
-    return !q||r.sku.toLowerCase().indexOf(q)>-1||r.desc.toLowerCase().indexOf(q)>-1||r.factura.toLowerCase().indexOf(q)>-1;
+    return !q||r.sku.toLowerCase().indexOf(q)>-1||r.desc.toLowerCase().indexOf(q)>-1||r.factura.toLowerCase().indexOf(q)>-1||
+      (r.oc||'').toLowerCase().indexOf(q)>-1||(r.proveedor||'').toLowerCase().indexOf(q)>-1;
   });
   rows=_applyFiltroFecha('ent',rows);
   rows.sort(function(a,b){return b._row-a._row;});
-  var totalUnd=rows.reduce(function(a,x){return a+x.unidades;},0);
-  var st=document.getElementById('ent-stat-total'); if(st)st.textContent=rows.length;
-  var su=document.getElementById('ent-stat-und');   if(su)su.textContent=fmt(totalUnd);
+
+  // Una fila por recepción: misma fecha, factura, proveedor y OC
+  var mapa={}, grupos=[];
+  rows.forEach(function(r){
+    var k=[r.fecha,r.factura,r.proveedor,r.oc].join('|');
+    if(!mapa[k]){ mapa[k]={key:k,fecha:r.fecha,factura:r.factura,proveedor:r.proveedor,oc:r.oc,responsable:r.responsable,items:[],und:0}; grupos.push(mapa[k]); }
+    mapa[k].items.push(r); mapa[k].und+=r.unidades;
+  });
+  grupos.forEach(function(g){ g.est=_entEstadoGrupo(g); });
+  var c={pen:0,par:0,reg:0}; grupos.forEach(function(g){c[g.est]++;});
+  var totalUnd=grupos.reduce(function(a,g){return a+g.und;},0);
+
+  // Resumen
+  var t=grupos.length||1, pc=function(n){return (n/t*100).toFixed(2);};
+  var leg=function(k,color,n,txt){return '<span onclick="entSetEstado(\''+k+'\')"><em style="background:'+color+'"></em><b>'+n+'</b> '+txt+'</span>';};
+  document.getElementById('ent-sum').innerHTML=
+    '<div class="ent-card"><div class="ent-k">Recepciones</div><div class="ent-v">'+fmt(grupos.length)+'</div><div class="ent-n">'+fmt(rows.length)+(rows.length===1?' producto recibido':' productos recibidos')+'</div></div>'+
+    '<div class="ent-card"><div class="ent-k">Unidades recibidas</div><div class="ent-v">'+fmt(totalUnd)+'<small>und.</small></div><div class="ent-n">En el período seleccionado</div></div>'+
+    '<div class="ent-card"><div class="ent-k">Registro en Dynamics</div>'+
+      '<div class="ent-dist"><i style="width:'+pc(c.reg)+'%;background:var(--ok)"></i><i style="width:'+pc(c.par)+'%;background:var(--accent)"></i><i style="width:'+pc(c.pen)+'%;background:var(--warn)"></i></div>'+
+      '<div class="ent-leg">'+leg('pen','var(--warn)',c.pen,'Pendientes')+leg('par','var(--accent)',c.par,'Parciales')+leg('reg','var(--ok)',c.reg,'Registradas')+'</div></div>';
+
+  var seg=function(k,txt,n){return '<button class="'+(_ENT_EST===k?'on':'')+'" onclick="entSetEstado(\''+k+'\')">'+txt+'<span>'+n+'</span></button>';};
+  document.getElementById('ent-est').innerHTML=seg('','Todas',grupos.length)+seg('pen','Pendientes',c.pen)+seg('par','Parciales',c.par)+seg('reg','Registradas',c.reg);
+
+  var vis=_ENT_EST?grupos.filter(function(g){return g.est===_ENT_EST;}):grupos;
+  _ENT_GRUPOS=vis;
+  window._ENT_ROWS={}; rows.forEach(function(r){window._ENT_ROWS[r._row]=r;});
   var el=document.getElementById('ent-count');
-  if(el)el.textContent=rows.length+' registros';
-  // Índice global para evitar interpolación de strings en onclick (más seguro contra comillas en datos)
-  window._ENT_ROWS = {};
-  var tbody=rows.map(function(r){
-    window._ENT_ROWS[r._row] = r;
-    return '<tr>'+
-      '<td class="mono" style="font-size:12px">'+esc(r.fecha)+'</td>'+
-      '<td class="mono col-hide-mobile" style="font-size:12px">'+esc(r.factura)+'</td>'+
-      '<td class="mono">'+esc(r.sku)+'</td>'+
-      '<td class="td-desc" title="'+esc(r.desc)+'">'+esc(r.desc)+'</td>'+
-      '<td class="r" style="font-weight:600">'+fmt(r.unidades)+'</td>'+
-      '<td class="muted col-hide-mobile">'+esc(r.proveedor)+'</td>'+
-      '<td class="muted col-hide-mobile">'+esc(r.oc)+'</td>'+
-      '<td class="col-hide-mobile"><span class="badge '+(r.dynamics==='Registrado'?'badge-ok':'badge-warn')+'">'+esc(r.dynamics)+'</span></td>'+
-      '<td class="muted col-hide-mobile">'+esc(r.responsable)+'</td>'+
-      '<td class="c"><button class="btn btn-ghost btn-sm" onclick="editarDynamicsRowSafe('+r._row+')">✏</button></td>'+
-    '</tr>';
-  }).join('');
-  var t=document.getElementById('entradas-tbody');
-  if(t)t.innerHTML=tbody||'<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:40px">Sin registros</td></tr>';
+  if(el)el.textContent=vis.length+(vis.length===1?' recepción':' recepciones');
+
+  var chev='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+  var lapiz=function(row,tit){return '<button class="ent-edb" title="'+tit+'" onclick="event.stopPropagation();editarDynamicsRowSafe('+row+')">✎</button>';};
+  var lineas=function(g,i){
+    if(!_ENT_ABIERTOS[g.key]) return '';
+    return '<div class="ent-its on">'+g.items.map(function(x){
+      return '<div class="ent-it"><span class="mono">'+esc(x.sku)+'</span><span class="d">'+esc(x.desc)+'</span><span class="r"><b>'+fmt(x.unidades)+'</b></span><span>'+_entPillLinea(x.dynamics)+'</span>'+
+        '<span class="r">'+(g.oc?'':lapiz(x._row,'Cambiar estado de Dynamics'))+'</span></div>';
+    }).join('')+'</div>';
+  };
+  document.getElementById('ent-rows').innerHTML=vis.map(function(g,i){
+    var o=!!_ENT_ABIERTOS[g.key];
+    return '<div class="ent-g"><div class="ent-rc'+(o?' open':'')+'" onclick="entTg('+i+')"><span class="ent-chev">'+chev+'</span>'+
+      '<span class="mono">'+esc(g.fecha)+'</span>'+
+      '<div><div class="ent-fa mono">'+esc(g.factura||'—')+'</div><div class="ent-sb">'+esc(g.proveedor||'')+'</div></div>'+
+      '<span>'+(g.oc?'<span class="ent-oc">'+esc(g.oc)+'</span>':'<span class="ent-sin">Sin OC</span>')+'</span>'+
+      '<span class="r">'+g.items.length+'</span><span class="r"><b>'+fmt(g.und)+'</b></span>'+
+      '<span>'+_entPillGrupo(g)+'</span><span class="ent-resp">'+esc(g.responsable||'')+'</span>'+
+      '<span class="r">'+(g.oc?lapiz(g.items[0]._row,'Cambiar el estado de Dynamics de toda la OC'):'')+'</span></div>'+lineas(g,i)+'</div>';
+  }).join('')||'<div class="ent-vacio">Sin registros</div>';
+  document.getElementById('ent-lst').innerHTML=vis.map(function(g,i){
+    return '<div class="ent-cd"><div class="ent-h" onclick="entTg('+i+')"><div style="min-width:0"><div class="ent-fa mono">'+esc(g.factura||'—')+'</div>'+
+      '<div class="ent-sb">'+esc(g.proveedor||'')+' · '+esc(g.fecha)+'</div>'+
+      '<div class="ent-tags">'+_entPillGrupo(g)+(g.oc?'<span class="ent-oc">'+esc(g.oc)+'</span>':'')+(g.oc?lapiz(g.items[0]._row,'Cambiar el estado de Dynamics de toda la OC'):'')+'</div></div>'+
+      '<div class="ent-u"><b>'+fmt(g.und)+'</b><span>'+g.items.length+' prod.</span></div></div>'+lineas(g,i)+'</div>';
+  }).join('')||'<div class="ent-vacio">Sin registros</div>';
 }
+
+function entTg(i){ var g=_ENT_GRUPOS[i]; if(!g) return; _ENT_ABIERTOS[g.key]=!_ENT_ABIERTOS[g.key]; _filterEntradas(); }
+function entSetEstado(k){ _ENT_EST=(_ENT_EST===k?'':k); _filterEntradas(); }
 
 // Wrapper seguro — lee valor actual desde el índice en lugar de recibirlo por interpolación de string
 function editarDynamicsRowSafe(rowNum){
