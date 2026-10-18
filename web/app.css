@@ -2942,3 +2942,26 @@ input.filter-inp:focus{
   #fs-conteo .fs-header{padding:calc(8px + env(safe-area-inset-top,0)) 10px 8px}
   #fs-conteo .fs-body{padding:8px 14px 20px}
 }
+
+/* ── DASHBOARD: descargas ── */
+.dash-head{margin-bottom:22px}
+.dash-h1{font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--text);letter-spacing:-.01em}
+.dash-sub{font-size:13px;color:var(--text3);margin-top:4px}
+.dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:820px}
+.dash-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;
+  display:flex;flex-direction:column;gap:6px;
+  box-shadow:0 1px 2px rgba(46,14,107,.04);transition:border-color .18s, box-shadow .18s, transform .15s;
+}
+.dash-card:hover{border-color:var(--accent-line);box-shadow:0 8px 22px rgba(46,14,107,.10);transform:translateY(-1px)}
+.dash-ico{
+  width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  background:rgba(123,82,255,.10);color:#7B52FF;border:1px solid rgba(123,82,255,.22);margin-bottom:10px;
+}
+.dash-ct{font-size:16px;font-weight:700;color:var(--text)}
+.dash-cd{font-size:12.5px;line-height:1.45;color:var(--text3);min-height:36px;margin-bottom:12px}
+.dash-btn{width:100%;justify-content:center;gap:8px;padding-top:9px;padding-bottom:9px}
+@media (max-width:640px){
+  .dash-grid{grid-template-columns:1fr}
+  .dash-h1{font-size:21px}
+}

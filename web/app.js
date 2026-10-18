@@ -309,7 +309,6 @@ function renderTopbarActions(name){
 
   if(name==='dashboard'){
     el.innerHTML=
-      '<button id="btn-export-dashboard" class="btn btn-ghost btn-sm tb-btn-icon" onclick="exportDashboard()">'+icoExport+'<span class="tb-btn-label"> Exportar</span></button>'+
       '<button class="btn btn-ghost btn-sm tb-btn-icon" onclick="reloadPage(\'dashboard\')">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>';
   } else if(name==='stock'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirSKUForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Nuevo SKU</span></button>'+btnExport+btnRefresh;
@@ -433,101 +432,33 @@ function renderDashboard(r){
   if(_handleExpired(r,'dashboard-root')) return;
   if(!r||!r.ok){errBox('dashboard-root',r?r.error:'Error desconocido','dashboard');return;}
   DATA.stock=r.data||[];
-  var data=DATA.stock;
-  var sedes=[...new Set(data.map(function(x){return x.sede;}).filter(Boolean))].sort();
-  var totalSKUs=data.length;
-  var totalUnd=data.reduce(function(a,x){return a+(Number(x.stock)||0);},0);
-  var totalEnt=data.reduce(function(a,x){return a+(Number(x.entradas)||0);},0);
-  var totalSal=data.reduce(function(a,x){return a+(Number(x.salidas)||0);},0);
-  var totalMT=data.reduce(function(a,x){return a+(Number(x.mt)||0);},0);
-  var conStock=data.filter(function(x){return(Number(x.stock)||0)>0;}).length;
-  var sinStock=data.filter(function(x){return(Number(x.stock)||0)===0;}).length;
-  var sedeRows=sedes.map(function(s){
-    var items=data.filter(function(x){return x.sede===s;});
-    var stk=items.reduce(function(a,x){return a+(Number(x.stock)||0);},0);
-    var ent=items.reduce(function(a,x){return a+(Number(x.entradas)||0);},0);
-    var sal=items.reduce(function(a,x){return a+(Number(x.salidas)||0);},0);
-    var mt=items.reduce(function(a,x){return a+(Number(x.mt)||0);},0);
-    var pct=ent>0?((mt/ent)*100).toFixed(1)+'%':'—';
-    return '<tr><td style="font-weight:600">'+esc(s)+'</td><td class="r">'+fmt(stk)+'</td><td class="r">'+fmt(ent)+'</td><td class="r">'+fmt(sal)+'</td><td class="r">'+fmt(mt)+'</td><td class="r">'+pct+'</td></tr>';
-  }).join('');
-  var pctTotal=totalEnt>0?((totalMT/totalEnt)*100).toFixed(1)+'%':'—';
-  var totalRow='<tr style="border-top:2px solid var(--border2);font-weight:700"><td>TOTAL</td><td class="r">'+fmt(totalUnd)+'</td><td class="r">'+fmt(totalEnt)+'</td><td class="r">'+fmt(totalSal)+'</td><td class="r">'+fmt(totalMT)+'</td><td class="r">'+pctTotal+'</td></tr>';
-  var icoDown='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  var sedes=[...new Set(DATA.stock.map(function(x){return x.sede;}).filter(Boolean))].sort();
+  var ico=function(d){return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';};
   document.getElementById('dashboard-root').innerHTML=
-    '<div style="margin-bottom:10px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)">Inventario</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">'+
-      _dKPI('Total SKUs',fmt(totalSKUs),'skus','')+_dKPI('Stock total',fmt(totalUnd),'und.','color:var(--blue)')+
-      _dKPI('Con stock',fmt(conStock),'skus','color:var(--ok)')+_dKPI('Sin stock',fmt(sinStock),'skus','color:var(--warn)')+
+    '<div class="dash-head">'+
+      '<div class="dash-h1">Descargas</div>'+
+      '<div class="dash-sub">Exporta a Excel la información de todas las sedes'+(sedes.length?' ('+sedes.map(esc).join(' · ')+')':'')+'.</div>'+
     '</div>'+
-    '<div style="margin-bottom:10px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)">Movimientos</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px">'+
-      _dKPI('Entradas total',fmt(totalEnt),'und.','')+_dKPI('Salidas total',fmt(totalSal),'und.','')+
-      _dKPI('M-T total',fmt(totalMT),'und.','color:var(--danger)')+
-    '</div>'+
-    '<div style="margin-top:28px">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
-        '<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)">Comparativa por sede</div>'+
-        '<button class="btn btn-ghost btn-sm tb-btn-icon" onclick="exportDashboard()" title="Exportar resumen">'+icoDown+' <span style="margin-left:4px">Resumen</span></button>'+
-      '</div>'+
-      '<div class="table-wrap"><table>'+
-        '<thead><tr><th>Sede</th><th class="r">Stock und.</th><th class="r">Entradas</th><th class="r">Salidas</th><th class="r">M-T</th><th class="r">% M-T/Ent.</th></tr></thead>'+
-        '<tbody>'+(sedeRows||(sedes.length?totalRow:'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:32px">Sin datos de sedes</td></tr>'))+(sedes.length?totalRow:'')+'</tbody>'+
-      '</table></div>'+
-    '</div>'+
-    '<div style="margin-top:32px">'+
-      '<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:16px">Descargas por módulo</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">'+
-        _dDLCard('Stock actual','Pivot SKU × sedes · estado actual','btn-dl-stock','dashExportStock()')+
-        _dDLCard('Salidas','Historial completo · 1 hoja por sede','btn-dl-salidas','dashExportModulo(\'salidas\',\'btn-dl-salidas\')')+
-        _dDLCard('Entradas','Historial completo · 1 hoja por sede','btn-dl-entradas','dashExportModulo(\'entradas\',\'btn-dl-entradas\')')+
-        _dDLCard('Mermas & Traslados','Historial completo · 1 hoja por sede','btn-dl-mt','dashExportModulo(\'mt\',\'btn-dl-mt\')')+
-      '</div>'+
-    '</div>'+
-    '<div style="margin-top:32px;border-top:1px solid var(--border);padding-top:28px">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
-        '<div><div style="font-size:14px;font-weight:700;color:var(--text)">Calculador de requerimiento</div>'+
-        '<div style="font-size:11px;color:var(--text3);margin-top:2px">Sugerido de compra basado en historial de ventas</div></div>'+
-        '<button class="btn btn-primary btn-sm" onclick="abrirCalculador()">Calcular</button>'+
-      '</div>'+
-      '<div id="req-panel" style="display:none"></div>'+
+    '<div class="dash-grid">'+
+      _dDLCard(ico('<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>'),
+        'Stock actual','Una sola hoja: cada SKU con el stock en pack de todas las sedes y su total.','btn-dl-stock','dashExportStock()')+
+      _dDLCard(ico('<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>'),
+        'Salidas','Historial completo de pedidos. Una hoja por sede.','btn-dl-salidas','dashExportModulo(\'salidas\',\'btn-dl-salidas\')')+
+      _dDLCard(ico('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>'),
+        'Entradas','Historial completo de ingresos. Una hoja por sede.','btn-dl-entradas','dashExportModulo(\'entradas\',\'btn-dl-entradas\')')+
+      _dDLCard(ico('<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
+        'Mermas & Traslados','Historial completo de mermas y traslados. Una hoja por sede.','btn-dl-mt','dashExportModulo(\'mt\',\'btn-dl-mt\')')+
     '</div>';
 }
 
-function _dKPI(label,val,unit,style){
-  return '<div class="stat-card" style="min-height:96px"><div class="stat-label">'+label+'</div>'+
-    '<div class="stat-val-row"><div class="stat-val" style="font-size:28px;'+style+'">'+val+'</div><span class="stat-unit-pill">'+unit+'</span></div></div>';
-}
-function _dDLCard(title,desc,btnId,onclick){
-  var icoDown='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
-  return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px">'+
-    '<div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px">'+title+'</div>'+
-    '<div style="font-size:11px;color:var(--text3);margin-bottom:14px">'+desc+'</div>'+
-    '<button id="'+btnId+'" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center" onclick="'+onclick+'">'+icoDown+' &nbsp;Descargar</button>'+
+function _dDLCard(icono,title,desc,btnId,onclick){
+  var icoDown='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  return '<div class="dash-card">'+
+    '<div class="dash-ico">'+icono+'</div>'+
+    '<div class="dash-ct">'+title+'</div>'+
+    '<div class="dash-cd">'+desc+'</div>'+
+    '<button id="'+btnId+'" class="btn btn-primary btn-sm dash-btn" onclick="'+onclick+'">'+icoDown+' Descargar Excel</button>'+
   '</div>';
-}
-
-function exportDashboard(){
-  var data=DATA.stock||[];
-  if(!data.length){showToast('Sin datos para exportar','err');return;}
-  var sedes=[...new Set(data.map(function(x){return x.sede;}).filter(Boolean))].sort();
-  var ws_data=[['Sede','Stock und.','Entradas','Salidas','M-T','% M-T/Ent.']];
-  var totStk=0,totEnt=0,totSal=0,totMT=0;
-  sedes.forEach(function(s){
-    var items=data.filter(function(x){return x.sede===s;});
-    var stk=items.reduce(function(a,x){return a+(Number(x.stock)||0);},0);
-    var ent=items.reduce(function(a,x){return a+(Number(x.entradas)||0);},0);
-    var sal=items.reduce(function(a,x){return a+(Number(x.salidas)||0);},0);
-    var mt=items.reduce(function(a,x){return a+(Number(x.mt)||0);},0);
-    ws_data.push([s,stk,ent,sal,mt,ent>0?((mt/ent)*100).toFixed(1)+'%':'—']);
-    totStk+=stk;totEnt+=ent;totSal+=sal;totMT+=mt;
-  });
-  ws_data.push(['TOTAL',totStk,totEnt,totSal,totMT,totEnt>0?((totMT/totEnt)*100).toFixed(1)+'%':'—']);
-  var wb=XLSX.utils.book_new();var ws=XLSX.utils.aoa_to_sheet(ws_data);
-  ws['!cols']=[{wch:24},{wch:14},{wch:12},{wch:12},{wch:10},{wch:14}];
-  XLSX.utils.book_append_sheet(wb,ws,'Resumen sedes');
-  XLSX.writeFile(wb,'dashboard_resumen_'+_hoyISO()+'.xlsx');
-  showToast('Resumen exportado','ok');
 }
 
 function dashExportStock(){
@@ -577,212 +508,6 @@ function dashExportModulo(modulo,btnId){
   _exportConSpinner(btnId,modulo,function(sedes){
     _exportMultiHoja(sedes.map(function(s){return{nombre:s.nombre,headers:cfg.hdr,rows:s.data,colWidths:cfg.cw,mapFn:cfg.fn};}),modulo+'_sedes');
   });
-}
-
-/* ══════════════════════════════════════
-   CALCULADOR DE REQUERIMIENTO
-══════════════════════════════════════ */
-var REQ={salidas:null,sede:'',dias:7,incremento:0,numCortes:3,diasCorte:['Lunes','Miércoles','Sábado'],modo:'auto',tabla:[]};
-
-function abrirCalculador(){
-  var panel=document.getElementById('req-panel');if(!panel)return;
-  if(panel.style.display!=='none'){panel.style.display='none';panel.innerHTML='';REQ.salidas=null;return;}
-  panel.style.display='block';_renderReqForm();_reqCargarSalidas();
-}
-
-function _renderReqForm(){
-  var panel=document.getElementById('req-panel');if(!panel)return;
-  var sedes=[...new Set((DATA.stock||[]).map(function(x){return x.sede;}).filter(Boolean))].sort();
-  var sedeOpts=sedes.map(function(s){return '<option value="'+esc(s)+'"'+(REQ.sede===s?' selected':'')+'>'+esc(s)+'</option>';}).join('');
-  panel.innerHTML=
-    '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:20px">'+
-      '<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:14px">Parámetros</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;align-items:end">'+
-        '<div><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px">Sede</div>'+
-          '<select class="inp" id="req-sede" onchange="REQ.sede=this.value"><option value="">Todas las sedes</option>'+sedeOpts+'</select></div>'+
-        '<div><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px">Días a cubrir</div>'+
-          '<input class="inp" id="req-dias" type="number" min="1" max="30" value="'+REQ.dias+'" style="font-family:var(--font-mono);font-weight:600" oninput="REQ.dias=Math.max(1,Number(this.value)||7)"/></div>'+
-        '<div><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px">% Incremento</div>'+
-          '<div style="display:flex;align-items:center;gap:6px"><input class="inp" id="req-inc" type="number" min="0" max="100" value="'+REQ.incremento+'" style="font-family:var(--font-mono);font-weight:600" oninput="REQ.incremento=Math.max(0,Number(this.value)||0)"/>'+
-          '<span style="font-size:13px;color:var(--text3)">%</span></div></div>'+
-        '<div><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px">Número de cortes</div>'+
-          '<select class="inp" id="req-nCortes" onchange="_reqCambiarCortes(Number(this.value))">'+
-            '<option value="1"'+(REQ.numCortes===1?' selected':'')+'>1 corte</option><option value="2"'+(REQ.numCortes===2?' selected':'')+'>2 cortes</option>'+
-            '<option value="3"'+(REQ.numCortes===3?' selected':'')+'>3 cortes</option><option value="4"'+(REQ.numCortes===4?' selected':'')+'>4 cortes</option>'+
-          '</select></div>'+
-      '</div>'+
-      '<div style="margin-top:14px"><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px">Días de entrega</div>'+
-        '<div id="req-cortes-wrap" style="display:flex;gap:8px;flex-wrap:wrap">'+_reqCortesHTML()+'</div></div>'+
-      '<div style="margin-top:14px;display:flex;align-items:center;gap:16px">'+
-        '<div style="font-size:11px;font-weight:600;color:var(--text3)">Distribución:</div>'+
-        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)"><input type="radio" name="req-modo" value="auto" '+(REQ.modo==='auto'?'checked':'')+' onchange="REQ.modo=\'auto\';_reqRecalcular()"/> Automática (proporcional)</label>'+
-        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2)"><input type="radio" name="req-modo" value="manual" '+(REQ.modo==='manual'?'checked':'')+' onchange="REQ.modo=\'manual\';_reqRecalcular()"/> Manual (editar cantidades)</label>'+
-      '</div>'+
-      '<div style="margin-top:16px;display:flex;gap:10px;align-items:center">'+
-        '<button class="btn btn-primary" id="btn-req-calc" onclick="_reqRecalcular()">Calcular requerimiento</button>'+
-        '<span id="req-status" style="font-size:12px;color:var(--text3)"></span>'+
-      '</div>'+
-    '</div>'+
-    '<div id="req-tabla-wrap"></div>';
-}
-
-function _reqCortesHTML(){
-  var dias=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-  return REQ.diasCorte.slice(0,REQ.numCortes).map(function(d,i){
-    var opts=dias.map(function(dia){return '<option value="'+dia+'"'+(dia===d?' selected':'')+'>'+dia+'</option>';}).join('');
-    return '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3);min-width:44px">Corte '+(i+1)+'</span>'+
-      '<select class="inp filter-select" style="width:130px" onchange="REQ.diasCorte['+(i)+'] = this.value">'+opts+'</select></div>';
-  }).join('');
-}
-
-function _reqCambiarCortes(n){
-  REQ.numCortes=n;
-  var defaults=['Lunes','Miércoles','Sábado','Viernes'];
-  while(REQ.diasCorte.length<n) REQ.diasCorte.push(defaults[REQ.diasCorte.length]||'Lunes');
-  REQ.diasCorte=REQ.diasCorte.slice(0,n);
-  var wrap=document.getElementById('req-cortes-wrap');
-  if(wrap) wrap.innerHTML=_reqCortesHTML();
-}
-
-function _reqCargarSalidas(){
-  var st=document.getElementById('req-status');var btn=document.getElementById('btn-req-calc');
-  if(st) st.textContent='Cargando historial de salidas...';
-  if(btn) btn.disabled=true;
-  google.script.run
-    .withSuccessHandler(function(r){
-      var st2=document.getElementById('req-status');var btn2=document.getElementById('btn-req-calc');
-      if(!r||!r.ok){if(st2)st2.textContent='Error: '+(r?r.error:'');if(btn2)btn2.disabled=false;return;}
-      REQ.salidas=r.sedes;
-      if(st2) st2.textContent='Historial cargado · '+r.sedes.length+' sede(s)';
-      if(btn2) btn2.disabled=false;
-    })
-    .withFailureHandler(function(e){
-      var st2=document.getElementById('req-status');var btn2=document.getElementById('btn-req-calc');
-      if(st2) st2.textContent='Error: '+e.message;if(btn2) btn2.disabled=false;
-    })
-    .getExportMultiSede(S.token,'salidas');
-}
-
-function _reqRecalcular(){
-  if(!REQ.salidas){showToast('Espera — cargando historial de salidas...','warn');return;}
-  var stock=DATA.stock||[];if(!stock.length){showToast('Sin datos de stock','err');return;}
-  var sedeFiltro=(document.getElementById('req-sede')||{}).value||'';
-  REQ.sede=sedeFiltro;
-  REQ.dias=Math.max(1,Number((document.getElementById('req-dias')||{}).value)||7);
-  REQ.incremento=Math.max(0,Number((document.getElementById('req-inc')||{}).value)||0);
-  var todasSalidas=[];
-  REQ.salidas.forEach(function(s){
-    if(sedeFiltro&&s.nombre!==sedeFiltro) return;
-    s.data.forEach(function(r){todasSalidas.push({sede:s.nombre,sku:r.sku,fecha:r.fecha,unidad:Number(r.unidad)||0});});
-  });
-  var stockFiltrado=sedeFiltro?stock.filter(function(x){return x.sede===sedeFiltro;}):stock;
-  var stockMap={};
-  stockFiltrado.forEach(function(r){
-    if(!r.sku) return;
-    if(!stockMap[r.sku]) stockMap[r.sku]={sku:r.sku,desc:r.desc,marca:r.marca,stockAct:0};
-    else if(!stockMap[r.sku].desc&&r.desc) stockMap[r.sku].desc=r.desc;
-    stockMap[r.sku].stockAct+=Number(r.stock)||0;
-  });
-  var hoy=new Date();var hace30=new Date(hoy);hace30.setDate(hoy.getDate()-30);var hace7=new Date(hoy);hace7.setDate(hoy.getDate()-7);
-  function parseF(s){if(!s) return null;var p=String(s).split('/');if(p.length===3) return new Date(Number(p[2]),Number(p[1])-1,Number(p[0]));return null;}
-  var salidaMap={};
-  todasSalidas.forEach(function(r){
-    if(!r.sku||!r.unidad) return;var f=parseF(r.fecha);if(!f) return;
-    if(!salidaMap[r.sku]) salidaMap[r.sku]={und30:0,und7:0};
-    if(f>=hace30) salidaMap[r.sku].und30+=r.unidad;
-    if(f>=hace7)  salidaMap[r.sku].und7+=r.unidad;
-  });
-  REQ.tabla=Object.values(stockMap).map(function(item){
-    var sal=salidaMap[item.sku]||{und30:0,und7:0};
-    var pDiaMes=sal.und30/30;var pDiaSem=sal.und7/7;
-    var pDia=(pDiaMes*0.4)+(pDiaSem*0.6);
-    var diasCob=pDia>0?Math.round(item.stockAct/pDia):9999;
-    var proyeccion=Math.round(pDia*REQ.dias);
-    var neto=Math.max(0,proyeccion-item.stockAct);
-    var conInc=Math.round(neto*(1+REQ.incremento/100));
-    var estado=diasCob>=REQ.dias?'ok':(diasCob>0?'parcial':'critico');
-    return{sku:item.sku,desc:item.desc,marca:item.marca,stockAct:item.stockAct,
-      pDiaMes:Math.round(pDiaMes*10)/10,pDiaSem:Math.round(pDiaSem*10)/10,pDia:Math.round(pDia*10)/10,
-      diasCob:diasCob>=9999?'∞':diasCob,proyeccion:proyeccion,neto:neto,total:conInc,
-      estado:estado,cortes:_reqDistribuir(conInc)};
-  }).filter(function(r){return r.pDia>0||r.stockAct>0;})
-    .sort(function(a,b){return(a.estado==='critico'?0:a.estado==='parcial'?1:2)-(b.estado==='critico'?0:b.estado==='parcial'?1:2);});
-  _reqRenderTabla();
-}
-
-function _reqDistribuir(total){
-  if(!total||REQ.numCortes<1) return Array(REQ.numCortes).fill(0);
-  if(REQ.modo==='manual'){
-    var base=Math.floor(total/REQ.numCortes);var resto=total-base*REQ.numCortes;
-    return Array.from({length:REQ.numCortes},function(_,i){return base+(i===0?resto:0);});
-  }
-  var diasSem={Lunes:1,Martes:2,'Miércoles':3,Jueves:4,Viernes:5,Sábado:6,Domingo:7};
-  var numeros=REQ.diasCorte.slice(0,REQ.numCortes).map(function(d){return diasSem[d]||1;});
-  var gaps=numeros.map(function(n,i){var sig=numeros[i+1]||(numeros[0]+7);return sig-n;});
-  var totalGaps=gaps.reduce(function(a,b){return a+b;},0)||1;
-  var repartido=gaps.map(function(g){return Math.round(total*g/totalGaps);});
-  repartido[0]+=total-repartido.reduce(function(a,b){return a+b;},0);
-  return repartido;
-}
-
-function _reqRenderTabla(){
-  var wrap=document.getElementById('req-tabla-wrap');if(!wrap) return;
-  if(!REQ.tabla.length){wrap.innerHTML='<div style="padding:32px;text-align:center;color:var(--text3)">Sin datos para mostrar</div>';return;}
-  var solicitarCount=REQ.tabla.filter(function(r){return r.total>0;}).length;
-  var omitirCount=REQ.tabla.filter(function(r){return r.total===0;}).length;
-  var corteThs=REQ.diasCorte.slice(0,REQ.numCortes).map(function(d,i){
-    return '<th class="r">Corte '+(i+1)+'<br><span style="font-size:10px;font-weight:400;color:var(--text3)">'+d+'</span></th>';
-  }).join('');
-  var rows=REQ.tabla.map(function(r,idx){
-    var estadoBadge=r.estado==='ok'?'<span class="badge badge-ok">Stock OK</span>':r.estado==='parcial'?'<span class="badge badge-warn">Parcial</span>':'<span class="badge badge-danger">Crítico</span>';
-    var cortesCells=r.cortes.map(function(c,ci){
-      if(REQ.modo==='manual'&&r.total>0)
-        return '<td class="r"><input type="number" min="0" value="'+c+'" style="width:70px;text-align:right;font-family:var(--font-mono);font-size:12px;padding:4px 6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text)" oninput="_reqActualizarCorte('+idx+','+ci+',Number(this.value))"/></td>';
-      return '<td class="r mono" style="font-size:12px">'+(r.total>0?fmt(c):'—')+'</td>';
-    }).join('');
-    return '<tr style="'+(r.total===0?'opacity:.5':'')+'">'+
-      '<td class="mono" style="font-size:11px;color:var(--text3)">'+esc(r.sku)+'</td>'+
-      '<td class="td-desc" title="'+esc(r.desc)+'">'+esc(r.desc)+'</td>'+
-      '<td class="r mono">'+fmt(r.stockAct)+'</td><td class="r" style="font-size:11px">'+r.diasCob+(r.diasCob!=='∞'?'d':'')+'</td>'+
-      '<td class="r" style="font-size:11px">'+r.pDiaSem+'</td><td class="r" style="font-size:11px">'+r.pDiaMes+'</td>'+
-      '<td class="r" style="font-size:11px;color:var(--accent)">'+r.pDia+'</td>'+
-      '<td class="r" style="font-weight:600">'+(r.total>0?fmt(r.total):'—')+'</td>'+
-      cortesCells+'<td class="c">'+estadoBadge+'</td></tr>';
-  }).join('');
-  wrap.innerHTML=
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
-      '<span style="font-size:12px;color:var(--text3)"><span style="color:var(--danger);font-weight:600">'+solicitarCount+'</span> a solicitar · <span style="color:var(--text3)">'+omitirCount+'</span> con stock suficiente</span>'+
-      '<button class="btn btn-ghost btn-sm" onclick="exportRequerimiento()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar requerimiento</button>'+
-    '</div>'+
-    '<div class="table-wrap"><table><thead><tr>'+
-      '<th>SKU</th><th>Descripción</th><th class="r">Stock act.</th><th class="r">Cob.</th>'+
-      '<th class="r">P.sem</th><th class="r">P.mes</th><th class="r">P.pond.</th><th class="r">Total pedir</th>'+
-      corteThs+'<th class="c">Estado</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-}
-
-function _reqActualizarCorte(rowIdx,corteIdx,val){
-  if(!REQ.tabla[rowIdx]) return;
-  REQ.tabla[rowIdx].cortes[corteIdx]=val;
-  REQ.tabla[rowIdx].total=REQ.tabla[rowIdx].cortes.reduce(function(a,b){return a+b;},0);
-}
-
-function exportRequerimiento(){
-  if(!REQ.tabla||!REQ.tabla.length){showToast('Sin datos','err');return;}
-  var headers=['SKU','Descripción','Marca','Stock actual','Días cob.','P.diaria sem.','P.diaria mes','P.diaria pond.','Total a pedir'];
-  REQ.diasCorte.slice(0,REQ.numCortes).forEach(function(d,i){headers.push('Corte '+(i+1)+' ('+d+')');});
-  headers.push('Estado');
-  var ws_data=[headers];
-  REQ.tabla.forEach(function(r){
-    var fila=[r.sku,r.desc,r.marca||'',r.stockAct,r.diasCob,r.pDiaSem,r.pDiaMes,r.pDia,r.total];
-    r.cortes.forEach(function(c){fila.push(r.total>0?c:0);});
-    fila.push(r.estado==='ok'?'Stock suficiente':r.estado==='parcial'?'Parcial':'Crítico');
-    ws_data.push(fila);
-  });
-  var wb=XLSX.utils.book_new();var ws=XLSX.utils.aoa_to_sheet(ws_data);
-  var colW=[{wch:14},{wch:36},{wch:14},{wch:12},{wch:10},{wch:12},{wch:12},{wch:12},{wch:12}];
-  for(var i=0;i<REQ.numCortes;i++) colW.push({wch:16});colW.push({wch:16});
-  ws['!cols']=colW;XLSX.utils.book_append_sheet(wb,ws,'Requerimiento');
-  XLSX.writeFile(wb,'requerimiento_'+_hoyISO()+'.xlsx');showToast('Requerimiento exportado','ok');
 }
 
 function loadStock(){
