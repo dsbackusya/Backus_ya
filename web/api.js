@@ -826,7 +826,7 @@
   /* ── DASHBOARD: alertas por sede + estado de OC (una sola llamada) ── */
   API.getDashboard = guard(async function (p) {
     // Mantiene al día el estado de las OC (las que ya tienen entradas pasan a Recibido) para no mostrar vencidas falsas
-    if (p.rol === 'admin') { try { await sb.rpc('validar_recepcion_oc'); } catch (e) { /* no bloquea el tablero */ } }
+    if (p.rol !== 'invitado') { try { await sb.rpc('validar_recepcion_oc'); } catch (e) { /* no bloquea el tablero */ } }
     var r = await sb.rpc('dashboard_resumen');
     if (r.error) throw r.error;
     return { ok: true, data: r.data };

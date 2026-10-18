@@ -308,7 +308,7 @@ function renderTopbarActions(name){
   var btnRefresh='<button class="btn btn-ghost btn-sm tb-btn-icon" title="Actualizar" onclick="reloadPage(\''+name+'\')">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>';
 
   if(name==='dashboard'){
-    var esAdm=S&&S.rol==='admin';
+    var esAdm=S&&S.rol!=='invitado'; // cargar y validar OC: cualquier cuenta que escribe (el invitado es solo lectura)
     el.innerHTML=(esAdm?'<button class="btn btn-primary btn-sm" onclick="abrirImportarOC()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Cargar OC</span></button>'+
       '<button class="btn btn-ghost btn-sm" id="btn-oc-validar" onclick="validarRecepcionOC()" style="border-color:var(--accent);color:var(--accent)">'+icoRefresh+'<span class="tb-btn-label"> Validar OC</span></button>':'')+
       '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Exportar órdenes de compra" onclick="exportOC()">'+icoExport+'<span class="tb-btn-label"> Exportar OC</span></button>'+btnRefresh;
