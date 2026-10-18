@@ -2052,92 +2052,157 @@ function editarDynamicsRow(rowNum, valorActual){
   );
 }
 
-/* ── ENTRADA TABS ── */
+/* ── ENTRADA: un solo formulario, dos formas de cargar los productos ── */
 var ENTRADA_TAB='manual';
 var ARCH_ROWS=[];   // filas parseadas del archivo
 var ARCH_TOT=null;  // totales de la OC leídos del PDF: {sub, imp, total}
 var ENT_ROW_COUNT=0;
+var ENT_OCS=[];     // OC pendientes de recibir (sugerencias)
 
 function switchEntradaTab(tab){
   ENTRADA_TAB=tab;
-  var tabs=['manual','archivo'];
-  tabs.forEach(function(t){
-    document.getElementById('tab-content-'+t).classList.toggle('hidden', t!==tab);
-    var btn=document.getElementById('tab-'+t);
-    if(t===tab){btn.style.background='var(--accent)';btn.style.color='#fff';btn.style.boxShadow='0 2px 8px rgba(148,128,232,.25)';}
-    else{btn.style.background='transparent';btn.style.color='var(--text2)';btn.style.boxShadow='none';}
-  });
+  document.getElementById('tab-content-manual').classList.toggle('hidden', tab!=='manual');
+  document.getElementById('tab-content-archivo').classList.toggle('hidden', tab!=='archivo');
+  document.getElementById('ent-m-manual').classList.toggle('on', tab==='manual');
+  document.getElementById('ent-m-archivo').classList.toggle('on', tab==='archivo');
   document.getElementById('btn-ent-save').textContent=tab==='manual'?'Guardar entrada':'Importar desde archivo';
+  entResumen();
 }
 
-/* ── MANUAL: rows dinámicas ── */
+function entDyn(b){
+  document.getElementById('ent-dynamics').value=b.dataset.v;
+  document.querySelectorAll('#ent-dy button').forEach(function(x){x.classList.toggle('on',x===b);});
+}
+
+// Resumen del pie y estado del botón Guardar
+function entResumen(){
+  var fac=(document.getElementById('ent-factura').value||'').trim();
+  var n=0,u=0;
+  if(ENTRADA_TAB==='manual'){
+    document.querySelectorAll('#ent-rows-wrap [id^="ent-row-"]').forEach(function(row){
+      var id=row.id.replace('ent-row-','');
+      var sku=((document.getElementById('er-sku-'+id)||{}).value||'').trim();
+      var und=Number((document.getElementById('er-und-'+id)||{}).value||0);
+      if(sku&&und>0){ n++; u+=und; }
+    });
+  } else {
+    ARCH_ROWS.forEach(function(r){ if(r.incluir){ n++; u+=Number(r.cant)||0; } });
+  }
+  var ok=!!fac&&n>0;
+  var btn=document.getElementById('btn-ent-save');
+  if(btn&&btn.textContent.indexOf('...')<0) btn.disabled=!ok;
+  var msg=document.getElementById('ent-msg');
+  if(msg){
+    msg.innerHTML=ok?'<b>'+n+'</b> '+(n===1?'producto':'productos')+' · <b>'+fmt(u)+'</b> unidades':(!fac?'Escribe la factura para continuar':(ENTRADA_TAB==='manual'?'Agrega al menos un producto':'Carga un archivo y marca los productos'));
+    msg.style.color=ok?'':'var(--text3)';
+  }
+  var st=document.getElementById('ent-stat');
+  if(st){ st.className='en2-stat'+(ok?' ok':''); document.getElementById('ent-stat-t').textContent=ok?'Listo para guardar':'Faltan datos'; }
+}
+
+function abrirEntrada(){
+  switchEntradaTab('manual');
+  ['ent-factura','ent-proveedor','ent-oc','ent-fvenc'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('ent-responsable').value=(S&&S.usuario)||'';
+  document.getElementById('ent-dynamics').value='Pendiente';
+  document.querySelectorAll('#ent-dy button').forEach(function(x){x.classList.toggle('on',x.dataset.v==='Pendiente');});
+  document.getElementById('ent-rows-wrap').innerHTML='';
+  ENT_ROW_COUNT=0;
+  document.getElementById('ent-err').textContent='';
+  addEntradaRow();
+  clearFile();
+  document.getElementById('arch-err').textContent='';
+  entCargarOCs();
+  entResumen();
+  openFS('fs-entrada');
+  setTimeout(function(){document.getElementById('ent-factura').focus();},120);
+}
+
+// OC pendientes de recibir de esta tienda: al elegir una se llenan OC y proveedor
+function entCargarOCs(){
+  ENT_OCS=[];
+  document.getElementById('ent-ocs').innerHTML='';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(!r||!r.ok) return;
+      ENT_OCS=(r.data||[]).filter(function(o){
+        return (o.estado||'Pendiente')==='Pendiente' && (!S||S.rol!=='store'||String(o.sedeId)===String(S.sheetId));
+      }).slice(0,6);
+      entPintarOCs();
+    })
+    .withFailureHandler(function(){})
+    .getOrdenesCompra(S.token);
+}
+function entPintarOCs(){
+  var el=document.getElementById('ent-ocs'); if(!el) return;
+  el.innerHTML=ENT_OCS.length?'<small>Pendientes:</small>'+ENT_OCS.map(function(o,i){
+    return '<button type="button" onclick="entAplicarOC('+i+')">'+esc(o.oc)+'</button>';
+  }).join(''):'';
+}
+function entAplicarOC(i){
+  var o=typeof i==='number'?ENT_OCS[i]:ENT_OCS.filter(function(x){return x.oc===i;})[0];
+  if(!o) return;
+  document.getElementById('ent-oc').value=o.oc;
+  var pv=document.getElementById('ent-proveedor');
+  if(pv&&!pv.value.trim()) pv.value=o.proveedor||'';
+  entResumen();
+}
+
+/* ── MANUAL: filas de producto ── */
 function addEntradaRow(){
   ENT_ROW_COUNT++;
   var id=ENT_ROW_COUNT;
   var wrap=document.getElementById('ent-rows-wrap');
-
   var div=document.createElement('div');
   div.id='ent-row-'+id;
-  div.style.cssText='display:grid;grid-template-columns:1fr 2fr 100px 32px;gap:10px;align-items:start;padding:12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border)';
-
-  // Col 1: SKU + autocomplete
-  var c1=document.createElement('div');
-  var lbl1=document.createElement('div');
-  lbl1.className='form-label';lbl1.style.marginBottom='4px';
-  lbl1.innerHTML='SKU <span class="req">*</span>';
-  var skuRow=document.createElement('div');
-  skuRow.style.cssText='display:flex;gap:6px;align-items:flex-start';
-  var acWrap=document.createElement('div');
-  acWrap.className='autocomplete-wrap';acWrap.style.flex='1';
-  var skuInp=document.createElement('input');
-  skuInp.className='inp';skuInp.id='er-sku-'+id;skuInp.placeholder='SKU o nombre...';
-  skuInp.addEventListener('input',function(){acSearch('er-sku-'+id,'er-desc-'+id,'','ac-er-'+id);});
-  var acList=document.createElement('div');
-  acList.className='ac-list';acList.id='ac-er-'+id;
-  acWrap.appendChild(skuInp);acWrap.appendChild(acList);
-  var camBtnEnt=document.createElement('button');
-  camBtnEnt.className='cam-btn';camBtnEnt.title='Escanear';camBtnEnt.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="11"/></svg>';
-  (function(rowId){camBtnEnt.addEventListener('click',function(){openScanner('er-sku-'+rowId,'er-desc-'+rowId,'');});})(id);
-  skuRow.appendChild(acWrap);skuRow.appendChild(camBtnEnt);
-  c1.appendChild(lbl1);c1.appendChild(skuRow);
-
-  // Col 2: Descripcion
-  var c2=document.createElement('div');
-  var lbl2=document.createElement('div');
-  lbl2.className='form-label';lbl2.style.marginBottom='4px';lbl2.textContent='Descripción';
-  var descInp=document.createElement('input');
-  descInp.className='inp';descInp.id='er-desc-'+id;
-  descInp.placeholder='Se completa automáticamente';descInp.readOnly=true;
-  c2.appendChild(lbl2);c2.appendChild(descInp);
-
-  // Col 3: Unidades
-  var c3=document.createElement('div');
-  var lbl3=document.createElement('div');
-  lbl3.className='form-label';lbl3.style.marginBottom='4px';
-  lbl3.innerHTML='Unidades <span class="req">*</span>';
-  var undInp=document.createElement('input');
-  undInp.className='inp';undInp.id='er-und-'+id;
-  undInp.type='number';undInp.min='0';undInp.placeholder='0';
-  c3.appendChild(lbl3);c3.appendChild(undInp);
-
-  // Col 4: Eliminar
-  var c4=document.createElement('div');
-  c4.style.paddingTop='22px';
-  var btn=document.createElement('button');
-  btn.className='btn btn-danger btn-sm';
-  btn.style.padding='7px 10px';btn.textContent='✕';
-  btn.addEventListener('click',function(){removeEntradaRow(id);});
-  c4.appendChild(btn);
-
-  div.appendChild(c1);div.appendChild(c2);div.appendChild(c3);div.appendChild(c4);
+  div.className='en2-ln';
+  div.innerHTML=
+    '<span class="en2-n"></span>'+
+    '<div class="en2-sk autocomplete-wrap">'+
+      '<input class="en2-in mono" id="er-sku-'+id+'" placeholder="SKU o nombre…" autocomplete="off"/>'+
+      '<button type="button" class="en2-cam" title="Escanear" aria-label="Escanear" tabindex="-1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button>'+
+      '<div class="ac-list" id="ac-er-'+id+'"></div>'+
+    '</div>'+
+    '<input class="en2-in en2-d" id="er-desc-'+id+'" placeholder="Se completa solo" readonly/>'+
+    '<input class="en2-in en2-u" id="er-und-'+id+'" type="number" min="0" inputmode="numeric" placeholder="0"/>'+
+    '<button type="button" class="en2-del" title="Quitar" aria-label="Quitar producto">×</button>';
   wrap.appendChild(div);
-  skuInp.focus();
+  var sku=document.getElementById('er-sku-'+id), und=document.getElementById('er-und-'+id);
+  sku.addEventListener('input',function(){ acSearch('er-sku-'+id,'er-desc-'+id,'','ac-er-'+id); entResumen(); });
+  sku.addEventListener('acpick',function(){ entResumen(); und.focus(); });
+  und.addEventListener('input',entResumen);
+  und.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); addEntradaRow(); } });
+  div.querySelector('.en2-cam').addEventListener('click',function(){ openScanner('er-sku-'+id,'er-desc-'+id,''); });
+  div.querySelector('.en2-del').addEventListener('click',function(){ removeEntradaRow(id); });
+  entNumerar();
+  entResumen();
+  sku.focus();
+}
+
+function entNumerar(){
+  document.querySelectorAll('#ent-rows-wrap .en2-n').forEach(function(n,i){ n.textContent=i+1; });
 }
 
 function removeEntradaRow(id){
   var el=document.getElementById('ent-row-'+id);
   if(el)el.remove();
+  if(!document.querySelector('#ent-rows-wrap [id^="ent-row-"]')) addEntradaRow();
+  entNumerar();
+  entResumen();
 }
+
+// Atajos: Esc cierra y Ctrl+Enter guarda
+document.addEventListener('keydown',function(e){
+  var fs=document.getElementById('fs-entrada');
+  if(!fs||!fs.classList.contains('open')) return;
+  if(e.key==='Escape'){ closeFS('fs-entrada'); return; }
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
+    var b=document.getElementById('btn-ent-save');
+    if(b&&!b.disabled){ e.preventDefault(); b.click(); }
+  }
+});
 
 /* ── ARCHIVO: parse Excel en el browser con SheetJS ── */
 function handleDrop(event){
@@ -2200,7 +2265,8 @@ function _soles(n){
 }
 
 // Monto de la OC: baja al desmarcar productos. Solo aparece si el archivo trae montos (el PDF de la OC los trae).
-function _archTotal(){
+function _archTotal(){ _archTotalInner(); entResumen(); }
+function _archTotalInner(){
   var el=document.getElementById('arch-total'); if(!el) return;
   var th=document.getElementById('arch-th-monto');
   var conMonto=ARCH_ROWS.some(function(r){return typeof r.monto==='number';});
@@ -2380,8 +2446,8 @@ async function leerPDFdeOC(file){
       return {idx:i+1,sku:it.sku,desc:it.desc,cant:it.cant,incluir:it.cant>0,editable:true,aviso:it.aviso,descOCR:it.desc,monto:it.monto};
     });
     ARCH_TOT=r.totales||{sub:null,imp:null,total:null};
-    var ocEl=document.getElementById('arch-oc');
-    if(r.oc && ocEl && !ocEl.value.trim()) ocEl.value=r.oc;
+    var ocEl=document.getElementById('ent-oc');
+    if(r.oc && ocEl && !ocEl.value.trim()){ ocEl.value=r.oc; entAplicarOC(r.oc); }
 
     // Verificar cada SKU contra el Stock de la sede y usar su descripción oficial
     _archEstado('Comprobando los SKU con tu Stock…');
@@ -2438,6 +2504,7 @@ function clearFile(){
   document.getElementById('arch-file-inp').value='';
   document.getElementById('arch-preview').classList.add('hidden');
   document.getElementById('arch-err').textContent='';
+  if(typeof entResumen==='function') entResumen();
 }
 
 /* ── GUARDAR (manual o archivo) ── */
@@ -2500,7 +2567,7 @@ function guardarEntradaManual(){
 }
 
 function guardarEntradaArchivo(){
-  var fac=document.getElementById('arch-factura').value.trim();
+  var fac=document.getElementById('ent-factura').value.trim();
   var err=document.getElementById('arch-err');
   if(!fac){err.textContent='La factura/referencia es obligatoria';return;}
   var seleccionados=ARCH_ROWS.filter(function(r){return r.incluir;});
@@ -2509,11 +2576,11 @@ function guardarEntradaArchivo(){
   var filas=seleccionados.map(function(r){return{sku:r.sku,desc:r.desc,unidades:r.cant};});
   var comun={
     factura:fac,
-    proveedor:document.getElementById('arch-proveedor').value,
-    oc:document.getElementById('arch-oc').value,
-    fVenc:document.getElementById('arch-fvenc').value,
-    dynamics:document.getElementById('arch-dynamics').value,
-    responsable:document.getElementById('arch-responsable').value
+    proveedor:document.getElementById('ent-proveedor').value,
+    oc:document.getElementById('ent-oc').value,
+    fVenc:document.getElementById('ent-fvenc').value,
+    dynamics:document.getElementById('ent-dynamics').value,
+    responsable:document.getElementById('ent-responsable').value
   };
 
   err.textContent='';
@@ -2844,6 +2911,7 @@ function acSelect(skuId,descId,marcaId,listId,idx){
   var item=(AC_CACHE[listId]||[])[Number(idx)];
   if(!item)return;
   document.getElementById(skuId).value=item.sku;
+  document.getElementById(skuId).dispatchEvent(new CustomEvent('acpick'));
   var descEl=document.getElementById(descId);
   if(descEl){
     var wasReadOnly=descEl.readOnly;
@@ -2885,29 +2953,6 @@ function eanFill(eanId,skuId,descId,marcaId){
 }
 
 /* ── FULL-SCREEN FORM HELPERS ── */
-function abrirEntrada(){
-  // Reset tab a manual
-  switchEntradaTab('manual');
-  // Limpiar campos generales manual
-  ['ent-factura','ent-proveedor','ent-oc','ent-fvenc','ent-responsable'].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.value='';
-  });
-  document.getElementById('ent-dynamics').value='';
-  // Limpiar filas de producto
-  document.getElementById('ent-rows-wrap').innerHTML='';
-  ENT_ROW_COUNT=0;
-  document.getElementById('ent-err').textContent='';
-  // Agregar 1 fila vacía por defecto
-  addEntradaRow();
-  // Limpiar tab archivo
-  clearFile();
-  ['arch-factura','arch-proveedor','arch-oc','arch-fvenc','arch-responsable'].forEach(function(id){
-    var el=document.getElementById(id);if(el)el.value='';
-  });
-  document.getElementById('arch-dynamics').value='';
-  document.getElementById('arch-err').textContent='';
-  openFS('fs-entrada');
-}
 function openFS(id){
   var el=document.getElementById(id);
   el.style.display='flex';
