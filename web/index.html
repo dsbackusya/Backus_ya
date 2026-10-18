@@ -84,7 +84,7 @@ window.addEventListener('load', function(){
             </div>
           </div>
           <div id="l-err" class="err-msg"></div>
-          <button class="btn btn-primary" id="btn-login" onclick="doLogin()" style="width:100%;justify-content:center">Ingresar →</button>
+          <button class="btn btn-primary" id="btn-login" onclick="doLogin()" style="width:100%;justify-content:center">Ingresar <svg class="ico-s l" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
         </div>
         <div class="login-foot">GESTIONADO POR <span>DINET LOGISTICS</span></div>
       </div>
@@ -239,7 +239,7 @@ window.addEventListener('load', function(){
 <!-- ══ FORM: AGREGAR PEDIDO A MANO ══ -->
 <div class="fscreen" id="fs-pedido">
   <div class="fs-header">
-    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-pedido')">← Volver</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-pedido')"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Volver</button>
     <div class="fs-title">Agregar pedido</div>
   </div>
   <div class="fs-body">
@@ -275,7 +275,7 @@ window.addEventListener('load', function(){
 <!-- ══ FORM: SALIDA ══ -->
 <div class="fscreen" id="fs-salida">
   <div class="fs-header">
-    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-salida')">← Volver</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-salida')"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Volver</button>
     <div class="fs-title" id="fs-salida-title">Registrar Salida</div>
   </div>
   <div class="fs-body">
@@ -337,7 +337,7 @@ window.addEventListener('load', function(){
 <!-- ══ FORM: ENTRADA ══ -->
 <div class="fscreen" id="fs-entrada">
   <div class="fs-header">
-    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-entrada')">← Volver</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-entrada')"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Volver</button>
     <div class="fs-title">Registrar entrada</div>
   </div>
   <div class="fs-body">
@@ -372,8 +372,8 @@ window.addEventListener('load', function(){
         <div class="en2-card">
           <div class="en2-step"><i>2</i> Productos recibidos</div>
           <div class="en2-modes">
-            <button type="button" class="on" id="ent-m-manual" onclick="switchEntradaTab('manual')">✎ Escribir</button>
-            <button type="button" id="ent-m-archivo" onclick="switchEntradaTab('archivo')">⇪ Importar archivo<span class="en2-x">&nbsp;(Excel o PDF)</span></button>
+            <button type="button" class="on" id="ent-m-manual" onclick="switchEntradaTab('manual')"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Escribir</button>
+            <button type="button" id="ent-m-archivo" onclick="switchEntradaTab('archivo')"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Importar archivo<span class="en2-x">&nbsp;(Excel o PDF)</span></button>
           </div>
 
           <!-- Escribir -->
@@ -391,7 +391,7 @@ window.addEventListener('load', function(){
                  ondragover="event.preventDefault();this.classList.add('over')"
                  ondragleave="this.classList.remove('over')"
                  ondrop="this.classList.remove('over');handleDrop(event)">
-              <div style="font-size:26px">⇪</div>
+              <div style="color:var(--text3)"><svg class="ico-s s" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
               <b>Arrastra tu archivo aquí</b>
               <small>o haz clic para elegirlo · .xlsx, .xls o .pdf (OC)</small>
               <input type="file" id="arch-file-inp" accept=".xlsx,.xls,.pdf,application/pdf" style="display:none" onchange="handleFileSelect(this.files[0])"/>
@@ -428,7 +428,7 @@ window.addEventListener('load', function(){
 <!-- ══ FORM: M-T ══ -->
 <div class="fscreen" id="fs-mt">
   <div class="fs-header">
-    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-mt')">← Volver</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-mt')"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Volver</button>
     <div class="fs-title" id="fs-mt-title">Registrar M-T</div>
   </div>
   <div class="fs-body">
@@ -498,7 +498,7 @@ window.addEventListener('load', function(){
 <!-- ══ FORM: IMPORTAR OC ══ -->
 <div class="fscreen" id="fs-oc-import">
   <div class="fs-header">
-    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-oc-import')">← Volver</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-oc-import')"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Volver</button>
     <div class="fs-title">Importar órdenes de compra</div>
   </div>
   <div class="fs-body">
@@ -516,7 +516,7 @@ window.addEventListener('load', function(){
     <div id="oc-preview" class="hidden" style="margin-top:20px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div style="font-size:13px;font-weight:600" id="oc-preview-title">Vista previa</div>
-        <button class="btn btn-ghost btn-sm" onclick="clearOCFile()">✕ Quitar archivo</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearOCFile()"><svg class="ico-s" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Quitar archivo</button>
       </div>
       <div class="table-wrap" style="max-height:320px;overflow-y:auto">
         <table><thead><tr>
@@ -543,7 +543,7 @@ window.addEventListener('load', function(){
     </div>
     <div style="overflow-y:auto;flex:1" id="detalle-oc-body"></div>
     <div style="padding:12px 24px;border-top:1px solid var(--border);flex-shrink:0;display:flex;justify-content:flex-end;gap:8px">
-      <button class="btn btn-ghost btn-sm" id="btn-detalle-oc-export" onclick="exportarDetalleOC()" style="display:none">↓ Exportar Excel</button>
+      <button class="btn btn-ghost btn-sm" id="btn-detalle-oc-export" onclick="exportarDetalleOC()" style="display:none"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar Excel</button>
       <button class="btn btn-ghost btn-sm" onclick="cerrarDetalleOC()">Cerrar</button>
     </div>
   </div>
@@ -552,7 +552,7 @@ window.addEventListener('load', function(){
 <div id="modal-cancelar" style="display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--danger);border-radius:var(--r2);padding:28px;width:480px;max-width:96vw;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:18px">
     <div>
-      <div style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:4px;color:var(--danger)">⚠ Confirmar cancelación</div>
+      <div style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:4px;color:var(--danger)"><svg class="ico-s" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Confirmar cancelación</div>
       <div style="font-size:13px;color:var(--text2)" id="modal-cancelar-info"></div>
     </div>
     <div id="modal-cancelar-preview" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);font-size:12px"></div>
@@ -578,7 +578,7 @@ window.addEventListener('load', function(){
 <div id="modal-anular-canc" style="display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--r2);padding:28px;width:480px;max-width:96vw;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:16px">
     <div>
-      <div style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:4px">↩ Anular cancelación</div>
+      <div style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:4px"><svg class="ico-s" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Anular cancelación</div>
       <div style="font-size:13px;color:var(--text2)" id="modal-anular-canc-info"></div>
     </div>
     <div id="modal-anular-canc-preview" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);font-size:12px"></div>
@@ -595,7 +595,7 @@ window.addEventListener('load', function(){
 <div id="modal-reemplazar-sku" style="display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(3px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);width:min(520px,96vw);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden">
     <div style="padding:20px 24px 0;border-bottom:1px solid var(--border);padding-bottom:16px">
-      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)">⇄ Reemplazar SKU</div>
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)"><svg class="ico-s" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Reemplazar SKU</div>
       <div style="font-size:12px;color:var(--text3);margin-top:2px">Busca todos los registros con el SKU origen y los reemplaza por el nuevo</div>
     </div>
     <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
@@ -656,7 +656,7 @@ window.addEventListener('load', function(){
 <div id="modal-editar-sku-fila" style="display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(3px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);width:min(460px,96vw);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden">
     <div style="padding:20px 24px 0;border-bottom:1px solid var(--border);padding-bottom:16px">
-      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)">✎ Editar SKU y cantidades</div>
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)"><svg class="ico-s" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Editar SKU y cantidades</div>
       <div style="font-size:12px;color:var(--text3);margin-top:2px" id="esku-info"></div>
     </div>
     <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
@@ -827,7 +827,7 @@ window.addEventListener('load', function(){
 <!-- FORM: NUEVO / EDITAR SKU -->
 <div class="fscreen" id="fs-sku">
   <div class="fs-header">
-    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-sku')">← Volver</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-sku')"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Volver</button>
     <div class="fs-title" id="fs-sku-title">Nuevo SKU</div>
   </div>
   <div class="fs-body">
@@ -888,7 +888,7 @@ window.addEventListener('load', function(){
         </div>
 
         <div class="sku-ok" id="sku-ok" style="display:none">
-          <div class="c">✓</div><b>SKU creado</b>
+          <div class="c"><svg class="ico-s s" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></div><b>SKU creado</b>
           <div class="d">Ya aparece en Stock. ¿Quieres agregar otro?</div>
           <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
             <button class="btn btn-ghost" onclick="closeFS('fs-sku')">Listo</button>
@@ -900,7 +900,7 @@ window.addEventListener('load', function(){
           <span class="sku-msg" id="sku-msg">Completa el código y la descripción para guardar</span>
           <button class="btn btn-ghost" onclick="closeFS('fs-sku')">Cancelar <span class="kb">Esc</span></button>
           <button class="btn btn-ghost" id="btn-sku-otro" onclick="guardarSKU(true)" disabled>Guardar y agregar otro</button>
-          <button class="btn btn-primary" id="btn-sku-save" onclick="guardarSKU(false)" disabled>Guardar SKU <span class="kb">Ctrl ↵</span></button>
+          <button class="btn btn-primary" id="btn-sku-save" onclick="guardarSKU(false)" disabled>Guardar SKU <span class="kb">Ctrl+Enter</span></button>
         </div>
       </div>
     </div>
@@ -910,7 +910,7 @@ window.addEventListener('load', function(){
 <!-- ══ FORM: MAESTRO ══ -->
 <div class="fscreen" id="fs-maestro">
   <div class="fs-header">
-    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-maestro')">← Volver</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-maestro')"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Volver</button>
     <div class="fs-title" id="fs-maestro-title">Agregar al maestro</div>
   </div>
   <div class="fs-body">
@@ -991,7 +991,7 @@ window.addEventListener('load', function(){
 
 <!-- OFFLINE BANNER -->
 <div id="offline-banner">
-  <span>📡 Sin conexión — los conteos se guardan localmente</span>
+  <span><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Sin conexión — los conteos se guardan localmente</span>
   <span class="ob-badge" id="ob-pending" style="display:none"></span>
   <button class="ob-sync-btn" id="ob-sync-btn" style="display:none" onclick="_intentarSyncOffline()">Sincronizar ahora</button>
 </div>

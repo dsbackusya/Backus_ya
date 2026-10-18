@@ -1,3 +1,25 @@
+/* ── ÍCONOS SVG (reemplazan a los emoji): ICO('warn',14) · modo 's' sin margen, 'l' margen a la izquierda ── */
+var _ICO_P={
+  warn:'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  check:'<polyline points="20 6 9 17 4 12"/>',
+  x:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
+  refresh:'<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+  undo:'<polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>',
+  swap:'<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+  right:'<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>',
+  left:'<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  wifioff:'<line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>',
+  bolt:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  info:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'
+};
+function ICO(n,sz,modo){
+  sz=sz||14;
+  return '<svg class="ico-s'+(modo?' '+modo:'')+'" width="'+sz+'" height="'+sz+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(_ICO_P[n]||'')+'</svg>';
+}
+
 /* ── SESSION KEEP-ALIVE: ping cada 30 min, redirige a login si expiró ── */
 var _sessionPingInterval=null;
 function _startSessionPing(){
@@ -344,7 +366,7 @@ function _cap(s){
 
 var PAGE_LOADING={}; // flag anti-doble-disparo por página
 var _FORCE_REFRESH={}; // se activa en reloadPage — le indica a loadXxx que ignore el caché del servidor
-// REQ_TOKEN: contador por página. Si el usuario navega rápido (salidas → entradas),
+// REQ_TOKEN: contador por página. Si el usuario navega rápido (salidas a entradas),
 // la respuesta vieja de salidas llega tarde y no debe pisar el render de entradas.
 // Cada loadXxx incrementa su contador; el handler descarta si ya no coincide.
 var REQ_TOKEN={};
@@ -382,12 +404,12 @@ function loadPage(name){
       }
       rootEl.innerHTML=
         '<div class="empty" style="gap:14px">'+
-          '<div class="ico">📡</div>'+
+          '<div class="ico">'+ICO('wifioff',34,'s')+'</div>'+
           '<div style="font-size:14px;font-weight:600;color:var(--text2)">Sin conexión</div>'+
           '<div style="font-size:13px;color:var(--text3);text-align:center;max-width:280px">'+
             'Esta sección requiere internet. Tus conteos en curso están guardados localmente.'+
           '</div>'+
-          '<button class="btn btn-ghost btn-sm" onclick="reloadPage(\''+name+'\')">↺ Reintentar</button>'+
+          '<button class="btn btn-ghost btn-sm" onclick="reloadPage(\''+name+'\')">'+ICO('refresh',14)+'Reintentar</button>'+
         '</div>';
     }
     return;
@@ -552,7 +574,7 @@ function dashDibujar(){
   root.innerHTML=
     '<div class="dash-top"><div><div class="dash-h1">Dashboard</div><div class="dash-sub">'+esc(fechaTxt)+(hora?' · actualizado '+hora:'')+'</div></div>'+seg+'</div>'+
     hero+
-    '<div class="dash-sec"><span>Órdenes de compra · estado de recepción</span><a onclick="dashVerOC(\'\')">Ver todas las OC →</a></div>'+kan+
+    '<div class="dash-sec"><span>Órdenes de compra · estado de recepción</span><a onclick="dashVerOC(\'\')">Ver todas las OC '+ICO('right',13,'l')+'</a></div>'+kan+
     '<div class="dash-sec"><span>Qué atender por sede</span></div>'+tarjetas+
     '<div class="dash-sec"><span>Recepciones por tienda</span>'+
       '<span class="dash-sec-r"><input type="date" class="filter-inp" id="oc-recep-fecha" onchange="loadRecepcionesPorTienda(this.value)"/></span></div>'+
@@ -930,7 +952,7 @@ function skuEv(){
   } else if(formatoMal){
     h.innerHTML='<div class="sku-hint err">Usa solo letras, números, guiones o puntos.</div>';
   } else if(sku&&!esEd){
-    h.innerHTML='<div class="sku-hint ok">✓ Código disponible</div>';
+    h.innerHTML='<div class="sku-hint ok">'+ICO('check',13)+'Código disponible</div>';
   } else { h.innerHTML=''; }
 
   _skuChips('sku-chips-m','marca','sku-marca');
@@ -1147,10 +1169,10 @@ function _salMenuContextual(row){
   var cancelado=row.cancelado||row.estado==='cancelado'||row.estado==='CANCELADO';
   if(cancelado) return '';
   return '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--accent);white-space:nowrap" '+
-    'onclick="abrirEditarSkuFila('+row._row+')">✎ SKU</button> '+
+    'onclick="abrirEditarSkuFila('+row._row+')">'+ICO('edit',12)+'SKU</button> '+
     '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 10px;color:var(--danger);border-color:var(--danger);white-space:nowrap" '+
     'data-row="'+row._row+'" data-nro="'+esc(row.nroPedido)+'" '+
-    'onclick="abrirModalCancelarBtn(this)">✕ Cancelar</button>';
+    'onclick="abrirModalCancelarBtn(this)">'+ICO('x',12)+'Cancelar</button>';
 }
 
 function _salEstadoBadge(r){
@@ -1168,7 +1190,7 @@ function _salRevisionCell(r){
   if(cancelado) return '—';
   var rev=String(r.revision||'').trim();
   var est=String(r.estado||'').trim();
-  if(rev.toLowerCase()==='entregado') return '<span style="color:var(--teal,#065f46);font-size:16px;font-weight:600">✓</span>';
+  if(rev.toLowerCase()==='entregado') return '<span style="color:var(--teal,#065f46);font-size:16px;font-weight:600">'+ICO('check',16,'s')+'</span>';
   // Mostrar botón si estado tiene cualquier valor y revision está vacío
   // No comparar texto exacto — la fórmula puede devolver cualquier variante
   if(!est) return '<span style="color:var(--text3);font-size:12px">—</span>';
@@ -1190,7 +1212,7 @@ function confirmarRecepcion(rowNum, btn){
           var nCols=cells.length;
           if(nCols>=3){
             cells[nCols-3].innerHTML='<span style="background:var(--teal-bg,#d1fae5);color:var(--teal,#065f46);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600">Entregado</span>';
-            cells[nCols-2].innerHTML='<span style="color:var(--teal,#065f46);font-size:16px;font-weight:600">✓</span>';
+            cells[nCols-2].innerHTML='<span style="color:var(--teal,#065f46);font-size:16px;font-weight:600">'+ICO('check',16,'s')+'</span>';
           }
         }
       } else {
@@ -1466,7 +1488,7 @@ function pedAgregarLinea(){
         '<input class="inp" id="pl-q-'+id+'" placeholder="Busca por descripción o SKU..." autocomplete="off" oninput="pedBuscar('+id+')"/>'+
         '<div class="ac-list" id="pl-ac-'+id+'"></div>'+
       '</div>'+
-      '<button class="btn btn-ghost btn-sm" title="Quitar producto" onclick="pedQuitarLinea('+id+')">✕</button>'+
+      '<button class="btn btn-ghost btn-sm" title="Quitar producto" onclick="pedQuitarLinea('+id+')">'+ICO('x',14,'s')+'</button>'+
     '</div>'+
     '<div id="pl-sel-'+id+'" style="font-size:12px;color:var(--text3)">Elige un producto de la lista</div>'+
     '<div style="display:flex;gap:10px">'+
@@ -1668,7 +1690,7 @@ function confirmarCancelar(){
         DATA.salidas = DATA.salidas.filter(function(x){return x._row!==rowNum;});
       }
       filterSalidas(); // re-renderizar tabla sin llamar al servidor
-      showToast('Pedido cancelado ('+r.cancelados+' fila'+(r.cancelados>1?'s':'')+') → PD CANCELADOS','ok');
+      showToast('Pedido cancelado ('+r.cancelados+' fila'+(r.cancelados>1?'s':'')+') a PD CANCELADOS','ok');
       // Forzar recarga inmediata de cancelados y marcar stock como stale
       PAGE_LOADED['stock']=false;
       reloadPage('cancelados');
@@ -1752,7 +1774,7 @@ function _fechaFiltroHTML(prefix, fnFilter, rangoFn){
       'Hoy</button>'+
     '<div id="'+prefix+'-rango-wrap" style="display:none;align-items:center;gap:6px;font-size:12px;color:var(--text2)">'+
       '<input type="date" id="'+prefix+'-fecha-desde" class="inp" style="padding:5px 8px;font-size:12px;width:140px" '+evt+'/>'+
-      '<span style="color:var(--text3)">→</span>'+
+      '<span style="color:var(--text3)">'+ICO('right',14,'s')+'</span>'+
       '<input type="date" id="'+prefix+'-fecha-hasta" class="inp" style="padding:5px 8px;font-size:12px;width:140px" '+evt+'/>'+
       '<button onclick="'+prefix+'LimpiarFechas()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:18px;line-height:1;padding:0 2px" title="Volver a Hoy">×</button>'+
     '</div>';
@@ -1977,7 +1999,7 @@ function _filterEntradas(){
   if(el)el.textContent=vis.length+(vis.length===1?' recepción':' recepciones');
 
   var chev='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
-  var lapiz=function(row,tit){return '<button class="ent-edb" title="'+tit+'" onclick="event.stopPropagation();editarDynamicsRowSafe('+row+')">✎</button>';};
+  var lapiz=function(row,tit){return '<button class="ent-edb" title="'+tit+'" onclick="event.stopPropagation();editarDynamicsRowSafe('+row+')">'+ICO('edit',13,'s')+'</button>';};
   var lineas=function(g,i){
     if(!_ENT_ABIERTOS[g.key]) return '';
     return '<div class="ent-its on">'+g.items.map(function(x){
@@ -2294,7 +2316,7 @@ function _archTotalInner(){
   }
   html+='</div>';
   if(t.sub && Math.abs(todo-t.sub)>0.05){
-    html+='<div style="font-size:12px;color:var(--warn);margin-top:6px">⚠ La suma de las líneas ('+_soles(todo)+') no coincide con el subtotal del PDF ('+_soles(t.sub)+'). Puede que algún monto se leyó mal: revisa la columna Monto.</div>';
+    html+='<div style="font-size:12px;color:var(--warn);margin-top:6px">'+ICO('warn',13)+'La suma de las líneas ('+_soles(todo)+') no coincide con el subtotal del PDF ('+_soles(t.sub)+'). Puede que algún monto se leyó mal: revisa la columna Monto.</div>';
   }
   el.innerHTML=html; el.style.display='block';
 }
@@ -2456,7 +2478,7 @@ async function leerPDFdeOC(file){
         var mapa=(s&&s.ok&&s.data)||{};
         ARCH_ROWS.forEach(function(row){ _archAplicarStock(row,mapa); });
         _archEstado('PDF leído'+(r.oc?' · '+r.oc:'')+' · revisa la vista previa antes de importar'+
-          (r.faltan.length?' · ⚠ no se leyeron las líneas: '+r.faltan.join(', '):''));
+          (r.faltan.length?' · Atención: no se leyeron las líneas: '+r.faltan.join(', '):''));
         renderPreview();
       })
       .withFailureHandler(function(){
@@ -2701,7 +2723,7 @@ function _filterMT(){
       '<td class="mono" style="font-size:12px">'+esc(r.nroFactura||'')+'</td>'+
       '<td class="mono" style="font-size:12px">'+esc(r.fechaRetiro||'')+'</td>'+
       '<td class="c"><button class="btn btn-ghost btn-sm" onclick="editarMTRow('+r._row+')">Editar</button></td>'+
-      '<td class="c"><button class="btn btn-danger btn-sm" onclick="eliminarMTRow('+r._row+')">✕</button></td>'+
+      '<td class="c"><button class="btn btn-danger btn-sm" onclick="eliminarMTRow('+r._row+')">'+ICO('x',14,'s')+'</button></td>'+
     '</tr>';
   }).join('');
   var t=document.getElementById('mt-tbody');
@@ -2967,7 +2989,7 @@ function closeFS(id){
 
 // onSaved: cierra el form y marca páginas relacionadas como stale.
 // NO recarga inmediatamente desde la API — la recarga ocurre la próxima vez
-// que el usuario navegue a esa sección o pulse "↺ Actualizar".
+// que el usuario navegue a esa sección o pulse "Actualizar".
 // Excepción: si el caller ya actualizó DATA local (salidas, conteo),
 // puede pasar localUpdate=true para saltar incluso el PAGE_LOADED=false.
 function onSaved(r, fsId, page, btn, btnLabel, localUpdate){
@@ -3063,7 +3085,7 @@ function renderCancelados(r){
   // Aviso si se están mostrando solo los últimos N registros
   var avisoTotal = r.total && r.total > r.data.length
     ? '<div style="background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:var(--r);padding:8px 14px;font-size:12px;color:var(--warn);margin-bottom:16px;font-family:var(--font-mono)">'+
-        '⚠ Mostrando los últimos '+r.data.length+' de '+r.total+' registros totales. Usa el filtro de fecha para buscar registros anteriores.'+
+        ICO('warn',13)+'Mostrando los últimos '+r.data.length+' de '+r.total+' registros totales. Usa el filtro de fecha para buscar registros anteriores.'+
       '</div>'
     : '';
   document.getElementById('cancelados-root').innerHTML=
@@ -3125,7 +3147,7 @@ function _filterCancelados(){
       '<td class="c"><span style="background:var(--danger-bg);color:var(--danger);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600">'+esc(r.estado||'Cancelado')+'</span></td>'+
       '<td class="c" style="font-size:12px;color:var(--text3)">'+esc(r.revision||'—')+'</td>'+
       '<td style="font-size:12px" title="'+esc(r.motivo)+'">'+esc(r.motivo||'—')+'</td>'+
-      (S&&S.rol==='store'&&r.nroPedido?'<td class="c" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" title="Devolver este pedido a Salidas" data-nro="'+esc(r.nroPedido)+'" onclick="anularCancAbrir(this.dataset.nro)">↩ Anular</button></td>':(S&&S.rol==='store'?'<td></td>':''))+
+      (S&&S.rol==='store'&&r.nroPedido?'<td class="c" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" title="Devolver este pedido a Salidas" data-nro="'+esc(r.nroPedido)+'" onclick="anularCancAbrir(this.dataset.nro)">'+ICO('undo',12)+'Anular</button></td>':(S&&S.rol==='store'?'<td></td>':''))+
     '</tr>';
   }).join('');
   var t=document.getElementById('cancelados-tbody');
@@ -3221,7 +3243,7 @@ function renderMaestro(r){
   if(MAESTRO.sinSku.length){
     panel='<div style="background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:var(--r);padding:12px 14px;margin-bottom:16px">'+
       '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">'+
-        '<div style="font-size:13px;font-weight:700;color:var(--warn)">⚠ '+filasSin+' salida'+(filasSin===1?'':'s')+' SIN SKU ('+MAESTRO.sinSku.length+' producto'+(MAESTRO.sinSku.length===1?'':'s')+' distinto'+(MAESTRO.sinSku.length===1?'':'s')+')</div>'+
+        '<div style="font-size:13px;font-weight:700;color:var(--warn)">'+ICO('warn',14)+filasSin+' salida'+(filasSin===1?'':'s')+' SIN SKU ('+MAESTRO.sinSku.length+' producto'+(MAESTRO.sinSku.length===1?'':'s')+' distinto'+(MAESTRO.sinSku.length===1?'':'s')+')</div>'+
       '</div>'+
       '<div style="display:flex;flex-direction:column;gap:6px">'+
       MAESTRO.sinSku.map(function(x,i){
@@ -3270,7 +3292,7 @@ function filterMaestro(){
     var nombre=MAESTRO.prod[m.sku];
     var celdaProd=nombre
       ? '<span title="'+esc(nombre)+'">'+esc(nombre)+'</span>'
-      : '<span style="color:var(--warn)" title="Este SKU no existe en el Stock de la sede">⚠ SKU no está en Stock</span>';
+      : '<span style="color:var(--warn)" title="Este SKU no existe en el Stock de la sede">'+ICO('warn',12)+'SKU no está en Stock</span>';
     return '<tr>'+
       '<td class="td-desc" title="'+esc(m.descripcion)+'">'+esc(m.descripcion)+'</td>'+
       '<td class="mono" style="font-weight:600">'+esc(m.sku||'—')+'</td>'+
@@ -3362,8 +3384,8 @@ function maestroSkuCambio(){
   if(!sku){el.innerHTML='';return;}
   var n=MAESTRO.prod[sku];
   el.innerHTML=n
-    ? '<span style="color:var(--text3)">→ '+esc(n)+'</span>'
-    : '<span style="color:var(--warn)">⚠ Este SKU no está en el Stock de la sede. Puedes guardarlo, pero la salida no aparecerá en Stock hasta crearlo con "Nuevo SKU".</span>';
+    ? '<span style="color:var(--text3)">'+ICO('right',12)+''+esc(n)+'</span>'
+    : '<span style="color:var(--warn)">'+ICO('warn',13)+'Este SKU no está en el Stock de la sede. Puedes guardarlo, pero la salida no aparecerá en Stock hasta crearlo con "Nuevo SKU".</span>';
 }
 
 function guardarMaestro(){
@@ -3476,7 +3498,7 @@ function _maeDibujarAplicar(){
           return '<option value="'+x.k+'"'+(a.ventana===x.k?' selected':'')+'>'+x.etq+' ('+a.w[x.c]+' salida'+(a.w[x.c]===1?'':'s')+')</option>';
         }).join('')+
       '</select>'+
-      '<div style="font-size:11.5px;color:var(--text3);margin-top:6px">Las filas que editaste a mano con "✎ SKU" no se modifican.</div>'+
+      '<div style="font-size:11.5px;color:var(--text3);margin-top:6px">Las filas que editaste a mano con el botón "SKU" no se modifican.</div>'+
     '</div>';
   }
   document.getElementById('modal-aplicar-body').innerHTML=html;
@@ -3527,10 +3549,10 @@ function errBox(id, msg, pageName){
   // Resetear flag para que reloadPage no quede bloqueado
   if(pageName) PAGE_LOADING[pageName]=false;
   var retryBtn = pageName
-    ? '<button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="reloadPage(\''+pageName+'\')">↺ Reintentar</button>'
+    ? '<button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="reloadPage(\''+pageName+'\')">'+ICO('refresh',14)+'Reintentar</button>'
     : '';
   el.innerHTML='<div class="err-box" style="text-align:center">'+
-    '<div>⚠ Error: '+esc(msg)+'</div>'+retryBtn+
+    '<div>'+ICO('warn',14)+'Error: '+esc(msg)+'</div>'+retryBtn+
   '</div>';
 }
 
@@ -3608,7 +3630,7 @@ function _scannerNativo(targetId, title){
   ov.innerHTML =
     '<div style="color:#fff;padding:12px 16px;font:600 15px DM Sans,sans-serif;display:flex;justify-content:space-between;align-items:center;gap:8px">'+
       '<span style="flex:1">'+esc(title||'Escanea el código')+'</span>'+
-      '<button type="button" id="scan-nativo-luz" style="display:none;background:#333;color:#fff;border:0;border-radius:8px;padding:8px 12px;font-weight:600">🔦</button>'+
+      '<button type="button" id="scan-nativo-luz" style="display:none;background:#333;color:#fff;border:0;border-radius:8px;padding:8px 12px;font-weight:600">'+ICO('bolt',16,'s')+'</button>'+
       '<button type="button" id="scan-nativo-x" style="background:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:600">Cerrar</button>'+
     '</div>'+
     '<div style="position:relative;flex:1;min-height:0">'+
@@ -4106,7 +4128,7 @@ function renderConteo(r){
       '<div style="display:flex;gap:6px;align-items:center">'+
         '<input class="filter-inp" id="cnt-busq" placeholder="Buscar SKU, EAN, producto..." style="width:220px" oninput="filterConteo()"/>'+
         '<button class="cam-btn" title="Escanear" onclick="openScannerConteoFiltro()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="11"/></svg></button>'+
-        '<button class="btn btn-danger btn-sm" id="btn-eliminar-ean-dia" style="display:none;white-space:nowrap" onclick="eliminarEANDia()">✕ Eliminar EAN del día</button>'+
+        '<button class="btn btn-danger btn-sm" id="btn-eliminar-ean-dia" style="display:none;white-space:nowrap" onclick="eliminarEANDia()">'+ICO('x',13)+'Eliminar EAN del día</button>'+
       '</div>'+
       _fechaFiltroHTML('cnt','filterConteo','cntRangoCambio')+
       '<span class="result-count" id="cnt-count"></span>'+
@@ -4178,7 +4200,7 @@ function _filterConteo(){
     var n=g.filas.length, html='';
     var gid='cg-'+key.replace(/[^a-zA-Z0-9]/g,'_');
     var badge=n>1?'<span style="background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">'+n+'×</span>':'';
-    var chevron=n>1?'<span id="chv-'+gid+'" style="margin-left:auto;font-size:11px;color:var(--text3);transition:transform .2s">▶</span>':'';
+    var chevron=n>1?'<span id="chv-'+gid+'" style="margin-left:auto;font-size:11px;color:var(--text3);transition:transform .2s">'+ICO('right',12,'s')+'</span>':'';
     var cursor=n>1?'cursor:pointer;user-select:none;':''; 
     html+='<tr style="background:var(--surface2);border-top:2px solid var(--border2);'+cursor+'" '+(n>1?'onclick="_toggleGrupoConteo(\''+gid+'\')"':'')+'>' +
       '<td colspan="4" style="padding:8px 12px">'+
@@ -4211,7 +4233,7 @@ function _filterConteo(){
         '<td class="r col-hide-mobile" style="color:var(--text2)">'+fmt(r.unds||0)+'</td>'+
         '<td class="r" style="color:var(--ok)">'+fmt(r.total)+'</td>'+
         '<td class="c"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editarConteoRowSafe('+r._row+')">Editar</button></td>'+
-        '<td class="c"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();eliminarConteoRow('+r._row+')">✕</button></td>'+
+        '<td class="c"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();eliminarConteoRow('+r._row+')">'+ICO('x',14,'s')+'</button></td>'+
       '</tr>';
     });
     tbodyParts.push(html);
@@ -4290,7 +4312,7 @@ function editarConteoRow(rowNum, packs, unds, sku, ean, producto, mult){
     document.getElementById('cnt-producto-card').style.display='block';
     // Cambiar título del botón guardar para indicar edición
     var btn=document.getElementById('btn-guardar-siguiente');
-    if(btn){ btn.textContent='✓ Guardar cambios'; }
+    if(btn){ btn.innerHTML=ICO('check',14)+'Guardar cambios'; }
     // Setear packs en último lugar y disparar calcTotal — evita que limpiarFormConteo lo pise
     var packsEl=document.getElementById('cnt-packs');
     if(packsEl){ packsEl.value=Number(packs)||0; }
@@ -4654,7 +4676,7 @@ function calcTotalConteo(){
       if(pct>=100){
         bar.style.background='var(--ok)';
         hint.style.color='var(--ok)';
-        hint.textContent='✓ Stock cubierto'+(totalAcum>stockNum?' (+'+( totalAcum-stockNum)+' extra)':'');
+        hint.innerHTML=ICO('check',13)+'Stock cubierto'+(totalAcum>stockNum?' (+'+( totalAcum-stockNum)+' extra)':'');
       } else if(pct>=60){
         bar.style.background='var(--warn)';
         hint.style.color='var(--warn)';
@@ -4754,7 +4776,7 @@ function _renderConteoHistoryNow() {
         '<div class="cnt-h-n" title="' + esc(item.producto) + '">' + esc(item.producto) + '</div>' +
         '<div class="cnt-h-s">' + esc(hora) + (hora && desc ? ' · ' : '') + esc(desc) + (pend ? ' · <span class="pend">Sin enviar</span>' : '') + '</div>' +
       '</div>' +
-      (pend ? '<div class="cnt-h-b"><button onclick="editBufferItem(' + i + ')">Editar</button><button onclick="deleteBufferItem(' + i + ')" aria-label="Quitar">✕</button></div>' : '') +
+      (pend ? '<div class="cnt-h-b"><button onclick="editBufferItem(' + i + ')">Editar</button><button onclick="deleteBufferItem(' + i + ')" aria-label="Quitar">'+ICO('x',14,'s')+'</button></div>' : '') +
       '<div class="cnt-h-t">' + (Number(item.total) || 0) + '<small>und.</small></div>' +
     '</div>';
   }
@@ -4968,14 +4990,14 @@ function showLoadingAndInit(restored){
 /* ── TOAST — definición única. tipos: 'ok'(3s) | 'warn'(5s) | 'err'(6s) | 'info'(3s) | 'err-crit'(manual) ── */
 window.showToast = function(msg, type) {
   var t = document.getElementById('toast');
-  var ico = {ok:'✓', err:'✕', warn:'!', info:'i', 'err-crit':'✕'}[type || 'info'] || 'i';
+  var ico = {ok:ICO('check',15,'s'), err:ICO('x',15,'s'), warn:ICO('warn',15,'s'), info:ICO('info',15,'s'), 'err-crit':ICO('x',15,'s')}[type || 'info'] || ICO('info',15,'s');
   var cssType = type === 'err-crit' ? 'err' : (type || 'info');
   t.className = 'toast t-' + cssType;
   clearTimeout(t._timer);
   if (type === 'err-crit') {
     // Crítico: sin auto-dismiss, con botón de cierre manual
     t.innerHTML = '<span class="tico">' + ico + '</span><span>' + (msg || '') + '</span>' +
-      ' <span onclick="this.parentElement.classList.remove(\'show\')" style="cursor:pointer;margin-left:8px;font-weight:700">✕</span>';
+      ' <span onclick="this.parentElement.classList.remove(\'show\')" style="cursor:pointer;margin-left:8px;font-weight:700">'+ICO('x',13,'s')+'</span>';
   } else {
     var durations = {ok: 3000, warn: 5000, err: 6000, info: 3000};
     t.innerHTML = '<span class="tico">' + ico + '</span><span>' + (msg || '') + '</span>';
@@ -5174,7 +5196,7 @@ function _intentarSyncOffline() {
       }
       clearConteoBuffer();
       _actualizarBannerPendientes();
-      showToast(r.registrados + ' conteo(s) sincronizado(s) correctamente ✓', 'ok');
+      showToast(r.registrados + ' conteo(s) sincronizado(s) correctamente', 'ok');
       // Actualizar tabla de conteo si está visible
       if (r.inserted && r.inserted.length) {
         if (!DATA.conteo) DATA.conteo = [];
@@ -5313,7 +5335,7 @@ var VAL_TAB='sku';   // 'sku' | 'categoria'
 var VAL_FILTRO='';   // '' | 'ok' | 'diff'
 var VAL_SEARCH='';   // búsqueda por SKU / descripción
 var VAL_MARCA='';    // filtro por marca
-var VAL_MAESTRO={};  // mapa lovis→precio para costo desvíos
+var VAL_MAESTRO={};  // mapa lovis a precio para costo desvíos
 var VAL_TREE_SEL={cat:null,marca:null}; // selección activa del árbol de descomposición
 
 // Fecha de hoy en Lima (YYYY-MM-DD), sin depender de la zona horaria del teléfono
@@ -5541,7 +5563,7 @@ function renderValSKU(body){
             '</div>'+
             '<div style="font-size:11px;color:var(--text3);margin-top:3px">'+costoExacto+' total</div>'+
             (skusSinPrecio>0
-              ? '<div style="font-size:10px;color:var(--warn);margin-top:4px" title="Estos SKUs no aparecen en la hoja MAESTRO (Cod_Lovis) o no tienen columna Precio — su costo se muestra como S/ 0.00 pero no está calculado">⚠ '+skusSinPrecio+' SKU sin precio en MAESTRO</div>'
+              ? '<div style="font-size:10px;color:var(--warn);margin-top:4px" title="Estos SKUs no aparecen en la hoja MAESTRO (Cod_Lovis) o no tienen columna Precio — su costo se muestra como S/ 0.00 pero no está calculado">'+ICO('warn',12)+skusSinPrecio+' SKU sin precio en MAESTRO</div>'
               : '')+
           '</div>'+
         '</div>'+
@@ -5567,14 +5589,14 @@ function renderValSKU(body){
     rows.forEach(function(r){
       var estado, bc, diffTxt, rowStyle='';
       if(r.sinContar){
-        estado='⚡ Sin contar'; bc='badge-warn'; diffTxt='—';
+        estado=ICO('bolt',12)+'Sin contar'; bc='badge-warn'; diffTxt='—';
         rowStyle=' style="background:var(--warn-bg)"';
       } else if(r.diff===null){
         estado='Sin conteo ant.'; bc='badge-neutral'; diffTxt='—';
       } else if(r.diff===0){
-        estado='✓ Cuadra'; bc='badge-ok'; diffTxt='0';
+        estado=ICO('check',12)+'Cuadra'; bc='badge-ok'; diffTxt='0';
       } else {
-        estado='⚠ Desvío'; bc='badge-danger';
+        estado=ICO('warn',12)+'Desvío'; bc='badge-danger';
         diffTxt=(r.diff>0?'+':'')+fmt(r.diff);
       }
       var btnAccion = r.sinContar
@@ -5606,7 +5628,7 @@ function renderValSKU(body){
             var costo=r.diff*precio;
             var costoStr='S/ '+costo.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
             if(!tieneMaestro){
-              return '<td class="r" style="font-weight:600;color:var(--warn)" title="SKU no encontrado en la hoja MAESTRO (Cod_Lovis) — costo no calculado">⚠ '+costoStr+'</td>';
+              return '<td class="r" style="font-weight:600;color:var(--warn)" title="SKU no encontrado en la hoja MAESTRO (Cod_Lovis) — costo no calculado">'+ICO('warn',12)+costoStr+'</td>';
             }
             return '<td class="r" style="font-weight:600;color:'+(costo<0?'var(--danger)':'var(--ok)')+'">'+costoStr+'</td>';
           }
@@ -5810,7 +5832,7 @@ function _vcTreeNode(cls,key,name,val,und,kind,active,dim,clickable,idx){
 function renderValTree(root,anim){
   var D=_vcTreeData();
   if(!D.n){
-    root.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">Sin desvíos — todos los SKUs contados cuadran ✓</div>';
+    root.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">Sin desvíos — todos los SKUs contados cuadran '+ICO('check',14,'l')+'</div>';
     return;
   }
   var noanim=anim?'':' vc-noanim';
@@ -5907,7 +5929,7 @@ function vcTreeDrawLinks(animate){
   // Colores de sistema: origen fijo por columna, destino según signo del nodo
   var SIGN_COL={neg:'var(--danger)',pos:'var(--ok)',zero:'var(--p500)'};
   var defs='<defs>', paths='', nLnk=0, GID=0;
-  // Cinta rellena de (x1,y1) a (x2,y2) con grosor t y gradiente c1→c2 propio
+  // Cinta rellena de (x1,y1) a (x2,y2) con grosor t y gradiente c1 a c2 propio
   var ribbon=function(x1,y1,x2,y2,t,c1,c2,op){
     var mx=(x1+x2)/2,h=t/2,id='vcrg'+(GID++);
     defs+='<linearGradient id="'+id+'" x1="'+x1+'" y1="0" x2="'+x2+'" y2="0" gradientUnits="userSpaceOnUse">'+
@@ -5919,7 +5941,7 @@ function vcTreeDrawLinks(animate){
     paths+='<path '+(animate?'class="vc-lnk" style="--j:'+(nLnk++)+';mix-blend-mode:screen" ':'style="mix-blend-mode:screen" ')+
       'd="'+d+'" fill="url(#'+id+')" opacity="'+op+'"/>';
   };
-  // Dibuja un grupo origen→destinos con salidas APILADAS a lo alto del nodo origen
+  // Dibuja un grupo origen a destinos con salidas APILADAS a lo alto del nodo origen
   // (estilo Sankey: cada cinta ocupa su propia franja, ordenadas por la posición del destino)
   var group=function(srcEl,els,srcCol,opFn,destCol){
     if(!srcEl||!els.length) return;
@@ -6376,7 +6398,7 @@ function _ocFechaToStr(v){
   return String(v||'').trim();
 }
 
-// Mapa: campo interno → posibles encabezados normalizados (sin tildes, minúsculas) que puede traer el Excel.
+// Mapa: campo interno: posibles encabezados normalizados (sin tildes, minúsculas) que puede traer el Excel.
 // Permite aceptar formatos con columnas en distinto orden, de menos columnas, o con nombres levemente distintos.
 var OC_FIELD_HEADERS = {
   oc:                  ['orden de compra'],

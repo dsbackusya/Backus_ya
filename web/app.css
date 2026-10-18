@@ -3298,3 +3298,10 @@ input.filter-inp:focus{
   #fs-entrada .fs-footer .btn-primary{flex:1 1 auto}
   .en2-kb{display:none}
 }
+
+/* ── Íconos SVG en línea (reemplazan a los emoji) ── */
+.ico-s{display:inline-block;vertical-align:-.17em;flex:none;margin-right:.4em}
+.ico-s.s{margin:0}
+.ico-s.l{margin:0 0 0 .4em}
+.en2-modes button .ico-s,.en2-chips .ico-s,.tico .ico-s,.toast .ico-s{margin:0}
+.btn .ico-s:only-child{margin:0}
