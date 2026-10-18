@@ -3305,3 +3305,42 @@ input.filter-inp:focus{
 .ico-s.l{margin:0 0 0 .4em}
 .en2-modes button .ico-s,.en2-chips .ico-s,.tico .ico-s,.toast .ico-s{margin:0}
 .btn .ico-s:only-child{margin:0}
+
+/* ── SALIDAS: resumen y filtros (la tabla conserva su forma original) ── */
+.sal2-sum{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:12px;margin-bottom:16px}
+.sal2-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;min-width:0}
+.sal2-k{font:500 10px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text3);display:flex;align-items:center;gap:10px}
+.sal2-live{display:inline-flex;align-items:center;gap:6px;font:500 10px 'DM Sans',sans-serif;letter-spacing:0;text-transform:none;color:var(--ok);background:var(--ok-bg);border-radius:99px;padding:2px 9px}
+.sal2-live i{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:sal2pu 1.6s infinite}
+@keyframes sal2pu{50%{opacity:.35}}
+.sal2-v{font:700 30px var(--font-display);margin-top:8px;line-height:1;color:var(--text)}
+.sal2-v small{font:500 13px 'DM Sans',sans-serif;color:var(--text3);margin-left:6px}
+.sal2-n{font-size:12px;color:var(--text3);margin-top:8px}
+.sal2-n b{color:var(--text2);font-weight:600;font-family:var(--font-mono)}
+.sal2-env{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
+.sal2-env>div{min-width:0}
+.sal2-envh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.sal2-envh b{font:700 22px var(--font-display);color:var(--text)}
+.sal2-envh span{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px}
+.sal2-envh em{width:8px;height:8px;border-radius:50%;display:inline-block}
+.sal2-sz{display:flex;align-items:center;gap:8px;font-size:11.5px;margin-top:5px;color:var(--text2)}
+.sal2-sz span:first-child{width:58px;font:500 11px var(--font-mono);color:var(--text3)}
+.sal2-bar{flex:1;height:5px;border-radius:99px;background:var(--surface3);overflow:hidden}
+.sal2-bar i{display:block;height:100%}
+.sal2-sz b{width:34px;text-align:right;font-weight:600;color:var(--text)}
+.sal2-fl{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.sal2-srch{position:relative;flex:1;min-width:220px;max-width:380px}
+.sal2-srch input{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border2);border-radius:10px;color:var(--text);padding:10px 12px 10px 36px;font:13px 'DM Sans',sans-serif}
+.sal2-srch svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text4);pointer-events:none}
+.sal2-seg{display:inline-flex;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:3px;flex-wrap:wrap}
+.sal2-seg button{background:none;border:none;color:var(--text3);font:500 12px 'DM Sans',sans-serif;padding:7px 12px;border-radius:8px;cursor:pointer;display:flex;gap:6px;align-items:center}
+.sal2-seg button.on{background:var(--accent);color:#fff}
+.sal2-seg button span{font:500 10px var(--font-mono);opacity:.8}
+.sal2-cnt{margin-left:auto;font:500 11px var(--font-mono);color:var(--text3)}
+/* Número de pedido con color: ahora es la primera columna de datos */
+.sal-ped{display:inline-block;font:600 11.5px var(--font-mono);color:var(--accent2);background:var(--accent-ghost);border:1px solid var(--accent-line);border-radius:7px;padding:3px 9px;white-space:nowrap}
+@media (max-width:900px){
+  .sal2-sum{grid-template-columns:1fr 1fr}.sal2-sum .sal2-card:last-child{grid-column:1/-1}
+  .sal2-seg{max-width:100%;overflow-x:auto}
+}
+@media (max-width:520px){.sal2-sum{grid-template-columns:1fr}}

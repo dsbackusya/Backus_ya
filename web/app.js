@@ -1119,24 +1119,25 @@ function renderSalidas(r){
   if(_handleExpired(r,'salidas-root')) return;
   if(!r||!r.ok){errBox('salidas-root',r?r.error:'Error desconocido');return;}
   DATA.salidas=r.data;
-
-  var total=r.data.reduce(function(a,x){return a+x.unidad;},0);
+  _SAL_EST='';
+  var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
   document.getElementById('salidas-root').innerHTML=
-    '<div class="stats">'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></div><div class="stat-label">Total pedidos</div><div class="stat-val-row"><div class="stat-val" id="sal-stat-total">'+r.data.length+'</div><span class="stat-unit-pill">únicos</span></div></div>'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="stat-label">Unidades salidas</div><div class="stat-val-row"><div class="stat-val" id="sal-stat-und">'+fmt(total)+'</div><span class="stat-unit-pill">und.</span></div></div>'+
-      _salKpiEnvases(r.data)+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-label">Último pedido</div><div class="stat-val-row"><div class="stat-val mono" id="sal-stat-ultimo">—</div><span class="stat-unit-pill" id="sal-stat-ultimo-tiempo"></span></div></div>'+
+    '<div class="sal2-sum">'+
+      '<div class="sal2-card"><div class="sal2-k">Pedidos <span class="sal2-live" id="sal-live" style="display:none"><i></i>En vivo</span></div>'+
+        '<div class="sal2-v" id="sal-stat-total">0</div><div class="sal2-n" id="sal-ultimo"></div></div>'+
+      '<div class="sal2-card"><div class="sal2-k">Unidades salidas</div><div class="sal2-v"><span id="sal-stat-und">0</span><small>und.</small></div><div class="sal2-n" id="sal-prod"></div></div>'+
+      '<div class="sal2-card"><div class="sal2-k">Envases</div><div class="sal2-env" id="sal-env"></div></div>'+
     '</div>'+
-    '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
-      '<input class="filter-inp" id="sal-busq" placeholder="Buscar SKU, pedido, descripción..." style="width:240px" oninput="filterSalidas()"/>'+
+    '<div class="sal2-fl">'+
+      '<div class="sal2-srch">'+icoBuscar+'<input id="sal-busq" placeholder="Buscar pedido, SKU, producto o motorizado…" oninput="filterSalidas()"/></div>'+
       _fechaFiltroHTML('sal','filterSalidas','salRangoCambio')+
-      '<span class="result-count" id="sal-count"></span>'+
+      '<div class="sal2-seg" id="sal-est"></div>'+
+      '<span class="sal2-cnt" id="sal-count"></span>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
       '<thead><tr>'+
-        '<th>Fecha</th><th class="col-hide-mobile">Hora</th><th class="col-hide-mobile">SKU</th><th>Descripción</th>'+
-        '<th>Nro. Pedido</th><th class="col-hide-mobile">Marca</th><th class="r col-hide-mobile">Pack</th><th class="r">Und.</th>'+
+        '<th>Fecha</th><th class="col-hide-mobile">Hora</th><th>Nro. Pedido</th><th class="col-hide-mobile">SKU</th><th>Descripción</th>'+
+        '<th class="col-hide-mobile">Marca</th><th class="r col-hide-mobile">Pack</th><th class="r">Und.</th>'+
         '<th class="c col-hide-mobile">Motor.</th><th class="r col-hide-mobile">Envases</th>'+
         '<th class="c col-hide-mobile">Estado</th><th class="c col-hide-mobile">Revisión</th>'+
         '<th class="c col-hide-mobile" style="min-width:110px;width:110px"></th>'+
@@ -1229,131 +1230,80 @@ function confirmarRecepcion(rowNum, btn){
     .marcarEntregado(S.token,rowNum);
 }
 
-// ── KPI Envases: genera los dos stat-cards (Retornables + Venta) ──
+// ── Resumen de Envases (Retornables y Venta por tamaño) ──
 // Tamaños canónicos que siempre se muestran (en orden)
 var SAL_TAMANOS = ['310','630','1000'];
+var _SAL_EST=''; // filtro de estado: '', 'pen' (por confirmar), 'ent' (entregado), 'cx' (cancelado)
 
-function _salKpiEnvases(rows){
-  var ret = {total:0, por:{}};
-  var ven = {total:0, por:{}};
-  SAL_TAMANOS.forEach(function(t){ ret.por[t]=0; ven.por[t]=0; });
+// Estado de una línea de salida (coincide con el botón "Confirmar recepción")
+function _salEstadoLinea(r){
+  if(r.cancelado||String(r.estado||'').toLowerCase()==='cancelado') return 'cx';
+  var est=String(r.estado||'').trim(), rev=String(r.revision||'').trim().toLowerCase();
+  if(rev==='entregado') return 'ent';
+  if(est) return 'pen';
+  return 'sin';
+}
 
+// Líneas que cumplen búsqueda y fecha (antes del filtro de estado)
+function _salBase(){
+  var q = ((document.getElementById('sal-busq')||{}).value||'').toLowerCase();
+  var rows = DATA.salidas.filter(function(r) {
+    return !q||(r.sku.toLowerCase().indexOf(q)>-1||r.desc.toLowerCase().indexOf(q)>-1||
+      r.nroPedido.toLowerCase().indexOf(q)>-1||String(r.motorizado||'').toLowerCase().indexOf(q)>-1);
+  });
+  return _applyFiltroFecha('sal', rows).sort(function(a,b){return b._row-a._row;});
+}
+
+function _salEnvasesHTML(rows){
+  var ret={}, ven={};
   rows.forEach(function(r){
-    var und = r.unidad || 0;
-    var env = String(r.envases || '').trim();
-    var tam = String(r.tamano  || '').trim();
+    var env=String(r.envases||'').trim().toLowerCase(), tam=String(r.tamano||'').trim(), und=r.unidad||0;
     if(!tam) return;
-    var esRetornable = env.toLowerCase() === 'retornable';
-    var esVenta      = env.toLowerCase() === 'venta';
-    if(!esRetornable && !esVenta) return;
-    var bucket = esRetornable ? ret : ven;
-    bucket.total += und;
-    if(bucket.por[tam] !== undefined) bucket.por[tam] += und;
-    else bucket.por[tam] = und;
+    if(env==='retornable') ret[tam]=(ret[tam]||0)+und;
+    else if(env==='venta') ven[tam]=(ven[tam]||0)+und;
   });
-
-  return _salKpiCard('Retornables','sal-kpi-ret','#1D9E75','#E1F5EE','#085041',ret) +
-         _salKpiCard('Venta','sal-kpi-ven','#D85A30','#FAECE7','#712B13',ven);
-}
-
-function _salKpiCard(titulo, idPfx, color, bgPill, txtPill, data){
-  var total = data.total;
-  var rows  = SAL_TAMANOS.map(function(t){
-    var val = data.por[t] || 0;
-    var pct = total > 0 ? Math.round(val / total * 100) : 0;
-    var dim = val === 0 ? 'opacity:0.35;' : '';
-    return '<div class="sal-env-row" style="'+dim+'">'+
-      '<span class="sal-env-size" style="background:'+bgPill+';color:'+txtPill+'">'+t+' ml</span>'+
-      '<div class="sal-env-right">'+
-        '<div class="sal-env-bar-bg"><div class="sal-env-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+
-        '<span class="sal-env-val">'+val+'</span>'+
-      '</div>'+
-    '</div>';
-  }).join('');
-
-  return '<div class="stat-card sal-env-card">'+
-    '<div class="sal-env-head">'+
-      '<span class="sal-env-dot" style="background:'+color+'"></span>'+
-      '<span class="sal-env-titulo">'+titulo+'</span>'+
-    '</div>'+
-    '<div class="sal-env-body">'+
-      '<div class="sal-env-left">'+
-        '<div class="sal-env-total" id="'+idPfx+'-total">'+fmt(total)+'</div>'+
-        '<div class="sal-env-totlabel">Totales</div>'+
-      '</div>'+
-      '<div class="sal-env-rows" id="'+idPfx+'-rows">'+rows+'</div>'+
-    '</div>'+
-  '</div>';
-}
-
-function _salActualizarKpiEnvases(filtered){
-  var ret = {total:0, por:{}};
-  var ven = {total:0, por:{}};
-  SAL_TAMANOS.forEach(function(t){ ret.por[t]=0; ven.por[t]=0; });
-
-  filtered.forEach(function(r){
-    var und = r.unidad || 0;
-    var env = String(r.envases || '').trim();
-    var tam = String(r.tamano  || '').trim();
-    if(!tam) return;
-    var esRetornable = env.toLowerCase() === 'retornable';
-    var esVenta      = env.toLowerCase() === 'venta';
-    if(!esRetornable && !esVenta) return;
-    var bucket = esRetornable ? ret : ven;
-    bucket.total += und;
-    if(bucket.por[tam] !== undefined) bucket.por[tam] += und;
-    else bucket.por[tam] = und;
-  });
-
-  function actualizarCard(idPfx, color, bgPill, txtPill, data){
-    var elTotal = document.getElementById(idPfx+'-total');
-    var elRows  = document.getElementById(idPfx+'-rows');
-    if(elTotal) elTotal.textContent = fmt(data.total);
-    if(elRows){
-      elRows.innerHTML = SAL_TAMANOS.map(function(t){
-        var val = data.por[t] || 0;
-        var pct = data.total > 0 ? Math.round(val / data.total * 100) : 0;
-        var dim = val === 0 ? 'opacity:0.35;' : '';
-        return '<div class="sal-env-row" style="'+dim+'">'+
-          '<span class="sal-env-size" style="background:'+bgPill+';color:'+txtPill+'">'+t+' ml</span>'+
-          '<div class="sal-env-right">'+
-            '<div class="sal-env-bar-bg"><div class="sal-env-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+
-            '<span class="sal-env-val">'+val+'</span>'+
-          '</div>'+
-        '</div>';
-      }).join('');
-    }
-  }
-
-  actualizarCard('sal-kpi-ret','#1D9E75','#E1F5EE','#085041',ret);
-  actualizarCard('sal-kpi-ven','#D85A30','#FAECE7','#712B13',ven);
+  var bloque=function(titulo,color,o){
+    var tot=0; SAL_TAMANOS.forEach(function(t){tot+=o[t]||0;});
+    return '<div><div class="sal2-envh"><b>'+fmt(tot)+'</b><span><em style="background:'+color+'"></em>'+titulo+'</span></div>'+
+      SAL_TAMANOS.map(function(t){
+        var v=o[t]||0, pct=tot>0?Math.round(v/tot*100):0;
+        return '<div class="sal2-sz"'+(v?'':' style="opacity:.35"')+'><span>'+t+' ml</span><div class="sal2-bar"><i style="width:'+pct+'%;background:'+color+'"></i></div><b>'+fmt(v)+'</b></div>';
+      }).join('')+'</div>';
+  };
+  return bloque('Retornables','var(--ok)',ret)+bloque('Venta','var(--warn)',ven);
 }
 
 function _filterSalidas(){
+  var base = _salBase();
+  var c={pen:0,ent:0,cx:0}, vivas=[];
+  base.forEach(function(r){ var e=_salEstadoLinea(r); if(c[e]!==undefined) c[e]++; if(e!=='cx') vivas.push(r); });
+
+  var seg=function(k,txt,n){return '<button class="'+(_SAL_EST===k?'on':'')+'" onclick="salSetEstado(\''+k+'\')">'+txt+'<span>'+n+'</span></button>';};
+  document.getElementById('sal-est').innerHTML=seg('','Todos',base.length)+seg('pen','Por confirmar',c.pen)+seg('ent','Entregados',c.ent)+(c.cx?seg('cx','Cancelados',c.cx):'');
+
   var filtered = _getFilteredRows('salidas');
 
-  var stats = filtered.reduce(function(acc, r){
+  // Resumen (sin contar líneas canceladas)
+  var stats = vivas.reduce(function(acc, r){
     acc.totalUnd += r.unidad;
     if(r.nroPedido && r.nroPedido.trim() !== ''){
       acc.pedidos.add(r.nroPedido);
       if(r._row > acc.ultimoRow){ acc.ultimoRow = r._row; acc.ultimoPedido = r.nroPedido; acc.ultimoFecha=r.fecha; acc.ultimoHora=r.hora; }
     }
     return acc;
-  }, {totalUnd:0, pedidos: new Set(), ultimoRow:-1, ultimoPedido:'—', ultimoFecha:'', ultimoHora:''});
+  }, {totalUnd:0, pedidos: new Set(), ultimoRow:-1, ultimoPedido:'', ultimoFecha:'', ultimoHora:''});
+  var el;
+  if(el=document.getElementById('sal-stat-total')) el.textContent=fmt(stats.pedidos.size);
+  if(el=document.getElementById('sal-stat-und'))   el.textContent=fmt(stats.totalUnd);
+  if(el=document.getElementById('sal-prod'))       el.textContent=fmt(vivas.length)+(vivas.length===1?' línea de producto':' líneas de producto');
+  if(el=document.getElementById('sal-ultimo')){
+    var rel=_salTiempoRelativo(stats.ultimoFecha, stats.ultimoHora);
+    el.innerHTML=stats.ultimoPedido?'Último: <b>'+esc(stats.ultimoPedido)+'</b>'+(rel?' · '+rel:''):'Sin pedidos en este período';
+  }
+  if(el=document.getElementById('sal-env')) el.innerHTML=_salEnvasesHTML(vivas);
+  if(el=document.getElementById('sal-live')) el.style.display=(window.TadaRealtime&&TadaRealtime.vivo&&TadaRealtime.vivo())?'':'none';
 
-  var statTotal  = document.getElementById('sal-stat-total');
-  var statUnd    = document.getElementById('sal-stat-und');
-  var statUltimo = document.getElementById('sal-stat-ultimo');
-  var statTiempo = document.getElementById('sal-stat-ultimo-tiempo');
-  if(statTotal)  statTotal.textContent  = stats.pedidos.size;
-  if(statUnd)    statUnd.textContent    = fmt(stats.totalUnd);
-  if(statUltimo) statUltimo.textContent = stats.ultimoPedido;
-  if(statTiempo) statTiempo.textContent = _salTiempoRelativo(stats.ultimoFecha, stats.ultimoHora);
-
-  _salActualizarKpiEnvases(filtered);
-
-  var el = document.getElementById('sal-count');
-  if(el) el.textContent = filtered.length + ' registros';
+  if(el=document.getElementById('sal-count')) el.textContent = filtered.length + ' registros';
 
   var tbody = filtered.map(function(r){
     var cancelado=r.cancelado||r.estado==='cancelado'||r.estado==='CANCELADO';
@@ -1364,9 +1314,9 @@ function _filterSalidas(){
     return '<tr'+(_salFlash[r._row]?' class="flash-new"':'')+' style="'+trStyle+'">'+
       '<td class="mono" style="font-size:12px">'+esc(r.fecha)+'</td>'+
       '<td class="mono col-hide-mobile" style="font-size:12px;color:var(--text3)">'+esc(r.hora)+'</td>'+
+      '<td class="pedido-link">'+(r.nroPedido?'<span class="sal-ped">'+esc(r.nroPedido)+'</span>':'<span style="color:var(--text4)">—</span>')+'</td>'+
       '<td class="mono col-hide-mobile">'+esc(r.sku)+'</td>'+
       descCell+
-      '<td class="mono pedido-link" style="font-size:11.5px">'+esc(r.nroPedido||'—')+'</td>'+
       '<td class="col-hide-mobile" style="font-size:12px">'+(r.marca?'<span class="brand-pill">'+esc(r.marca)+'</span>':'<span style="color:var(--text4)">—</span>')+'</td>'+
       '<td class="r col-hide-mobile">'+fmt(r.pack)+'</td>'+
       '<td class="r" style="font-weight:600">'+fmt(r.unidad)+'</td>'+
@@ -1380,6 +1330,8 @@ function _filterSalidas(){
   var t = document.getElementById('salidas-tbody');
   if(t) t.innerHTML = tbody || '<tr><td colspan="13" style="text-align:center;color:var(--text3);padding:40px">Sin registros</td></tr>';
 }
+
+function salSetEstado(k){ _SAL_EST=(_SAL_EST===k?'':k); _filterSalidas(); }
 
 // Exportar salidas filtradas a Excel
 function exportSalidas(){
@@ -2842,11 +2794,8 @@ function _getFilteredRows(name) {
     });
   }
   if (name === 'salidas') {
-    var q = ((document.getElementById('sal-busq')||{}).value||'').toLowerCase();
-    var rows = DATA.salidas.filter(function(r) {
-      return !q||(r.sku.toLowerCase().indexOf(q)>-1||r.desc.toLowerCase().indexOf(q)>-1||r.nroPedido.toLowerCase().indexOf(q)>-1);
-    });
-    return _applyFiltroFecha('sal', rows).sort(function(a,b){return b._row-a._row;});
+    var base = _salBase();
+    return _SAL_EST ? base.filter(function(r){return _salEstadoLinea(r)===_SAL_EST;}) : base;
   }
   if (name === 'entradas') {
     var q = ((document.getElementById('ent-busq')||{}).value||'').toLowerCase();
