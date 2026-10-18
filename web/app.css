@@ -2999,3 +2999,6 @@ input.filter-inp:focus{
 .dash-dl:hover{border-color:var(--accent);color:var(--text)}
 @media (max-width:900px){.dash-hero{grid-template-columns:1fr 1fr}.dash-kan{grid-template-columns:1fr 1fr}}
 @media (max-width:520px){.dash-hero,.dash-kan{grid-template-columns:1fr}.dash-sedes{grid-template-columns:1fr}.dash-h1{font-size:21px}}
+
+.dash-sec-r{text-transform:none;letter-spacing:0}
+.dash-sec-r input{width:160px}

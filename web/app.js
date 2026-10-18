@@ -245,7 +245,7 @@ function initApp(){
 /* ── AUTO-RESTORE SESSION ON LOAD ── */
 
 /* NAV state — declarado ANTES del auto-restore para evitar undefined si GAS responde rápido */
-var PAGE_TITLES={'dashboard':'Dashboard','stock':'Stock Actual','entradas':'Entradas','salidas':'Salidas','mt':'Mermas & Traslados','cancelados':'Pedidos Cancelados','maestro':'Maestro de Productos','conteo':'Conteo de Inventario','validacion':'Validación de Inventario','oc':'Órdenes de Compra'};
+var PAGE_TITLES={'dashboard':'Dashboard','stock':'Stock Actual','entradas':'Entradas','salidas':'Salidas','mt':'Mermas & Traslados','cancelados':'Pedidos Cancelados','maestro':'Maestro de Productos','conteo':'Conteo de Inventario','validacion':'Validación de Inventario'};
 var PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,conteo:false,validacion:false,oc:false};
 
 (function(){
@@ -279,7 +279,7 @@ var CURRENT_PAGE = '';
 
 function navTo(name,btn){
   CURRENT_PAGE = name;
-  ['dashboard','stock','entradas','salidas','mt','cancelados','maestro','conteo','validacion','oc'].forEach(function(n){
+  ['dashboard','stock','entradas','salidas','mt','cancelados','maestro','conteo','validacion'].forEach(function(n){
     document.getElementById('p-'+n).classList.remove('active');
     document.getElementById('nav-'+n).classList.remove('active');
   });
@@ -308,8 +308,10 @@ function renderTopbarActions(name){
   var btnRefresh='<button class="btn btn-ghost btn-sm tb-btn-icon" title="Actualizar" onclick="reloadPage(\''+name+'\')">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>';
 
   if(name==='dashboard'){
-    el.innerHTML=
-      '<button class="btn btn-ghost btn-sm tb-btn-icon" onclick="reloadPage(\'dashboard\')">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>';
+    var esAdm=S&&S.rol==='admin';
+    el.innerHTML=(esAdm?'<button class="btn btn-primary btn-sm" onclick="abrirImportarOC()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Cargar OC</span></button>'+
+      '<button class="btn btn-ghost btn-sm" id="btn-oc-validar" onclick="validarRecepcionOC()" style="border-color:var(--accent);color:var(--accent)">'+icoRefresh+'<span class="tb-btn-label"> Validar OC</span></button>':'')+
+      '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Exportar órdenes de compra" onclick="exportOC()">'+icoExport+'<span class="tb-btn-label"> Exportar OC</span></button>'+btnRefresh;
   } else if(name==='stock'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirSKUForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Nuevo SKU</span></button>'+btnExport+btnRefresh;
   } else if(name==='salidas'){
@@ -329,9 +331,6 @@ function renderTopbarActions(name){
   } else if(name==='validacion'){
     el.innerHTML='<button class="btn btn-ghost btn-sm tb-btn-icon" title="Actualizar" onclick="correrValidacion(true)">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>'+
       '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Exportar Excel" onclick="exportValidacion()">'+icoExport+'<span class="tb-btn-label"> Exportar Excel</span></button>';
-  } else if(name==='oc'){
-    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirImportarOC()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Cargar Excel</span></button>'+
-      '<button class="btn btn-ghost btn-sm" id="btn-oc-validar" onclick="validarRecepcionOC()" style="border-color:var(--accent);color:var(--accent)">'+icoRefresh+'<span class="tb-btn-label"> Validar</span></button>'+btnExport+btnRefresh;
   } else { el.innerHTML=''; }
 }
 // Capitaliza nombres de página para construir el handler "export<Page>()".
@@ -403,7 +402,6 @@ function loadPage(name){
   if(name==='maestro')    loadMaestro();
   if(name==='conteo')     loadConteo();
   if(name==='validacion') initValidacion();
-  if(name==='oc')          loadOC();
 }
 
 /* ══════════════════════════════════════
@@ -412,22 +410,27 @@ function loadPage(name){
 /* ══════════════════════════════════════
    DASHBOARD — admin / invitado
 ══════════════════════════════════════ */
-var DASH={d:null,sede:'',hl:'',ts:null};
+var DASH={d:null,m:null,sede:'',hl:'',ts:null,q:'',est:'',rec:null};
 
 function loadDashboard(){
   if(!S||!S.token){errBox('dashboard-root','Sin sesión activa.','dashboard');PAGE_LOADING['dashboard']=false;return;}
   _FORCE_REFRESH['dashboard']=false;
   var t = (REQ_TOKEN.dashboard = (REQ_TOKEN.dashboard||0) + 1);
+  var res={dash:null,oc:null}, falta=2;
+  var listo=function(){
+    if(--falta>0||t!==REQ_TOKEN.dashboard) return;
+    PAGE_LOADING['dashboard']=false;
+    DATA.oc=(res.oc&&res.oc.ok)?res.oc.data:[];
+    renderDashboard(res.dash);
+  };
   google.script.run
-    .withSuccessHandler(function(r){
-      if(t !== REQ_TOKEN.dashboard) return;
-      PAGE_LOADING['dashboard']=false; renderDashboard(r);
-    })
-    .withFailureHandler(function(e){
-      if(t !== REQ_TOKEN.dashboard) return;
-      PAGE_LOADING['dashboard']=false; errBox('dashboard-root',e.message,'dashboard');
-    })
+    .withSuccessHandler(function(r){ res.dash=r; listo(); })
+    .withFailureHandler(function(e){ res.dash={ok:false,error:e.message}; listo(); })
     .getDashboard(S.token);
+  google.script.run
+    .withSuccessHandler(function(r){ res.oc=r; listo(); })
+    .withFailureHandler(function(){ res.oc=null; listo(); })
+    .getOrdenesCompra(S.token);
 }
 
 function _dashDias(fechaISO, hoyISO){
@@ -455,9 +458,9 @@ function _dashModelo(d){
       d:'Salidas mayores a lo ingresado'+((x.ejemplos&&x.ejemplos.length)?'. Ej.: '+x.ejemplos.join(', '):''),ir:'Ver stock',go:'stock:neg'});
   });
   ocs.forEach(function(o){
-    if(o.col==='v') al.push({sede:o.sede,sev:'rd',key:o.oc,t:o.oc+' vencida hace '+(-o.dias)+(o.dias===-1?' día':' días'),
-      d:'Esperada el '+_dashFecha(o.fecha)+' · '+o.pv,ir:'Ver OC',go:'oc'});
-    if(o.col==='h') al.push({sede:o.sede,sev:'am',key:o.oc,t:o.oc+' llega hoy',d:o.pv+' · falta registrar la entrada',ir:'Ver OC',go:'oc'});
+    if(o.col==='v') al.push({sede:o.sede,sev:'rd',t:o.oc+' vencida hace '+(-o.dias)+(o.dias===-1?' día':' días'),
+      d:'Esperada el '+_dashFecha(o.fecha)+' · '+o.pv,ir:'Ver OC',go:'oc',key:o.oc});
+    if(o.col==='h') al.push({sede:o.sede,sev:'am',t:o.oc+' llega hoy',d:o.pv+' · falta registrar la entrada',ir:'Ver OC',go:'oc',key:o.oc});
   });
   (d.pedidos_duplicados||[]).forEach(function(x){
     al.push({sede:sedeN(x.sede_id),sev:'am',t:x.n+(x.n===1?' pedido está':' pedidos están')+' en Salidas y en Cancelados',
@@ -535,7 +538,7 @@ function dashDibujar(){
     var filas=a.length?a.map(function(x){
       var sel=DASH.hl&&x.key===DASH.hl;
       return '<div class="dash-li'+(sel?' hl':'')+'"><span class="dd '+x.sev+'"></span><div class="t">'+esc(x.t)+'<small>'+esc(x.d)+'</small></div>'+
-        '<button onclick="dashIr(\''+x.go+'\')">'+esc(x.ir)+'</button></div>';
+        '<button data-go="'+esc(x.go)+'" data-key="'+esc(x.key||'')+'" onclick="dashIr(this.dataset.go,this.dataset.key)">'+esc(x.ir)+'</button></div>';
     }).join(''):'<div class="dash-okline"><i></i> Todo en orden</div>';
     return '<div class="dash-sd"><div class="dash-sdh"><div class="dash-sdn">'+esc(s)+'</div></div>'+
       '<div class="dash-sdsub">'+a.length+(a.length===1?' alerta · ':' alertas · ')+nOC+(nOC===1?' OC abierta':' OC abiertas')+'</div>'+
@@ -549,18 +552,43 @@ function dashDibujar(){
   root.innerHTML=
     '<div class="dash-top"><div><div class="dash-h1">Dashboard</div><div class="dash-sub">'+esc(fechaTxt)+(hora?' · actualizado '+hora:'')+'</div></div>'+seg+'</div>'+
     hero+
-    '<div class="dash-sec"><span>Órdenes de compra · estado de recepción</span><a onclick="navTo(\'oc\',document.getElementById(\'nav-oc\'))">Ver todas las OC →</a></div>'+kan+
+    '<div class="dash-sec"><span>Órdenes de compra · estado de recepción</span><a onclick="dashVerOC(\'\')">Ver todas las OC →</a></div>'+kan+
     '<div class="dash-sec"><span>Qué atender por sede</span></div>'+tarjetas+
+    '<div class="dash-sec"><span>Recepciones por tienda</span>'+
+      '<span class="dash-sec-r"><input type="date" class="filter-inp" id="oc-recep-fecha" onchange="loadRecepcionesPorTienda(this.value)"/></span></div>'+
+      '<div class="stats" id="oc-recep-grid"></div>'+
+    '<div class="dash-sec" id="dash-oclist"><span>Todas las órdenes de compra</span><span class="result-count" id="oc-count"></span></div>'+
+    '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
+      '<input class="filter-inp" id="oc-busq" placeholder="Buscar OC, proveedor, entrega..." style="width:260px" value="'+esc(DASH.q||'')+'" oninput="DASH.q=this.value;filterOC()"/>'+
+      '<select class="filter-select" id="oc-estado-filtro" onchange="DASH.est=this.value;filterOC()">'+
+        '<option value="">Todos los estados</option>'+
+        '<option value="Pendiente"'+(DASH.est==='Pendiente'?' selected':'')+'>Pendiente</option>'+
+        '<option value="Recibido"'+(DASH.est==='Recibido'?' selected':'')+'>Recibido</option>'+
+        '<option value="Cancelada"'+(DASH.est==='Cancelada'?' selected':'')+'>Cancelada</option>'+
+      '</select>'+
+    '</div>'+
+    '<div class="table-wrap"><table><thead><tr><th>Fecha recepción</th><th>Orden de compra</th><th>Proveedor</th><th>Nombre de entrega</th><th class="c">Estado</th></tr></thead><tbody id="oc-tbody"></tbody></table></div>'+
     '<div class="dash-sec"><span>Descargas</span></div>'+
     '<div class="dash-dls">'+dl('btn-dl-stock','Stock actual','dashExportStock()')+dl('btn-dl-salidas','Salidas','dashExportModulo(\'salidas\',\'btn-dl-salidas\')')+
       dl('btn-dl-entradas','Entradas','dashExportModulo(\'entradas\',\'btn-dl-entradas\')')+dl('btn-dl-mt','Mermas y traslados','dashExportModulo(\'mt\',\'btn-dl-mt\')')+'</div>';
+  dashPostDibujo();
 }
 
+function dashPostDibujo(){
+  filterOC();
+  if(DASH.rec) renderRecepcionesPorTienda(DASH.rec); else loadRecepcionesPorTienda('');
+}
 function dashSede(s){ DASH.sede=s||''; DASH.hl=''; dashDibujar(); }
 function dashResaltar(oc){ DASH.hl=(DASH.hl===oc?'':oc); dashDibujar(); }
 
 // Lleva a la pantalla donde se resuelve la alerta (y aplica el filtro de stock cuando corresponde)
-function dashIr(dest){
+function dashVerOC(oc){
+  DASH.q=oc||''; DASH.est='';
+  dashDibujar();
+  var el=document.getElementById('dash-oclist'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function dashIr(dest,key){
+  if(dest==='oc'){ dashVerOC(key); return; }
   var p=String(dest).split(':'), pag=p[0], filtro=p[1]||'';
   navTo(pag,document.getElementById('nav-'+pag));
   if(pag==='stock'&&filtro){
@@ -5861,70 +5889,16 @@ function cerrarModalMov(){
 ══════════════════════════════════════ */
 var OC_ROWS_PARSED = []; // filas del Excel ya parseadas, pendientes de importar
 
-function loadOC(){
-  if(!S||!S.token){errBox('oc-root','Sin sesión activa.','oc');PAGE_LOADING['oc']=false;return;}
-  var force=!!_FORCE_REFRESH['oc']; _FORCE_REFRESH['oc']=false;
-  var t=(REQ_TOKEN.oc=(REQ_TOKEN.oc||0)+1);
-  google.script.run
-    .withSuccessHandler(function(r){
-      if(t!==REQ_TOKEN.oc) return;
-      PAGE_LOADING['oc']=false;
-      renderOC(r);
-    })
-    .withFailureHandler(function(e){
-      if(t!==REQ_TOKEN.oc) return;
-      PAGE_LOADING['oc']=false;errBox('oc-root',e.message,'oc');
-    })
-    .getOrdenesCompra(S.token, force);
-}
-
 function _ocBadge(estado){
   var e=(estado||'Pendiente').trim();
   var cls=e==='Recibido'?'badge-ok':'badge-warn';
   return '<span class="badge '+cls+'">'+esc(e)+'</span>';
 }
 
-function renderOC(r){
-  if(_handleExpired(r,'oc-root')) return;
-  if(!r||!r.ok){errBox('oc-root',r&&r.error?r.error:'Error al cargar órdenes de compra','oc');return;}
-  DATA.oc=r.data||[];
-  var pendientes=DATA.oc.filter(function(x){return (x.estado||'Pendiente')==='Pendiente';}).length;
-  var recibidas=DATA.oc.filter(function(x){return x.estado==='Recibido';}).length;
-  document.getElementById('oc-root').innerHTML=
-    '<div class="stats">'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div><div class="stat-label">Total OC</div><div class="stat-val-row"><div class="stat-val" id="oc-stat-total">'+DATA.oc.length+'</div><span class="stat-unit-pill">órdenes</span></div></div>'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-label">Pendientes</div><div class="stat-val-row"><div class="stat-val" id="oc-stat-pend" style="color:var(--warn)">'+pendientes+'</div><span class="stat-unit-pill">OC</span></div></div>'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div class="stat-label">Recibidas</div><div class="stat-val-row"><div class="stat-val" id="oc-stat-rec" style="color:var(--ok)">'+recibidas+'</div><span class="stat-unit-pill">OC</span></div></div>'+
-    '</div>'+
-    '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
-      '<input class="filter-inp" id="oc-busq" placeholder="Buscar OC, proveedor, entrega..." style="width:260px" oninput="filterOC()"/>'+
-      '<select class="filter-select" id="oc-estado-filtro" onchange="filterOC()">'+
-        '<option value="">Todos los estados</option>'+
-        '<option value="Pendiente">Pendiente</option>'+
-        '<option value="Recibido">Recibido</option>'+
-      '</select>'+
-      '<span class="result-count" id="oc-count"></span>'+
-    '</div>'+
-    '<div class="table-wrap"><table>'+
-      '<thead><tr>'+
-        '<th>Fecha recepción</th><th>Orden de compra</th><th>Proveedor</th><th>Nombre de entrega</th><th class="c">Estado</th>'+
-      '</tr></thead>'+
-      '<tbody id="oc-tbody"></tbody>'+
-    '</table></div>'+
-    '<div style="margin-top:28px">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">'+
-        '<div style="font-size:14px;font-weight:600;color:var(--text)">Recepciones por tienda</div>'+
-        '<div style="display:flex;align-items:center;gap:8px">'+
-          '<input type="date" class="filter-inp" id="oc-recep-fecha" style="width:160px" onchange="loadRecepcionesPorTienda(this.value)"/>'+
-          '<button class="btn btn-ghost btn-sm" onclick="loadRecepcionesPorTienda(document.getElementById(\'oc-recep-fecha\').value)">Actualizar</button>'+
-        '</div>'+
-      '</div>'+
-      '<div class="stats" id="oc-recep-grid"></div>'+
-    '</div>';
-  filterOC();
-  loadRecepcionesPorTienda('');
+function _dashSedeDeOC(r){
+  var s=((DASH.d&&DASH.d.sedes)||[]).filter(function(x){return x.id===r.sedeId;})[0];
+  return s?s.nombre:'';
 }
-
 function filterOC(){
   var q=((document.getElementById('oc-busq')||{}).value||'').toLowerCase();
   var estadoF=((document.getElementById('oc-estado-filtro')||{}).value||'');
@@ -5934,7 +5908,8 @@ function filterOC(){
       (r.proveedor||'').toLowerCase().indexOf(q)>-1||
       (r.entrega||'').toLowerCase().indexOf(q)>-1;
     var okE=!estadoF||(r.estado||'Pendiente')===estadoF;
-    return okQ&&okE;
+    var okS=!DASH.sede||_dashSedeDeOC(r)===DASH.sede;
+    return okQ&&okE&&okS;
   });
   rows.sort(function(a,b){return (b._row||0)-(a._row||0);});
   var el=document.getElementById('oc-count');
@@ -5968,7 +5943,7 @@ function loadRecepcionesPorTienda(fechaISO){
   var grid=document.getElementById('oc-recep-grid');
   if(grid) grid.innerHTML='<div class="stat-card"><div class="stat-label">Cargando...</div></div>';
   google.script.run
-    .withSuccessHandler(function(r){renderRecepcionesPorTienda(r);})
+    .withSuccessHandler(function(r){DASH.rec=r;renderRecepcionesPorTienda(r);})
     .withFailureHandler(function(e){
       var g=document.getElementById('oc-recep-grid');
       if(g) g.innerHTML='<div style="color:var(--danger);font-size:12px;padding:8px 0">'+esc(e.message)+'</div>';
@@ -5988,11 +5963,12 @@ function renderRecepcionesPorTienda(r){
     if(p.length===3) inp.value=p[2]+'-'+p[1]+'-'+p[0];
   }
 
-  if(!r.data||!r.data.length){
+  var tiendas=(r.data||[]).filter(function(st){return !DASH.sede||st.nombre===DASH.sede;});
+  if(!tiendas.length){
     grid.innerHTML='<div class="stat-card"><div class="stat-label">Sin tiendas registradas</div></div>';
     return;
   }
-  grid.innerHTML=r.data.map(function(st){
+  grid.innerHTML=tiendas.map(function(st){
     var ocsHtml = (st.ocs&&st.ocs.length)
       ? '<div class="oc-chip-list" data-tienda="'+esc(st.nombre)+'" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">'+
           st.ocs.map(function(oc){
@@ -6261,8 +6237,7 @@ function confirmarImportarOC(){
       if(!r||!r.ok){err.textContent=(r&&r.error)||'Error al importar';return;}
       closeFS('fs-oc-import');
       showToast(r.agregadas+' OC nuevas cargadas'+(r.omitidas?', '+r.omitidas+' omitidas (ya existían)':''),'ok');
-      _FORCE_REFRESH['oc']=true;
-      loadOC();
+      reloadPage('dashboard');
     })
     .withFailureHandler(function(e){
       btn.disabled=false;btn.textContent='Importar';
@@ -6281,8 +6256,7 @@ function validarRecepcionOC(){
       if(btn){btn.disabled=false;}
       if(!r||!r.ok){showToast((r&&r.error)||'Error al validar','err');return;}
       showToast(r.actualizadas+' OC actualizadas a "Recibido"','ok');
-      _FORCE_REFRESH['oc']=true;
-      loadOC();
+      reloadPage('dashboard');
     })
     .withFailureHandler(function(e){
       if(btn){btn.disabled=false;}

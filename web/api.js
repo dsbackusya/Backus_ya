@@ -788,7 +788,7 @@
       ok: true,
       data: filas.map(function (r, i) {
         return {
-          _row: i + 2, oc: str(r.oc), proveedor: str(r.proveedor), fechaRecepcion: fmtFecha(r.fecha_recepcion),
+          _row: i + 2, sedeId: r.sede_id, oc: str(r.oc), proveedor: str(r.proveedor), fechaRecepcion: fmtFecha(r.fecha_recepcion),
           entrega: str(r.nombre_entrega), estado: str(r.estado_recepcion) || 'Pendiente'
         };
       })
