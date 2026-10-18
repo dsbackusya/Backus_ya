@@ -12,6 +12,7 @@ var _ICO_P={
   upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
   wifioff:'<line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>',
+  reloj:'<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>',
   bolt:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
   info:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'
 };
@@ -1123,8 +1124,8 @@ function renderSalidas(r){
   var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
   document.getElementById('salidas-root').innerHTML=
     '<div class="sal2-sum">'+
-      '<div class="sal2-card"><div class="sal2-k">Pedidos <span class="sal2-live" id="sal-live" style="display:none"><i></i>En vivo</span></div>'+
-        '<div class="sal2-v" id="sal-stat-total">0</div><div class="sal2-n" id="sal-ultimo"></div></div>'+
+      '<div class="sal2-card sal2-ped"><div class="sal2-pl"><div class="sal2-k">Pedidos</div><div class="sal2-v" id="sal-stat-total">0</div></div>'+
+        '<div class="sal2-pr" id="sal-ultimo"></div></div>'+
       '<div class="sal2-card"><div class="sal2-k">Unidades salidas</div><div class="sal2-v"><span id="sal-stat-und">0</span><small>und.</small></div><div class="sal2-n" id="sal-prod"></div></div>'+
       '<div class="sal2-card"><div class="sal2-k">Envases</div><div class="sal2-env" id="sal-env"></div></div>'+
     '</div>'+
@@ -1298,10 +1299,10 @@ function _filterSalidas(){
   if(el=document.getElementById('sal-prod'))       el.textContent=fmt(vivas.length)+(vivas.length===1?' línea de producto':' líneas de producto');
   if(el=document.getElementById('sal-ultimo')){
     var rel=_salTiempoRelativo(stats.ultimoFecha, stats.ultimoHora);
-    el.innerHTML=stats.ultimoPedido?'Último: <b>'+esc(stats.ultimoPedido)+'</b>'+(rel?' · '+rel:''):'Sin pedidos en este período';
+    el.innerHTML=stats.ultimoPedido?'<div class="sal2-k sal2-k4">Último pedido</div><span class="sal-ped sal2-pc">'+esc(stats.ultimoPedido)+'</span>'+
+      (rel?'<span class="sal2-ago">'+ICO('reloj',13)+rel+'</span>':''):'<div class="sal2-k sal2-k4">Último pedido</div><span class="sal2-ago">Sin pedidos en este período</span>';
   }
   if(el=document.getElementById('sal-env')) el.innerHTML=_salEnvasesHTML(vivas);
-  if(el=document.getElementById('sal-live')) el.style.display=(window.TadaRealtime&&TadaRealtime.vivo&&TadaRealtime.vivo())?'':'none';
 
   if(el=document.getElementById('sal-count')) el.textContent = filtered.length + ' registros';
 

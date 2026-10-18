@@ -3310,9 +3310,13 @@ input.filter-inp:focus{
 .sal2-sum{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:12px;margin-bottom:16px}
 .sal2-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;min-width:0}
 .sal2-k{font:500 10px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text3);display:flex;align-items:center;gap:10px}
-.sal2-live{display:inline-flex;align-items:center;gap:6px;font:500 10px 'DM Sans',sans-serif;letter-spacing:0;text-transform:none;color:var(--ok);background:var(--ok-bg);border-radius:99px;padding:2px 9px}
-.sal2-live i{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:sal2pu 1.6s infinite}
-@keyframes sal2pu{50%{opacity:.35}}
+.sal2-ped{padding:0;overflow:hidden;display:grid;grid-template-columns:auto 1fr}
+.sal2-pl{padding:18px 22px;border-right:1px solid var(--border)}
+.sal2-ped .sal2-v{font-size:38px;letter-spacing:-.02em;color:var(--text2);margin-top:10px}
+.sal2-pr{padding:18px 20px;display:flex;flex-direction:column;justify-content:center;gap:9px;min-width:0;background:linear-gradient(135deg,var(--accent-ghost),transparent 70%)}
+.sal2-k4{color:var(--text4)}
+.sal-ped.sal2-pc{align-self:flex-start;font-size:13px;padding:4px 11px}
+.sal2-ago{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text3)}
 .sal2-v{font:700 30px var(--font-display);margin-top:8px;line-height:1;color:var(--text)}
 .sal2-v small{font:500 13px 'DM Sans',sans-serif;color:var(--text3);margin-left:6px}
 .sal2-n{font-size:12px;color:var(--text3);margin-top:8px}
@@ -3344,3 +3348,4 @@ input.filter-inp:focus{
   .sal2-seg{max-width:100%;overflow-x:auto}
 }
 @media (max-width:520px){.sal2-sum{grid-template-columns:1fr}}
+@media (max-width:520px){.sal2-envh{flex-wrap:wrap;gap:0 8px}.sal2-env{gap:12px}}
