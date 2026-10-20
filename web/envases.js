@@ -138,11 +138,8 @@ function _evRender(){
           '<button class="ev-nav" title="Semana siguiente" onclick="envSemana(1)">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>'+'</button></div>'+
           '<div class="ev-days" id="ev-days"></div>'+
           '<div class="ev-leg"><span><i></i>el día tiene conteo</span><span>El conteo de un día se hace al empezar el día y se compara con los movimientos de los días anteriores. El primer conteo de la semana es el inicial.</span></div>'+
-          '<div class="ev-res"><div class="ev-card"><div class="ev-k" id="ev-rk"></div><div class="ev-v" id="ev-rt"></div><div class="ev-n" id="ev-rn"></div></div>'+
-            '<div class="ev-card"><div class="ev-k" style="margin-bottom:10px" id="ev-dk"></div><table class="ev-df"><thead><tr><th>Cierre</th><th class="r">Und.</th><th>Estado</th><th class="r">Precio</th></tr></thead><tbody id="ev-df"></tbody><tfoot><tr><td colspan="3">Total</td><td class="r" id="ev-dt"></td></tr></tfoot></table></div></div>'+
-          '<div class="ev-card"><div class="ev-gh"><span class="t">Faltantes y sobrantes de la semana</span><span class="s">diferencia de cada conteo contra lo esperado</span><span class="ev-sp"></span>'+
-            '<div class="ev-seg"><button id="ev-mv" class="'+(ENV.met==='val'?'on':'')+'" onclick="envMet(\'val\')">S/</button><button id="ev-mu" class="'+(ENV.met==='und'?'on':'')+'" onclick="envMet(\'und\')">Unidades</button></div></div>'+
-            '<div id="ev-ch"></div></div>'+
+          '<div class="evm2" id="ev-merge"></div>'+
+          '<div class="ev-card"><div class="ev-k" style="margin-bottom:10px" id="ev-dk"></div><table class="ev-df"><thead><tr><th>Cierre</th><th class="r">Und.</th><th>Estado</th><th class="r">Precio</th></tr></thead><tbody id="ev-df"></tbody><tfoot><tr><td colspan="3">Total</td><td class="r" id="ev-dt"></td></tr></tfoot></table></div>'+
           '<div class="ev-card"><div class="ev-h"><span class="t">Movimientos y conteo</span><span class="s" id="ev-hd"></span><span class="ev-sp"></span><button class="btn btn-primary" id="ev-bc" onclick="envContar()"></button></div>'+
             '<div class="ev-t" id="ev-t"></div>'+
             '<div class="ev-ft">Esperado = conteo inicial + entradas − devoluciones − ventas + botellas que devolvieron los motorizados, de los días anteriores. Diferencia = conteo del día − esperado. Dentro de una familia, las diferencias de llenas y vacías se compensan. Las cajas plásticas solo se cuentan. ENT y DEV de Marcaje se suman solos (aparecen como + debajo del número).</div></div>'
@@ -153,7 +150,7 @@ function _evRender(){
 }
 function envVista(v){ ENV.vista=v; _evRender(); }
 function envSel(i){ ENV.sel=i; _evDias(); _evTabla(); _evResumen(); }
-function envMet(x){ ENV.met=x; document.getElementById('ev-mv').className=x==='val'?'on':''; document.getElementById('ev-mu').className=x==='und'?'on':''; _evGrafico(); }
+function envMet(x){ ENV.met=x; _evMerge(); }
 
 function _evDias(){
   var m=ENV.m, el=document.getElementById('ev-days'); if(!el) return;
@@ -218,56 +215,67 @@ function _evResumen(){
     h+='<tr><td>'+ENV_FAM[f].n+'</td><td class="r">'+(cont?u:'—')+'</td><td>'+(cont?'<span class="ev-bd '+(u<0?'f':u>0?'s':'c')+'">'+(u<0?'Faltante':u>0?'Sobrante':'Cuadra')+'</span>':'<span class="ev-bd c" style="opacity:.5">—</span>')+'</td><td class="r '+(v<0?'ev-neg':v>0?'ev-pos':'')+'">'+(!cont||v===0?'—':_evMoney(v))+'</td></tr>';
   });
   document.getElementById('ev-df').innerHTML=h;
-  var nom=ENV_DL[s]+' '+parseInt(m.days[s].slice(8),10), ini=s===m.b, k;
-  document.getElementById('ev-rk').textContent=ini?'Conteo inicial':'Resultado del conteo del '+nom;
-  document.getElementById('ev-dk').textContent=ini||!cont?'Diferencia por familia':'Diferencia por familia · '+nom;
+  var nom=ENV_DL[s]+' '+parseInt(m.days[s].slice(8),10);
+  document.getElementById('ev-dk').textContent=s===m.b||!cont?'Diferencia por familia':'Diferencia por familia · '+nom;
   var dt=document.getElementById('ev-dt'); dt.textContent=cont?_evMoney(td.v):'—'; dt.className='r '+(!cont?'':td.v<0?'ev-neg':td.v>0?'ev-pos':'ev-zero');
-  var rt=document.getElementById('ev-rt');
-  rt.textContent=ini?'Inicial':cont?_evMoney(td.v):'Sin conteo'; rt.className='ev-v '+(ini||!cont?'':td.v===0?'ev-zero':td.v<0?'ev-neg':'ev-pos');
-  var fal=Object.keys(o).filter(function(f){ return o[f]<0; }).length;
-  document.getElementById('ev-rn').textContent=ini?'Es el punto de partida de la semana':!cont?(m.C[s].has?'Aún no hay un conteo inicial antes de este día':'Toca "Contar este día"'):td.v===0&&td.u===0?'Todo cuadra':fal+(fal===1?' familia con faltante':' familias con faltante');
-  _evGrafico();
+  _evMerge();
 }
 
-/* gráfico semanal: una columna por día, barras apiladas por familia (faltantes abajo, sobrantes arriba) */
+/* tarjeta única: resultado del día elegido (izquierda) + faltantes y sobrantes de la semana (derecha) */
 var ENV_FCOL = { C6:'#F0A3AA', B6:'#E3A53A', C3:'#8FDCEB', B3:'#9480E8' };
-function _evGrafico(){
-  var m=ENV.m, el=document.getElementById('ev-ch'); if(!el) return;
-  var val=ENV.met==='val', f=0, sob=0, max=1, H=95;
+function _evSumFilas(di,k){ // contado y esperado de un tipo de fila ('caja' | 'vac' | 'lle') en el día
+  var c=0, e=0, hay=false; ENV_FILAS.forEach(function(r,j){ if(r.k!==k) return; var t=ENV.m.tot[di]; if(t&&t[j]!=null) c+=t[j]; var x=_evEsp(di,j); if(x!=null){ e+=x; hay=true; } });
+  return { c:c, e:hay?e:null };
+}
+function _evMerge(){
+  var m=ENV.m, el=document.getElementById('ev-merge'); if(!el) return;
+  var val=ENV.met==='val', s=ENV.sel, f=0, sob=0, mx=1, H=70;
   var dias=m.days.map(function(d,i){
     if(m.b<0||i<=m.b||!m.C[i].has) return null;
     var o=_evDifs(i), v={}; Object.keys(ENV_FAM).forEach(function(k){ v[k]=val?o[k]*_evPrecio(ENV_FAM[k].g):o[k]; });
     var up=0, dn=0; Object.keys(v).forEach(function(k){ if(v[k]>0) up+=v[k]; else dn+=-v[k]; });
-    f+=dn; sob+=up; max=Math.max(max,up,dn); return { o:o, v:v, tot:up-dn };
+    f+=dn; sob+=up; mx=Math.max(mx,up,dn); return { o:o, v:v, tot:up-dn };
   });
-  var fm=function(n){ return val?_evMoney(n):(n>0?'+':'')+n; };
-  var net=sob-f;
-  var h='<div class="evg-k"><div><small>Faltante de la semana</small><b class="ev-neg">'+(val?_evMoney(-f):(f?'−'+f:'0'))+'</b></div>'+
-    '<div><small>Sobrante de la semana</small><b class="ev-pos">'+(val?_evMoney(sob):'+'+sob)+'</b></div>'+
-    '<div><small>Neto</small><b class="'+_evCls(net)+'">'+fm(net)+'</b></div></div><div class="evg-cols">';
-  m.days.forEach(function(dia,i){
-    var d=dias[i], plot='', vv='';
-    if(i===m.b) plot='<div class="evg-none">punto de partida</div>';
-    else if(!d) plot='<div class="evg-none">sin conteo</div>';
+  var fm=function(n){ return val?_evMoney(n):(n>0?'+':'')+n; }, net=sob-f;
+  // panel izquierdo: resultado del día
+  var d=dias[s], c, v, st, seg, sub=['',''], ct='';
+  if(s===m.b){ c='#80799A'; v='Inicial'; st='Punto de partida'; seg=['','','','']; sub=['Es el conteo base de la semana',''];
+    ct=''; }
+  else if(!d){ c='#80799A'; v='Sin conteo'; st='Pendiente'; seg=['','','','']; sub=[m.b<0?'Primero cuenta el primer día de la semana':'Toca «Contar este día»','']; }
+  else {
+    var t=_evTotDif(_evDifs(s)), nf=0, ns=0; Object.keys(ENV_FAM).forEach(function(k){ if(d.o[k]<0) nf++; else if(d.o[k]>0) ns++; });
+    c=t.v<0?'#F0A3AA':t.v>0?'#8FDCEB':(nf||ns)?'#E3A53A':'#7ADBB3';
+    v=(t.v===0&&!nf&&!ns)?'Cuadra':_evMoney(t.v);
+    st=nf&&ns?'Faltante y sobrante':nf?'Faltante':ns?'Sobrante':'Todo en orden';
+    seg=Object.keys(ENV_FAM).map(function(k){ return d.o[k]<0?'f':d.o[k]>0?'s':'c'; });
+    sub=[nf&&ns?nf+' con faltante · '+ns+' con sobrante':nf?nf+' de 4 familias con faltante':ns?ns+' de 4 con sobrante':'Las 4 familias cuadran',(4-nf-ns)+' cuadran'];
+    ct=[['Cajas plásticas','caja'],['Botellas vacías','vac'],['Botellas llenas','lle']].map(function(x){ var q=_evSumFilas(s,x[1]);
+      return '<div><span>'+x[0]+'</span><span><b>'+q.c.toLocaleString('es-PE')+'</b>'+(q.e!=null?'<em>esperado '+q.e.toLocaleString('es-PE')+'</em>':'')+'</span></div>'; }).join('');
+  }
+  var nom=ENV_DL[s]+' '+parseInt(m.days[s].slice(8),10);
+  var L='<div class="evm2-l" style="--c:'+c+'"><div class="ev-k">Resultado del conteo · '+nom+'</div><div class="evm2-v">'+v+'</div><span class="evm2-st"><i></i>'+st+'</span>'+
+    '<div class="evm2-sg">'+seg.map(function(x){ return '<span class="'+x+'"></span>'; }).join('')+'</div><div class="evm2-sb"><b>'+sub[0]+'</b><span>'+sub[1]+'</span></div>'+
+    (ct?'<div class="evm2-ct">'+ct+'</div>':'')+'</div>';
+  // panel derecho: semana
+  var cols=m.days.map(function(dia,i){
+    var x=dias[i], pl, vv='';
+    if(i===m.b) pl='<div class="evm2-no">punto de partida</div>';
+    else if(!x) pl='<div class="evm2-no">sin conteo</div>';
     else {
       var up='', dn='';
-      Object.keys(ENV_FAM).forEach(function(k){
-        var x=d.v[k]; if(!x) return; var hh=Math.max(4,Math.abs(x)/max*H);
-        var seg='<div class="evg-s" style="height:'+hh+'px;background:'+ENV_FCOL[k]+'" title="'+ENV_FAM[k].n+'"></div>';
-        if(x>0) up+=seg; else dn+=seg;
-      });
-      plot='<div class="evg-plot"><div class="evg-up">'+up+'</div><div class="evg-z"></div><div class="evg-dn">'+(up||dn?dn:'<div class="evg-ok"></div>')+'</div></div>';
-      vv='<div class="evg-v '+_evCls(d.tot)+'">'+(d.tot===0?'Cuadra':fm(d.tot))+'</div>';
+      Object.keys(ENV_FAM).forEach(function(k){ var y=x.v[k]; if(!y) return; var hh=Math.max(4,Math.abs(y)/mx*H);
+        var sg='<div class="evm2-sg2" style="height:'+hh+'px;background:'+ENV_FCOL[k]+'" title="'+ENV_FAM[k].n+'"></div>'; if(y>0) up+=sg; else dn+=sg; });
+      pl='<div class="evm2-pl"><div class="up">'+up+'</div><div class="z"></div><div class="dn">'+(up||dn?dn:'<div class="ok"></div>')+'</div></div>';
+      vv='<div class="evm2-dv '+_evCls(x.tot)+'">'+(x.tot===0?'Cuadra':fm(x.tot))+'</div>';
     }
-    h+='<div class="evg-d'+(i===ENV.sel?' on':'')+'" onclick="envSel('+i+')">'+(vv||'<div class="evg-v"></div>')+plot+'<div class="evg-l">'+ENV_DN[i]+'<b>'+parseInt(dia.slice(8),10)+'</b></div><div class="evg-tag">'+(i===m.b?'inicial':'')+'</div></div>';
-  });
-  h+='</div>';
-  var sd=dias[ENV.sel];
-  h+='<div class="evg-det">'+(sd?Object.keys(ENV_FAM).map(function(k){ var u=sd.o[k], v=u*_evPrecio(ENV_FAM[k].g);
-      return '<div><small>'+ENV_FAM[k].n+'</small><b class="'+_evCls(u)+'">'+(u>0?'+':'')+u+' und.</b><small> · '+(v===0?'—':_evMoney(v))+'</small></div>'; }).join('')
-    :'<div style="grid-column:1/-1;color:var(--text3);font-size:12.5px">'+(ENV.sel===m.b?'El primer conteo de la semana es el inicial: no tiene diferencia.':'Este día aún no tiene conteo.')+'</div>')+'</div>'+
-    '<div class="evg-lg">'+Object.keys(ENV_FAM).map(function(k){ return '<span><i style="background:'+ENV_FCOL[k]+'"></i>'+ENV_FAM[k].n+'</span>'; }).join('')+'<span><i style="background:#7ADBB3"></i>Cuadra</span></div>';
-  el.innerHTML=h;
+    return '<div class="evm2-d'+(i===s?' on':'')+'" onclick="envSel('+i+')">'+(vv||'<div class="evm2-dv"></div>')+pl+'<div class="evm2-dl">'+ENV_DN[i]+'<b>'+parseInt(dia.slice(8),10)+'</b></div></div>';
+  }).join('');
+  var R='<div class="evm2-r"><div class="evm2-rh"><h3>Faltantes y sobrantes de la semana</h3><span class="ev-sp"></span>'+
+    '<div class="ev-seg"><button class="'+(val?'on':'')+'" onclick="envMet(\'val\')">S/</button><button class="'+(!val?'on':'')+'" onclick="envMet(\'und\')">Unidades</button></div></div>'+
+    '<div class="evm2-wk"><span>Faltante<b class="ev-neg">'+(val?_evMoney(-f):(f?'−'+f:'0'))+'</b></span><span>Sobrante<b class="ev-pos">'+(val?_evMoney(sob):'+'+sob)+'</b></span><span>Neto<b class="'+_evCls(net)+'">'+fm(net)+'</b></span></div>'+
+    '<div class="evm2-cols">'+cols+'</div>'+
+    '<div class="evm2-lg">'+Object.keys(ENV_FAM).map(function(k){ return '<span><i style="background:'+ENV_FCOL[k]+'"></i>'+ENV_FAM[k].n+'</span>'; }).join('')+'<span><i style="background:#7ADBB3"></i>Cuadra</span></div></div>';
+  el.innerHTML=L+R;
 }
 
 /* ══ Pantalla de conteo: formulario "Agregar al conteo" (estado, envase, ubicación, cajas y botellas) ══ */

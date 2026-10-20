@@ -3899,3 +3899,35 @@ body.evc-abierto{overflow:hidden}
 .evg-lg{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)}
 .evg-lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 @media (max-width:760px){.evg-plot,.evg-none{height:150px}.evg-cols{gap:3px}.evg-d{padding:6px 2px}.evg-det{grid-template-columns:1fr 1fr}.evg-v{font-size:10.5px}.evg-k b{font-size:15px}}
+
+.evm2{display:grid;grid-template-columns:minmax(270px,320px) minmax(0,1fr);background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:14px}
+.evm2-l{position:relative;padding:20px 22px;display:flex;flex-direction:column;gap:13px;border-right:1px solid var(--border);background:linear-gradient(160deg,color-mix(in srgb,var(--c) 9%,transparent),transparent 55%)}
+.evm2-l::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+.evm2-v{font:700 40px var(--font-mono);letter-spacing:-.02em;color:var(--c);line-height:1}
+.evm2-st{display:inline-flex;align-items:center;gap:8px;width:max-content;padding:5px 12px;border-radius:999px;font:600 12px 'DM Sans',sans-serif;background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c)}
+.evm2-st i{width:7px;height:7px;border-radius:50%;background:var(--c)}
+.evm2-sg{display:flex;gap:6px}.evm2-sg span{flex:1;height:8px;border-radius:4px;background:var(--border2)}
+.evm2-sg .f{background:#F0A3AA}.evm2-sg .s{background:#8FDCEB}.evm2-sg .c{background:#7ADBB3}
+.evm2-sb{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--text3);margin-top:-5px}.evm2-sb b{color:var(--text);font-weight:600}
+.evm2-ct{display:grid;gap:7px;margin-top:auto}
+.evm2-ct>div{display:flex;justify-content:space-between;align-items:baseline;padding-top:7px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)}
+.evm2-ct b{font:700 14px var(--font-mono);color:var(--text)}.evm2-ct em{font:500 11px 'DM Sans',sans-serif;font-style:normal;margin-left:6px;color:var(--text3)}
+.evm2-r{padding:18px 20px;min-width:0}
+.evm2-rh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.evm2-rh h3{margin:0;font:600 15px 'DM Sans',sans-serif;color:var(--text)}
+.evm2-wk{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px;font-size:12px;color:var(--text3)}
+.evm2-wk span b{display:block;font:700 15px var(--font-mono);margin-top:2px}
+.evm2-cols{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.evm2-d{border-radius:12px;padding:6px 4px 8px;cursor:pointer;border:1px solid transparent;display:flex;flex-direction:column;align-items:center}
+.evm2-d:hover{background:var(--surface2)}.evm2-d.on{background:var(--accent-ghost);border-color:var(--accent-line)}
+.evm2-dv{height:20px;font:700 12px var(--font-mono);display:flex;align-items:center}
+.evm2-pl{width:100%;height:150px;display:flex;flex-direction:column}
+.evm2-pl .up,.evm2-pl .dn{flex:1;display:flex;flex-direction:column;align-items:center}.evm2-pl .up{justify-content:flex-end}.evm2-pl .dn{justify-content:flex-start}
+.evm2-pl .z{height:1px;background:var(--border2);width:100%}
+.evm2-sg2{width:min(40px,70%)}.evm2-pl .up .evm2-sg2:first-child{border-radius:7px 7px 0 0}.evm2-pl .dn .evm2-sg2:last-child{border-radius:0 0 7px 7px}
+.evm2-pl .ok{width:min(40px,70%);height:6px;border-radius:3px;background:#7ADBB3;margin-top:-3px}
+.evm2-no{width:min(40px,70%);height:150px;border:1px dashed var(--border2);border-radius:10px;display:grid;place-items:center;font:500 9.5px var(--font-mono);color:var(--text4);text-align:center;padding:3px;box-sizing:border-box}
+.evm2-dl{margin-top:6px;font:600 10.5px var(--font-mono);color:var(--text3);text-align:center}.evm2-dl b{display:block;font:700 14px 'DM Sans',sans-serif;color:var(--text)}.evm2-d.on .evm2-dl b{color:var(--accent2)}
+.evm2-lg{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text3)}
+.evm2-lg i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+@media (max-width:860px){.evm2{grid-template-columns:1fr}.evm2-l{border-right:0;border-bottom:1px solid var(--border)}.evm2-pl,.evm2-no{height:120px}.evm2-cols{gap:2px}.evm2-dv{font-size:10px}}
