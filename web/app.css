@@ -3583,14 +3583,15 @@ input.filter-inp:focus{
 .dp .dp-sig{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:70px}
 .dp .dp-sig div{border-top:1px solid #000;padding-top:5px;font-size:11.5px;line-height:1.7;color:#000}
 .dp .dp-sig b{display:block;text-align:center}
-.dp.mar{padding:30px 34px 44px;font-family:Calibri,Arial,Helvetica,sans-serif}
+.dp.mar{width:498px;padding:30px 34px 44px;font-family:Calibri,Arial,Helvetica,sans-serif}
 .dp.mar h2{font:700 21px Calibri,Arial,sans-serif;margin:0 0 30px;letter-spacing:.2px}
 .dp.mar .dpm-h{display:flex;justify-content:space-between;align-items:baseline;font:17px Calibri,Arial,sans-serif;margin-bottom:4px;color:#000}
 .dp.mar .dpm-h .l{display:flex;gap:14px}.dp.mar .dpm-h .l span{width:98px}
 .dp.mar .dpm-h .rr{display:flex;gap:14px;justify-content:flex-end}
 .dp.mar .dpm-h b{font-weight:700}
 .dp.mar .dpm-h .rr b{min-width:104px;text-align:center}
-.dp.mar table{margin-top:2px}
+.dp.mar table{margin-top:2px;table-layout:fixed;width:430px!important}
+.dp.mar th:nth-child(1){width:80px}.dp.mar th:nth-child(2){width:140px}.dp.mar th:nth-child(n+3){width:70px}
 .dp.mar th{font:700 14px Calibri,Arial,sans-serif!important;height:34px!important;padding:6px!important}
 .dp.mar td{font:15px Calibri,Arial,sans-serif!important;height:26px!important;padding:3px 8px!important}
 .dp.mar td.c{text-align:center!important;font-size:16px!important}
@@ -3614,7 +3615,8 @@ input.filter-inp:focus{
   .dc-bar>*{flex:1}
   .dp{padding:22px 16px 28px;font-size:10px}
   .dp td,.dp th{font-size:9.5px!important;padding:4px 3px!important}
-  .dp.mar{padding:20px 14px 28px}
+  .dp.mar{padding:20px 14px 28px;width:auto}
+  .dp.mar table{width:100%!important}
   .dp.mar h2{font-size:15px}
   .dp.mar .dpm-h{font-size:12px}.dp.mar .dpm-h .l span{width:70px}
   .dp.mar td,.dp.mar th{font-size:11px!important}.dp.mar td.c{font-size:12px!important}
@@ -3629,6 +3631,7 @@ input.filter-inp:focus{
   body.doc-printing .dv-top{display:none!important}
   body.doc-printing .dv-body{overflow:visible!important;padding:0!important}
   body.doc-printing .dp{position:static!important;width:100%!important;max-width:none!important;box-sizing:border-box!important;box-shadow:none!important;margin:0!important;padding:14mm 14mm 12mm!important;break-inside:avoid;page-break-inside:avoid}
+  body.doc-printing .dp.mar{width:506px!important;margin:0 auto!important;padding:14mm 10mm 12mm!important}
   body.doc-printing .dp th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 

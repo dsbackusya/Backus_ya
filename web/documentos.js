@@ -417,7 +417,7 @@ function _dcPapel(d){
     var mh=function(l1,v1,l2,v2){ return '<div class="dpm-h"><div class="l"><span>'+l1+'</span><b>'+esc(v1)+'</b></div><div class="rr"><span>'+l2+'</span><b>'+esc(v2)+'</b></div></div>'; };
     t='<h2>CONCILIACIÓN DE ENVASES - '+esc(sede)+'</h2>'+
       mh('Reparto:',d.reparto,'Fecha:',_dcF(d.fecha))+mh('Transporte:',d.transporte,'Placa:',d.placa)+mh('Hora Inicio:',_dcHms(d.horaInicio),'Hora Fin:',_dcHms(d.horaFin))+
-      '<table><tr><th style="width:16%">Sku</th><th style="width:24%">Descripcion</th><th>ENT</th><th>DEV</th><th>DIFF</th></tr>';
+      '<table><tr><th>Sku</th><th>Descripcion</th><th>ENT</th><th>DEV</th><th>DIFF</th></tr>';
     (d.lineas||[]).forEach(function(r){
       var c=r.cz?' cz-'+r.cz:'';
       t+='<tr><td class="'+c+'">'+r.sku+'</td><td class="'+c+'">'+esc(r.code)+'</td><td class="c">'+(r.ent||0)+'</td><td class="c">'+(r.dev||0)+'</td><td class="c">'+((r.ent||0)-(r.dev||0))+'</td></tr>';
