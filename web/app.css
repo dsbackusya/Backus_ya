@@ -3629,3 +3629,9 @@ input.filter-inp:focus{
   body.doc-printing .dp{position:absolute;left:0;top:0;width:100%;box-shadow:none;padding:0;margin:0}
   body.doc-printing .dp th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+.dc-edit{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:11px 16px;border-radius:14px;background:rgba(227,165,58,.10);border:1px solid rgba(227,165,58,.28);color:#E3A53A;font-size:12.5px}
+.dc-edit span{flex:1;min-width:220px;color:var(--text2)}
+.dc-edit b{color:#E3A53A}
+.dc-ha{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:820px){ .dc-hr .dc-ha{grid-column:1/-1;justify-content:flex-start} }

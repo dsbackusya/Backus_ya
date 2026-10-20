@@ -929,13 +929,17 @@
     var sede = exigirSede(p, null);
     var res = await Promise.all([
       sb.from('documentos').select('*').eq('sede_id', sede).order('id', { ascending: false }).limit(300),
-      sb.from('envases_precio').select('grupo,precio').eq('sede_id', sede)
+      sb.from('envases_precio').select('grupo,precio').eq('sede_id', sede),
+      sb.from('envases_mov').select('documento_id').eq('sede_id', sede).not('documento_id', 'is', null).limit(2000)
     ]);
     if (res[0].error) throw res[0].error;
     if (res[1].error) throw res[1].error;
+    if (res[2].error) throw res[2].error;
     var precios = {};
     res[1].data.forEach(function (r) { precios[r.grupo] = Number(r.precio); });
-    return { ok: true, hoy: hoyISO(), sede: sedeNombre(sede), docs: res[0].data.map(mapDoc), precios: precios };
+    var conEnv = {};
+    res[2].data.forEach(function (r) { conEnv[r.documento_id] = true; });
+    return { ok: true, hoy: hoyISO(), sede: sedeNombre(sede), docs: res[0].data.map(mapDoc), precios: precios, conEnv: conEnv };
   });
 
   // Busca en el Stock de la sede por nombre o SKU (todas las palabras) y trae el SAP: primero el del maestro, si no el del maestro de conteo.
@@ -978,13 +982,32 @@
     var lineas = d.lineas || [];
     if (!lineas.length) return { ok: false, error: 'No hay productos para guardar' };
     if (tipo === 'nc' && !str(d.nroFactura)) return { ok: false, error: 'El nro. de factura es obligatorio' };
-    var r = await sb.rpc('guardar_documento', {
-      p_sede: sede, p_tipo: tipo, p_usuario: p.usuario, p_movs: d.movs || [],
-      p_datos: { fecha: fecha, reparto: str(d.reparto), transporte: str(d.transporte), placa: str(d.placa), horaInicio: str(d.horaInicio),
-        horaFin: str(d.horaFin), nroFactura: str(d.nroFactura), destino: str(d.destino), observaciones: str(d.observaciones), lineas: lineas }
-    });
+    var r = await sb.rpc('guardar_documento', { p_sede: sede, p_tipo: tipo, p_usuario: p.usuario, p_movs: d.movs || [], p_datos: datosDoc(d, fecha, lineas) });
     if (r.error) throw r.error;
     return { ok: true, id: r.data };
+  });
+  function datosDoc(d, fecha, lineas) {
+    return { fecha: fecha, reparto: str(d.reparto), transporte: str(d.transporte), placa: str(d.placa), horaInicio: str(d.horaInicio),
+      horaFin: str(d.horaFin), nroFactura: str(d.nroFactura), destino: str(d.destino), observaciones: str(d.observaciones), lineas: lineas };
+  }
+
+  // Edita un documento ya guardado y rehace sus movimientos de Envases (marcaje) o sus filas de M-T (NC).
+  API.actualizarDocumento = guard(async function (p, id, d) {
+    var tipo = str(d.tipo), fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(d.fecha || '')) ? d.fecha : null;
+    if (!fecha) return { ok: false, error: 'La fecha es obligatoria' };
+    var lineas = d.lineas || [];
+    if (!lineas.length) return { ok: false, error: 'No hay productos para guardar' };
+    if (tipo === 'nc' && !str(d.nroFactura)) return { ok: false, error: 'El nro. de factura es obligatorio' };
+    var r = await sb.rpc('actualizar_documento', { p_id: Number(id), p_usuario: p.usuario, p_movs: d.movs || [], p_datos: datosDoc(d, fecha, lineas) });
+    if (r.error) return { ok: false, error: mensaje(r.error) };
+    return { ok: true };
+  });
+
+  // Elimina un documento del historial (y su efecto en Envases / las filas pendientes de M-T).
+  API.eliminarDocumento = guard(async function (p, id) {
+    var r = await sb.rpc('eliminar_documento', { p_id: Number(id) });
+    if (r.error) return { ok: false, error: mensaje(r.error) };
+    return { ok: true, conservadas: r.data && r.data.mt_conservadas || 0 };
   });
 
   /* ── EXPORT MULTI-SEDE ── */

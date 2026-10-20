@@ -32,7 +32,7 @@ var DCX = {
   nc:{ fac:'', lineas:[] },
   tr:{ destino:'TADA EVENTOS', obs:'', lineas:[] },
   res:{ nc:[], tr:[] }, tm:{},
-  hist:[], filtro:'', q:''
+  hist:[], filtro:'', q:'', edit:null
 };
 
 /* ── utilidades ── */
@@ -88,6 +88,7 @@ function renderDocumentos(){
   root.innerHTML=
     '<div class="dc-wrap">'+
       '<div class="dc-top"><span class="dc-chip"><i></i>'+esc(DCX.d.sede)+'</span><span class="dc-sub">Se llenan a mano, se guardan en el historial y se imprimen para firma.</span></div>'+
+      _dcBannerEdit()+
       (DCX.tab==='his'?'':_dcCabecera())+
       '<div class="dc-tabs">'+tabs.map(function(t){
         return '<button class="dc-tab'+(DCX.tab===t[0]?' on':'')+'" onclick="dcTab(\''+t[0]+'\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg>'+t[1]+'</button>';
@@ -96,7 +97,10 @@ function renderDocumentos(){
     '</div>';
   _dcCuerpo();
 }
-function dcTab(t){ DCX.tab=t; renderDocumentos(); }
+function dcTab(t){
+  if(DCX.edit && DCX.edit.tab!==t) dcCancelarEdicion(true);
+  DCX.tab=t; renderDocumentos();
+}
 
 function _dcCabecera(){
   var tr=DCX.tab==='tr';
@@ -143,8 +147,7 @@ function _dcMarcajeHtml(){
     '<div class="dc-card"><div class="dc-h"><span class="t">Convertidor · cajas llenas</span><span class="s">botellas ÷ botellas por caja, comparado con las cajas contadas</span></div><div class="dm-conv" id="dm-conv"></div></div>'+
     '<div class="dc-card"><div class="dm-tot"><div><div class="k">Diferencia valorizada</div><div class="v" id="dm-tot">S/ 0.00</div></div><span style="flex:1"></span>'+
       '<label class="dm-sw"><input type="checkbox"'+(DCX.env?' checked':'')+' onchange="DCX.env=this.checked">Registrar también en Envases (entrada y devolución)</label></div></div>'+
-    '<div class="dc-bar"><button class="btn btn-ghost" onclick="dcGuardar(\'marcaje\',false)">Guardar</button>'+
-      '<button class="btn btn-primary" onclick="dcGuardar(\'marcaje\',true)">Guardar e imprimir</button></div>';
+    _dcBarra('marcaje');
 }
 function dcMIn(el){
   var r=el.parentNode, gi=r.dataset.g, G=DCX.gr[gi], row=G.rows[r.dataset.r], k=el.dataset.k;
@@ -203,13 +206,12 @@ function _dcListaHtml(w){
         '<div class="dc-g dc-g2"><div class="dc-f"><label>Nro. de factura</label><input class="inp" value="'+esc(DCX.nc.fac)+'" placeholder="Ej: F001-000123" oninput="DCX.nc.fac=this.value"></div></div></div>'
     : '<div class="dc-card"><div class="dc-h"><span class="t">Cargo de despacho</span></div><div class="dc-g dc-g3">'+
         '<div class="dc-f"><label>Origen</label><input class="inp" value="'+esc(_dcSede())+'" disabled></div>'+
-        '<div class="dc-f"><label>Destino</label><select onchange="DCX.tr.destino=this.value">'+DCX_DESTINOS.map(function(d){ return '<option'+(d===DCX.tr.destino?' selected':'')+'>'+d+'</option>'; }).join('')+'</select></div>'+
+        '<div class="dc-f"><label>Destino</label><select onchange="DCX.tr.destino=this.value">'+(DCX_DESTINOS.indexOf(DCX.tr.destino)<0?[DCX.tr.destino].concat(DCX_DESTINOS):DCX_DESTINOS).map(function(d){ return '<option'+(d===DCX.tr.destino?' selected':'')+'>'+esc(d)+'</option>'; }).join('')+'</select></div>'+
         '<div class="dc-f"><label>Observaciones</label><input class="inp" value="'+esc(DCX.tr.obs)+'" placeholder="Opcional" oninput="DCX.tr.obs=this.value"></div></div></div>')+
     '<div class="dc-card"><div class="dc-h"><span class="t">'+(nc?'Productos que no dejaron':'Productos')+'</span><span class="s">busca por nombre o SKU y escribe '+(nc?'solo las unidades':'las cantidades')+'</span></div>'+
       '<div class="dc-sr"><input class="inp" id="dc-q-'+w+'" placeholder="Buscar producto: pilsen, guaraná, 10000092…" autocomplete="off" oninput="dcBuscar(\''+w+'\')" onblur="setTimeout(function(){dcCerrarAc(\''+w+'\')},180)"><div class="dc-ac" id="dc-ac-'+w+'"></div></div>'+
       '<div id="dc-ln-'+w+'"></div></div>'+
-    '<div class="dc-bar"><button class="btn btn-ghost" onclick="dcGuardar(\''+(nc?'nc':'traslado')+'\',false)">'+(nc?'Guardar en M-T como NC pendiente':'Guardar')+'</button>'+
-      '<button class="btn btn-primary" onclick="dcGuardar(\''+(nc?'nc':'traslado')+'\',true)">Guardar e imprimir</button></div>';
+    _dcBarra(nc?'nc':'traslado');
 }
 function _dcL(w){ return w==='nc'?DCX.nc.lineas:DCX.tr.lineas; }
 function dcBuscar(w){
@@ -277,22 +279,100 @@ function dcGuardar(tipo,imprimir){
     d.destino=DCX.tr.destino; d.observaciones=DCX.tr.obs;
   }
   DCX.busy=true;
-  google.script.run
+  var editando=DCX.edit&&DCX.edit.tipo===tipo ? DCX.edit : null;
+  var llamada=google.script.run
     .withSuccessHandler(function(r){
       DCX.busy=false;
       if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo guardar','err'); return; }
-      var doc={ id:r.id, tipo:tipo, fecha:d.fecha, reparto:d.reparto, transporte:d.transporte, placa:d.placa, horaInicio:d.horaInicio, horaFin:d.horaFin,
-        nroFactura:d.nroFactura, destino:d.destino, observaciones:d.observaciones, lineas:d.lineas, usuario:(S&&S.usuario)||'', creado:new Date().toISOString() };
-      DCX.hist.unshift(doc);
-      showToast(tipo==='marcaje'?'Marcaje guardado'+(DCX.env&&d.movs.length?' y registrado en Envases':''):tipo==='nc'?'NC guardada y agregada a M-T como pendiente':'Traslado guardado','ok');
-      if(tipo==='marcaje'){ DCX.gr=_dcGrNuevo(); DCX.hi=''; DCX.hf=''; PAGE_LOADED['envases']=false; }
-      if(tipo==='nc'){ DCX.nc={ fac:'', lineas:[] }; PAGE_LOADED['mt']=false; }
-      if(tipo==='traslado'){ DCX.tr.lineas=[]; DCX.tr.obs=''; }
+      var doc;
+      if(editando){
+        doc=DCX.hist.filter(function(x){ return x.id===editando.id; })[0];
+        if(doc){
+          doc.fecha=d.fecha; doc.reparto=d.reparto; doc.transporte=d.transporte; doc.placa=d.placa; doc.horaInicio=d.horaInicio; doc.horaFin=d.horaFin;
+          doc.nroFactura=d.nroFactura; doc.destino=d.destino; doc.observaciones=d.observaciones; doc.lineas=d.lineas;
+        }
+        if(tipo==='marcaje') DCX.d.conEnv[editando.id]=d.movs.length>0;
+        DCX.edit=null;
+      } else {
+        doc={ id:r.id, tipo:tipo, fecha:d.fecha, reparto:d.reparto, transporte:d.transporte, placa:d.placa, horaInicio:d.horaInicio, horaFin:d.horaFin,
+          nroFactura:d.nroFactura, destino:d.destino, observaciones:d.observaciones, lineas:d.lineas, usuario:(S&&S.usuario)||'', creado:new Date().toISOString() };
+        DCX.hist.unshift(doc);
+        if(tipo==='marcaje'&&d.movs.length) DCX.d.conEnv[r.id]=true;
+      }
+      showToast(editando ? 'Documento actualizado'
+        : tipo==='marcaje'?'Marcaje guardado'+(DCX.env&&d.movs.length?' y registrado en Envases':''):tipo==='nc'?'NC guardada y agregada a M-T como pendiente':'Traslado guardado','ok');
+      if(tipo==='marcaje') PAGE_LOADED['envases']=false;
+      if(tipo==='nc') PAGE_LOADED['mt']=false;
+      _dcReset(tipo);
+      if(editando){ DCX.h={ reparto:'', transporte:'', placa:'', fecha:DCX.d.hoy }; DCX.tab='his'; }
       renderDocumentos();
-      if(imprimir) dcVer(doc);
+      if(imprimir&&doc) dcVer(doc);
     })
-    .withFailureHandler(function(e){ DCX.busy=false; showToast(e.message,'err'); })
-    .guardarDocumento(S.token,d);
+    .withFailureHandler(function(e){ DCX.busy=false; showToast(e.message,'err'); });
+  if(editando) llamada.actualizarDocumento(S.token,editando.id,d); else llamada.guardarDocumento(S.token,d);
+}
+/* limpia el formulario del tipo (Reparto, Transporte y Placa se conservan al crear: sirven para la NC del mismo reparto) */
+function _dcReset(tipo){
+  if(tipo==='marcaje'){ DCX.gr=_dcGrNuevo(); DCX.hi=''; DCX.hf=''; DCX.env=true; }
+  if(tipo==='nc') DCX.nc={ fac:'', lineas:[] };
+  if(tipo==='traslado'){ DCX.tr.lineas=[]; DCX.tr.obs=''; }
+}
+
+/* ── editar un documento del historial ── */
+function _dcBannerEdit(){
+  var e=DCX.edit; if(!e||e.tab!==DCX.tab) return '';
+  return '<div class="dc-edit"><span>Editando <b>'+esc(DCX_TIT[e.tipo])+'</b> N.º '+e.id+' · '+_dcF(e.fecha)+'. Los cambios reemplazan lo guardado'+
+    (e.tipo==='marcaje'?' y lo registrado en Envases':e.tipo==='nc'?' y las filas de M-T':'')+'.</span>'+
+    '<button class="btn btn-ghost btn-sm" onclick="dcCancelarEdicion()">Cancelar edición</button></div>';
+}
+function _dcBarra(tipo){
+  var ed=DCX.edit&&DCX.edit.tipo===tipo, nc=tipo==='nc';
+  return '<div class="dc-bar"><button class="btn btn-ghost" onclick="dcGuardar(\''+tipo+'\',false)">'+
+    (ed?'Guardar cambios':nc?'Guardar en M-T como NC pendiente':'Guardar')+'</button>'+
+    '<button class="btn btn-primary" onclick="dcGuardar(\''+tipo+'\',true)">'+(ed?'Guardar cambios e imprimir':'Guardar e imprimir')+'</button></div>';
+}
+function dcEditar(id){
+  var d=DCX.hist.filter(function(x){ return x.id===id; })[0]; if(!d) return;
+  var tab=d.tipo==='marcaje'?'mar':d.tipo==='nc'?'nc':'tr';
+  DCX.edit={ id:d.id, tipo:d.tipo, tab:tab, fecha:d.fecha };
+  DCX.h={ reparto:d.reparto, transporte:d.transporte, placa:d.placa, fecha:d.fecha };
+  if(d.tipo==='marcaje'){
+    DCX.gr=_dcGrNuevo();
+    d.lineas.forEach(function(l){ DCX.gr.forEach(function(g){ g.rows.forEach(function(r){ if(r.sku===l.sku){ r.ent=l.ent||0; r.dev=l.dev||0; } }); }); });
+    DCX.hi=d.horaInicio; DCX.hf=d.horaFin; DCX.env=!!(DCX.d.conEnv&&DCX.d.conEnv[d.id]);
+  } else if(d.tipo==='nc'){
+    DCX.nc={ fac:d.nroFactura, lineas:d.lineas.map(function(l){ return { sku:l.sku, sap:l.sap, desc:l.desc, und:l.und }; }) };
+  } else {
+    DCX.tr={ destino:d.destino||'TADA EVENTOS', obs:d.observaciones, lineas:d.lineas.map(function(l){ return { sku:l.sku, sap:l.sap, desc:l.desc, und:l.und }; }) };
+  }
+  DCX.tab=tab; renderDocumentos();
+  var c=document.getElementById('documentos-root'); if(c&&c.scrollIntoView) c.scrollIntoView({block:'start'});
+}
+function dcCancelarEdicion(silencioso){
+  var e=DCX.edit; if(!e) return;
+  DCX.edit=null; _dcReset(e.tipo==='traslado'?'traslado':e.tipo);
+  DCX.h={ reparto:'', transporte:'', placa:'', fecha:DCX.d.hoy };
+  if(!silencioso){ DCX.tab='his'; renderDocumentos(); }
+}
+function dcEliminar(id){
+  var d=DCX.hist.filter(function(x){ return x.id===id; })[0]; if(!d) return;
+  var efecto=d.tipo==='marcaje'?' También se quitan los movimientos que registró en Envases.'
+    :d.tipo==='nc'?' También se quitan sus filas pendientes de M-T (las ya retiradas se conservan).':'';
+  _confirmDialog('Eliminar documento','Se eliminará el '+DCX_TIT[d.tipo].toLowerCase()+' del '+_dcF(d.fecha)+(d.reparto?' (reparto '+d.reparto+')':d.nroFactura?' (factura '+d.nroFactura+')':'')+'.'+efecto,
+    function(){
+      google.script.run
+        .withSuccessHandler(function(r){
+          if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo eliminar','err'); return; }
+          DCX.hist=DCX.hist.filter(function(x){ return x.id!==id; });
+          if(DCX.edit&&DCX.edit.id===id) DCX.edit=null;
+          if(d.tipo==='marcaje') PAGE_LOADED['envases']=false;
+          if(d.tipo==='nc') PAGE_LOADED['mt']=false;
+          showToast('Documento eliminado'+(r.conservadas?' · '+r.conservadas+' fila(s) de M-T ya retiradas se conservaron':''),'ok');
+          renderDocumentos();
+        })
+        .withFailureHandler(function(e){ showToast(e.message,'err'); })
+        .eliminarDocumento(S.token,id);
+    },'Eliminar');
 }
 
 /* ── historial ── */
@@ -318,7 +398,9 @@ function dcHistFiltrar(){
           : d.tipo==='nc' ? ('Factura '+(d.nroFactura||'—')+' · '+d.lineas.length+(d.lineas.length===1?' producto':' productos'))
           : ('Destino '+(d.destino||'—')+' · '+d.lineas.length+(d.lineas.length===1?' producto':' productos'));
     return '<div class="dc-hr"><div class="dc-hd">'+_dcF(d.fecha)+'</div><div>'+bd[d.tipo]+'</div><div class="dc-ht"><b>'+esc(det)+'</b><small>'+esc(d.usuario||'')+'</small></div>'+
-      '<button class="btn btn-ghost btn-sm" onclick="dcVerId('+d.id+')">Ver / Imprimir</button></div>';
+      '<div class="dc-ha"><button class="btn btn-ghost btn-sm" onclick="dcVerId('+d.id+')">Ver / Imprimir</button>'+
+      '<button class="btn btn-ghost btn-sm" onclick="dcEditar('+d.id+')">Editar</button>'+
+      '<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="dcEliminar('+d.id+')">Eliminar</button></div></div>';
   }).join('') : '<div class="dc-empty">Sin documentos guardados'+(DCX.filtro||q?' con ese filtro':'')+'.</div>';
 }
 function dcVerId(id){ var d=DCX.hist.filter(function(x){ return x.id===id; })[0]; if(d) dcVer(d); }
