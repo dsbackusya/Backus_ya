@@ -3814,7 +3814,7 @@ input.filter-inp:focus{
 .ev-ch{height:190px}
 }
 
-.ev-wrap{max-width:1180px;margin:0 auto}
+.ev-wrap{width:100%}
 .ev-top{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .ev-sp{flex:1}
 .ev-d.hoy{outline:1px dashed var(--accent-line);outline-offset:2px}
