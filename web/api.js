@@ -232,7 +232,7 @@
       ok: true,
       data: filas.map(function (r) {
         return { sede: sedeNombre(r.sede_id), sku: str(r.sku), desc: str(r.descripcion), marca: str(r.marca),
-          categoria: str(r.categoria), stockPack: num(r.stock_pack) };
+          categoria: str(r.categoria), stockPack: num(r.stock_pack), sap: str(r.sap) };
       })
     };
   });

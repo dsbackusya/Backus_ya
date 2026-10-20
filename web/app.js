@@ -707,23 +707,24 @@ function _dashExportStockExcel(data){
   var skuMap={};
   data.forEach(function(r){
     if(!r.sku) return;
-    if(!skuMap[r.sku]) skuMap[r.sku]={sku:r.sku,desc:'',marca:'',cat:'',sedes:{}};
+    if(!skuMap[r.sku]) skuMap[r.sku]={sku:r.sku,sap:'',desc:'',marca:'',cat:'',sedes:{}};
+    if(!skuMap[r.sku].sap&&r.sap) skuMap[r.sku].sap=r.sap;
     if(!skuMap[r.sku].desc&&r.desc) skuMap[r.sku].desc=r.desc;
     if(!skuMap[r.sku].marca&&r.marca) skuMap[r.sku].marca=r.marca;
     if(!skuMap[r.sku].cat&&r.categoria) skuMap[r.sku].cat=r.categoria;
     if(r.sede) skuMap[r.sku].sedes[r.sede]=(skuMap[r.sku].sedes[r.sede]||0)+(Number(r.stockPack)||0);
   });
-  var headers=['SKU / Lovis','Descripción','Marca','Categoría'];
+  var headers=['SKU / Lovis','SAP','Descripción','Marca','Categoría'];
   sedes.forEach(function(s){headers.push(s+' · Stock pack');});
   headers.push('TOTAL Stock pack');
   var ws_data=[headers];
   Object.values(skuMap).sort(function(a,b){return a.sku.localeCompare(b.sku);}).forEach(function(item){
-    var fila=[item.sku,item.desc,item.marca,item.cat];var total=0;
+    var fila=[item.sku,item.sap,item.desc,item.marca,item.cat];var total=0;
     sedes.forEach(function(s){var v=Math.round(item.sedes[s]||0);fila.push(v);total+=v;});
     fila.push(total);ws_data.push(fila);
   });
   var wb=XLSX.utils.book_new();var ws=XLSX.utils.aoa_to_sheet(ws_data);
-  var colW=[{wch:14},{wch:40},{wch:16},{wch:18}];
+  var colW=[{wch:14},{wch:12},{wch:40},{wch:16},{wch:18}];
   sedes.forEach(function(){colW.push({wch:16});});colW.push({wch:14});
   ws['!cols']=colW;XLSX.utils.book_append_sheet(wb,ws,'Stock por sede');
   XLSX.writeFile(wb,'stock_pivot_'+_hoyISO()+'.xlsx');
