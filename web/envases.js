@@ -265,109 +265,102 @@ function envTip(e,i){
   var r=document.getElementById('ev-ch').getBoundingClientRect(); t.style.left=Math.min(e.clientX-r.left+12,r.width-170)+'px'; t.style.top=Math.max(e.clientY-r.top-20,0)+'px';
 }
 
-/* ══ Pantalla de conteo: Palet, Cámara y PFN ══ */
+/* ══ Pantalla de conteo: formulario "Agregar al conteo" (estado, envase, ubicación, cajas y botellas) ══ */
+var ENV_UBIS = ['Palet','Cámara','Z3','Pendientes','PFN'];
+var ENV_CAJA = { 630:'620/650 (3500192)', 310:'330 (3500240)', 1000:'1100 (3500193)' };
+function _evNLin(l){ var n=ENV_MULT[l.tamano]; return { cajas:l.packs+l.solas, bot:l.packs*n+l.unidades }; }
+function _evFechaPfn(lineas,hasta){ var f=''; lineas.forEach(function(l){ if(_evSec(l.ubicacion)==='PFN'&&l.fecha<=hasta&&l.fecha>f) f=l.fecha; }); return f; }
 function envContar(){
   if(!ENV.d||!ENV.m){ showToast('Espera a que cargue la semana','err'); return; }
   if(ENV.vista!=='ctl'){ ENV.vista='ctl'; _evRender(); }
-  var m=ENV.m, di=ENV.sel, fecha=m.days[di];
-  var ses={ di:di, fecha:fecha, sec:'Palet', ver:false, ent:[], pfn:m.pfn[di].slice(), pfn0:m.pfn[di].slice(), pfnToco:false, pfnHoy:false };
-  ENV.d.conteo.filter(function(l){ return l.fecha===fecha; }).forEach(function(l){
-    var sec=_evSec(l.ubicacion);
-    if(sec==='PFN'){ ses.pfnHoy=true; return; }
-    var bot=l.packs*ENV_MULT[l.tamano]+l.unidades, caj=l.packs+l.solas, bi, ci;
-    if(bot){ bi=_evFilaIdx(l.tamano,l.estado==='llena'?'lle':'vac'); if(bi>=0) ses.ent.push({ i:bi, sec:sec, q:bot, h:'—' }); }
-    if(caj){ ci=_evFilaIdx(l.tamano,'caja'); if(ci>=0) ses.ent.push({ i:ci, sec:sec, q:caj, h:'—' }); }
-  });
+  var di=ENV.sel, fecha=ENV.m.days[di], todas=ENV.d.conteo.concat(ENV.d.pfnPrev);
+  var ses={ di:di, fecha:fecha, lineas:[], pfnDirty:false, pfnHoy:false,
+    f:{ estado:'vacia', tam:630, ubi:'Palet', solas:'', packs:'', und:'' } };
+  var propias=ENV.d.conteo.filter(function(l){ return l.fecha===fecha; });
+  propias.forEach(function(l){ if(_evSec(l.ubicacion)==='PFN') ses.pfnHoy=true; ses.lineas.push({ estado:l.estado, tamano:l.tamano, ubi:_evUbi(l.ubicacion), packs:l.packs, solas:l.solas, unidades:l.unidades, h:'—', carry:false }); });
+  if(!ses.pfnHoy){ // PFN de días anteriores: se muestra y se mantiene
+    var fp=_evFechaPfn(todas.filter(function(l){ return l.fecha<fecha; }),fecha);
+    todas.filter(function(l){ return l.fecha===fp&&_evSec(l.ubicacion)==='PFN'; }).forEach(function(l){ ses.lineas.push({ estado:l.estado, tamano:l.tamano, ubi:'PFN', packs:l.packs, solas:l.solas, unidades:l.unidades, h:'—', carry:true }); });
+  }
   ENV.ses=ses; _evcMontar(); _evcPinta();
 }
+function _evUbi(u){ u=String(u||'').trim(); var k=u.toLowerCase(); if(k==='cámara'||k==='camara') return 'Cámara'; if(k==='z3') return 'Z3'; if(k==='pendientes') return 'Pendientes'; if(k==='pfn') return 'PFN'; return 'Palet'; }
 function _evcMontar(){
   var el=document.getElementById('evc');
   if(!el){ el=document.createElement('div'); el.id='evc'; el.className='evc'; document.body.appendChild(el); }
   el.innerHTML=
-    '<div class="evc-top"><button class="btn btn-ghost btn-sm" onclick="envCerrarConteo()">‹ Volver</button><h2 id="evc-t"></h2><span class="ev-sp"></span>'+
-      '<label class="evc-sw"><input type="checkbox" id="evc-ver" onchange="ENV.ses.ver=this.checked;_evcPinta()">Ver lo esperado</label></div>'+
-    '<div class="evc-sec" id="evc-sec"></div><div class="evc-hint" id="evc-hint"></div>'+
-    '<div class="evc-body"><div class="evc-card" id="evc-env"></div><div class="evc-card evc-l"><h3 id="evc-lt">Registro del conteo</h3><div class="s" id="evc-ls"></div><div id="evc-ll"></div></div></div>'+
-    '<div class="evc-ft"><span class="t">Piezas contadas<b id="evc-n">0</b></span><span class="ev-sp"></span>'+
+    '<div class="evc-top"><button class="btn btn-ghost btn-sm" onclick="envCerrarConteo()">‹ Volver</button><h2 id="evc-t"></h2><span class="ev-sp"></span></div>'+
+    '<div class="evc-body evcf-body"><div class="evc-card evcf" id="evcf"></div>'+
+      '<div class="evcf-r"><div class="evc-card evc-l"><h3>Conteo del día</h3><div class="s" id="evc-ls"></div><div id="evc-ll"></div></div>'+
+      '<div class="evc-card evcf-sum"><h3>Lo que verá el Control</h3><div id="evc-sum"></div></div></div></div>'+
+    '<div class="evc-ft"><span class="t">Botellas contadas<b id="evc-n">0</b></span><span class="ev-sp"></span>'+
       '<button class="btn btn-ghost" onclick="envCerrarConteo()">Cancelar</button><button class="btn btn-primary" id="evc-gb" onclick="envGuardarConteo()">Guardar conteo</button></div>';
   el.className='evc on'; document.body.classList.add('evc-abierto');
 }
 function envCerrarConteo(){ var el=document.getElementById('evc'); if(el) el.className='evc'; document.body.classList.remove('evc-abierto'); ENV.ses=null; }
-function _evcTotal(j){ var s=ENV.ses, t=s.pfn[j]||0; s.ent.forEach(function(e){ if(e.i===j) t+=e.q; }); return t; }
-function _evcTotales(){
-  var s=ENV.ses, n=0;
-  ENV_FILAS.forEach(function(r,j){
-    var t=_evcTotal(j); n+=t;
-    var el=document.getElementById('evc-tot'+j); if(el) el.textContent=(t||s.ent.some(function(e){return e.i===j;})||s.pfn[j])?t:'—';
-  });
-  document.getElementById('evc-n').textContent=n.toLocaleString('es-PE');
+function envF(campo,v){ var f=ENV.ses.f; f[campo]=(campo==='tam')?Number(v):v; _evcPinta(); }
+function envFIn(campo,el){ ENV.ses.f[campo]=el.value; _evcForm(); }
+function _evcForm(){
+  var f=ENV.ses.f, n=ENV_MULT[f.tam], packs=_evNum(f.packs)||0, solas=_evNum(f.solas)||0, und=_evNum(f.und)||0;
+  var c=document.getElementById('evcf-c'), b=document.getElementById('evcf-b'); if(!c||!b) return;
+  c.innerHTML=packs+' + '+solas+' = <b>'+(packs+solas)+'</b> cajas';
+  b.innerHTML=packs+' × '+n+' = '+(packs*n)+' + '+und+' = <b>'+(packs*n+und)+'</b> botellas';
+  var a=document.getElementById('evcf-auto'); if(a) a.textContent=packs;
 }
-function envSector(n){ ENV.ses.sec=n; _evcPinta(); }
-function envAgregar(j){
-  var s=ENV.ses, inp=document.getElementById('evc-q'+j), q=_evNum(inp.value); if(!q){ inp.focus(); return; }
-  var d=new Date(); s.ent.push({ i:j, sec:s.sec, q:q, h:('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2) });
-  _evcPinta(); var n=document.getElementById('evc-q'+j); if(n) n.focus();
+function envAgregar(){
+  var s=ENV.ses, f=s.f, packs=_evNum(f.packs)||0, solas=_evNum(f.solas)||0, und=_evNum(f.und)||0;
+  if(packs+solas+und===0){ showToast('Ingresa al menos una cantidad','err'); return; }
+  var d=new Date(); s.lineas.push({ estado:f.estado, tamano:f.tam, ubi:f.ubi, packs:packs, solas:solas, unidades:und, h:('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2), carry:false });
+  if(f.ubi==='PFN') s.pfnDirty=true;
+  f.packs=''; f.solas=''; f.und=''; _evcPinta();
 }
-function envQuitar(k){ ENV.ses.ent.splice(k,1); _evcPinta(); }
-function envPfnIn(j,el){ var s=ENV.ses; s.pfn[j]=_evNum(el.value)||0; s.pfnToco=true; _evcTotales(); }
+function envQuitar(k){ var s=ENV.ses, l=s.lineas[k]; if(l.ubi==='PFN') s.pfnDirty=true; s.lineas.splice(k,1); _evcPinta(); }
+function _evcSeg(opts,sel,fn){ return '<div class="ev-seg evcf-seg">'+opts.map(function(o){ return '<button class="'+(String(o[0])===String(sel)?'on':'')+'" onclick="'+fn+'(\''+o[0]+'\')">'+o[1]+'</button>'; }).join('')+'</div>'; }
 function _evcPinta(){
-  var s=ENV.ses, m=ENV.m; if(!s) return;
-  var sum={}; ENV_SECS.forEach(function(x){ sum[x]=0; });
-  s.ent.forEach(function(e){ sum[e.sec]+=e.q; }); sum.PFN=s.pfn.reduce(function(a,b){ return a+b; },0);
-  var dia=ENV_DL[s.di]+' '+parseInt(s.fecha.slice(8),10);
-  document.getElementById('evc-t').textContent='Conteo del '+dia+(s.di===m.b?' · inicial':'');
-  document.getElementById('evc-ver').checked=s.ver;
-  document.getElementById('evc-sec').innerHTML='<span class="l">Contando en</span>'+ENV_SECS.map(function(n){
-    return '<button class="evc-chip'+(n===s.sec?' on':'')+'" onclick="envSector(\''+n+'\')">'+n+(sum[n]?'<b>'+sum[n].toLocaleString('es-PE')+'</b>':'')+'</button>'; }).join('');
-  var pfn=s.sec==='PFN';
-  document.getElementById('evc-hint').innerHTML=pfn
-    ? '<b>PFN</b> se mantiene: lo que anotes aquí se suma al conteo de <b>todos los días</b> siguientes hasta que lo cambies. Si baja, edítalo y el nuevo valor rige desde este día.'
-    : 'Escribe la cantidad de <b>'+s.sec+'</b> y toca <b>Agregar</b>. Cuentas otro sector y vuelves a agregar: el sistema suma todo, junto con el PFN.';
-  var h='';
-  ENV_FILAS.forEach(function(r,j){
-    if(r.g) h+='<div class="evc-g">'+r.g+'</div>';
-    var t=_evcTotal(j), esp=_evEsp(s.di,j), d=t-(esp==null?0:esp);
-    var tipo=r.k==='caja'?'<em class="c">solo se cuenta</em>':r.k==='lle'?'<em class="l">llena</em>':'<em class="v">vacía</em>';
-    var br={}; s.ent.forEach(function(e){ if(e.i===j) br[e.sec]=(br[e.sec]||0)+e.q; }); if(s.pfn[j]) br.PFN=s.pfn[j];
-    var has=s.ent.some(function(e){ return e.i===j; })||s.pfn[j];
-    h+='<div class="evc-r"><div class="n"><b>'+r.t+' '+tipo+'</b><small>'+r.sku+' · '+r.n+'</small>'+
-      (Object.keys(br).length?'<div class="br">'+Object.keys(br).map(function(k){ return '<span>'+k+' '+br[k]+'</span>'; }).join('')+'</div>':'')+'</div>'+
-      '<div class="tot"><b id="evc-tot'+j+'">'+(has?t:'—')+'</b><small>total</small>'+(s.ver&&esp!=null&&has?'<span class="ex '+_evCls(d)+'">esp. '+esp+' · '+_evSg(d)+'</span>':'')+'</div>'+
-      (pfn
-        ? '<div class="add"><input class="inp" inputmode="numeric" value="'+(s.pfn[j]||'')+'" placeholder="PFN" oninput="envPfnIn('+j+',this)"></div>'
-        : '<div class="add"><input class="inp" id="evc-q'+j+'" inputmode="numeric" placeholder="+ '+s.sec+'" onkeydown="if(event.key===\'Enter\'){envAgregar('+j+')}"><button onclick="envAgregar('+j+')">Agregar</button></div>')+'</div>';
-  });
-  document.getElementById('evc-env').innerHTML=h;
-  var L='';
-  if(pfn){
-    document.getElementById('evc-lt').textContent='PFN que se mantiene';
-    var vigente=ENV_FILAS.map(function(r,j){ return s.pfn[j]?'<div class="evc-li"><span class="h"></span><span class="sc">PFN</span><span class="e">'+r.t+'</span><span class="q">'+s.pfn[j]+'</span><span></span></div>':''; }).join('');
-    document.getElementById('evc-ls').textContent=s.pfn0.some(function(x){ return x; })&&!s.pfnToco?'Valores que vienen de días anteriores':'Valores que regirán desde este día';
-    L=vigente||'<div class="evc-le">Aún no hay PFN registrado.<br>Escribe lo que corresponda en cada envase.</div>';
-  } else {
-    document.getElementById('evc-lt').textContent='Registro del conteo';
-    document.getElementById('evc-ls').textContent=s.ent.length+(s.ent.length===1?' anotación':' anotaciones');
-    L=s.ent.length?s.ent.map(function(e,k){ return k; }).reverse().map(function(k){ var e=s.ent[k];
-      return '<div class="evc-li"><span class="h">'+e.h+'</span><span class="sc">'+e.sec+'</span><span class="e">'+ENV_FILAS[e.i].t+'</span><span class="q">+'+e.q+'</span><button title="Quitar" onclick="envQuitar('+k+')">✕</button></div>'; }).join('')
-      :'<div class="evc-le">Aún no anotaste nada.<br>Empieza por cualquier envase.</div>';
-  }
+  var s=ENV.ses, m=ENV.m; if(!s) return; var f=s.f;
+  document.getElementById('evc-t').textContent='Conteo del '+ENV_DL[s.di]+' '+parseInt(s.fecha.slice(8),10)+(s.di===m.b?' · inicial':'');
+  var n=ENV_MULT[f.tam];
+  document.getElementById('evcf').innerHTML=
+    '<div class="evcf-k">Agregar al conteo</div>'+
+    '<label class="evcf-l">Estado</label>'+_evcSeg([['llena','Llenas'],['vacia','Vacías']],f.estado,'envFE')+
+    '<label class="evcf-l">Envase</label>'+_evcSeg([[630,'Botella 630'],[310,'Botella 305'],[1000,'Botella 1000']],f.tam,'envFT')+
+    '<div class="evcf-h">Multiplica ×'+n+' · caja plástica asociada: '+ENV_CAJA[f.tam]+'</div>'+
+    '<label class="evcf-l">Ubicación</label>'+_evcSeg(ENV_UBIS.map(function(u){ return [u,u]; }),f.ubi,'envFU')+
+    (f.ubi==='PFN'?'<div class="evcf-h">El PFN se mantiene: se suma al conteo de todos los días siguientes hasta que lo cambies.</div>':'')+
+    '<div class="evcf-box"><div class="evcf-bt"><b>Cajas plásticas</b><span>'+ENV_CAJA[f.tam].split(' ')[0]+'</span></div><div class="evcf-g">'+
+      '<div><label>Con botellas</label><div class="evcf-auto"><em>AUTO</em><b id="evcf-auto">'+(_evNum(f.packs)||0)+'</b></div></div>'+
+      '<div><label>Solas (sin botellas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.solas)+'" oninput="envFIn(\'solas\',this)"></div></div>'+
+      '<div class="evcf-eq" id="evcf-c"></div></div>'+
+    '<div class="evcf-box"><div class="evcf-bt"><b>Botellas</b><span>× '+n+' automático</span></div><div class="evcf-g">'+
+      '<div><label>Packs (cajas completas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.packs)+'" oninput="envFIn(\'packs\',this)"></div>'+
+      '<div><label>Unidades sueltas</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.und)+'" oninput="envFIn(\'und\',this)"></div></div>'+
+      '<div class="evcf-eq" id="evcf-b"></div></div>'+
+    '<div class="evcf-h">Los packs de botellas ya cuentan como "cajas con botellas": solo se escriben una vez.</div>'+
+    '<button class="btn btn-primary evcf-add" onclick="envAgregar()">✓ Agregar al conteo</button>';
+  _evcForm();
+  // lista de líneas
+  var L=s.lineas.length?s.lineas.map(function(l,k){ return k; }).reverse().map(function(k){
+    var l=s.lineas[k], x=_evNLin(l);
+    return '<div class="evc-li evcf-li"><span class="sc '+(l.estado==='llena'?'ll':'va')+'">'+(l.estado==='llena'?'Llena':'Vacía')+'</span><span class="e">'+ENV_TAMN[l.tamano]+' · '+l.ubi+(l.carry?' <small>de días anteriores</small>':'')+'</span>'+
+      '<span class="q">'+x.cajas+' cajas · '+x.bot+' bot.</span><button title="Quitar" onclick="envQuitar('+k+')">✕</button></div>'; }).join('')
+    :'<div class="evc-le">Aún no agregaste nada.<br>Llena el formulario y toca "Agregar al conteo".</div>';
   document.getElementById('evc-ll').innerHTML=L;
-  _evcTotales();
+  document.getElementById('evc-ls').textContent=s.lineas.length+(s.lineas.length===1?' línea':' líneas');
+  // resumen por envase
+  var tot={}; [630,310,1000].forEach(function(t){ tot[t]={ caja:0, vac:0, lle:0 }; });
+  s.lineas.forEach(function(l){ var x=_evNLin(l); tot[l.tamano].caja+=x.cajas; tot[l.tamano][l.estado==='llena'?'lle':'vac']+=x.bot; });
+  var nb=0; var h='<div class="evcf-rt h"><span>Envase</span><span>Caja plástica</span><span>Vacías</span><span>Llenas</span></div>';
+  [630,310,1000].forEach(function(t){ nb+=tot[t].vac+tot[t].lle; h+='<div class="evcf-rt"><span>'+ENV_TAMN[t]+'</span><span>'+tot[t].caja+'</span><span>'+tot[t].vac+'</span><span>'+tot[t].lle+'</span></div>'; });
+  document.getElementById('evc-sum').innerHTML=h; document.getElementById('evc-n').textContent=nb.toLocaleString('es-PE');
 }
+function envFE(v){ envF('estado',v); } function envFT(v){ envF('tam',v); } function envFU(v){ envF('ubi',v); }
 function envGuardarConteo(){
   var s=ENV.ses; if(!s||ENV.busy) return;
-  var lineas=[];
-  s.ent.forEach(function(e){
-    var r=ENV_FILAS[e.i];
-    lineas.push(r.k==='caja' ? { estado:'vacia', tamano:r.tam, ubicacion:e.sec, packs:0, solas:e.q, unidades:0 }
-                             : { estado:r.k==='lle'?'llena':'vacia', tamano:r.tam, ubicacion:e.sec, packs:0, solas:0, unidades:e.q });
+  var escribirPfn=s.pfnDirty||s.pfnHoy, lineas=[];
+  s.lineas.forEach(function(l){
+    if(l.ubi==='PFN'&&!escribirPfn) return;
+    lineas.push({ estado:l.estado, tamano:l.tamano, ubicacion:l.ubi, packs:l.packs, solas:l.solas, unidades:l.unidades });
   });
-  // el PFN solo se escribe si lo tocaste hoy o ya había un PFN guardado en este día; si no, se sigue arrastrando el anterior
-  if(s.pfnToco||s.pfnHoy){
-    ENV_FILAS.forEach(function(r,j){ if(!s.pfn[j]) return;
-      lineas.push(r.k==='caja' ? { estado:'vacia', tamano:r.tam, ubicacion:'PFN', packs:0, solas:s.pfn[j], unidades:0 }
-                               : { estado:r.k==='lle'?'llena':'vacia', tamano:r.tam, ubicacion:'PFN', packs:0, solas:0, unidades:s.pfn[j] }); });
-  }
   var btn=document.getElementById('evc-gb'); ENV.busy=true; btn.disabled=true; btn.textContent='Guardando…';
   google.script.run.withSuccessHandler(function(r){
     ENV.busy=false; btn.disabled=false; btn.textContent='Guardar conteo';
