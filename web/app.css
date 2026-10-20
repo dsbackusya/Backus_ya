@@ -3622,11 +3622,12 @@ input.filter-inp:focus{
 }
 @media print{
   @page{size:A4;margin:12mm}
-  body.doc-printing{background:#fff!important}
-  body.doc-printing *{visibility:hidden}
-  body.doc-printing #dc-pv,body.doc-printing #dc-pv .dv-body{position:static!important;background:#fff!important;overflow:visible!important;padding:0!important;display:block!important}
-  body.doc-printing .dp,body.doc-printing .dp *{visibility:visible}
-  body.doc-printing .dp{position:absolute;left:0;top:0;width:100%;box-shadow:none;padding:0;margin:0}
+  html.doc-printing,html.doc-printing body,body.doc-printing{height:auto!important;min-height:0!important;overflow:visible!important;background:#fff!important}
+  body.doc-printing>*:not(#dc-pv){display:none!important}
+  body.doc-printing #dc-pv{position:static!important;display:block!important;inset:auto!important;background:#fff!important}
+  body.doc-printing .dv-top{display:none!important}
+  body.doc-printing .dv-body{overflow:visible!important;padding:0!important}
+  body.doc-printing .dp{position:static!important;width:100%!important;max-width:none!important;box-shadow:none!important;margin:0!important;padding:0!important;break-inside:avoid;page-break-inside:avoid}
   body.doc-printing .dp th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 

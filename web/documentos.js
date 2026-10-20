@@ -450,9 +450,9 @@ function dcVer(d){
   p.className='dp'+(d.tipo==='marcaje'?' mar':'');
   p.innerHTML=_dcPapel(d);
   document.getElementById('dc-pv-t').textContent=DCX_TIT[d.tipo]||'Documento';
-  pv.classList.add('on'); document.body.classList.add('doc-printing');
+  pv.classList.add('on'); document.body.classList.add('doc-printing'); document.documentElement.classList.add('doc-printing');
 }
 function dcCerrarPv(){
   var pv=document.getElementById('dc-pv'); if(pv) pv.classList.remove('on');
-  document.body.classList.remove('doc-printing');
+  document.body.classList.remove('doc-printing'); document.documentElement.classList.remove('doc-printing');
 }
