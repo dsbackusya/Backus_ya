@@ -142,7 +142,7 @@ function _evRender(){
             '<div class="ev-card"><div class="ev-k" style="margin-bottom:10px" id="ev-dk"></div><table class="ev-df"><thead><tr><th>Cierre</th><th class="r">Und.</th><th>Estado</th><th class="r">Precio</th></tr></thead><tbody id="ev-df"></tbody><tfoot><tr><td colspan="3">Total</td><td class="r" id="ev-dt"></td></tr></tfoot></table></div></div>'+
           '<div class="ev-card"><div class="ev-gh"><span class="t">Faltantes y sobrantes de la semana</span><span class="s">diferencia de cada conteo contra lo esperado</span><span class="ev-sp"></span>'+
             '<div class="ev-seg"><button id="ev-mv" class="'+(ENV.met==='val'?'on':'')+'" onclick="envMet(\'val\')">S/</button><button id="ev-mu" class="'+(ENV.met==='und'?'on':'')+'" onclick="envMet(\'und\')">Unidades</button></div></div>'+
-            '<div class="ev-ch" id="ev-ch"></div></div>'+
+            '<div id="ev-ch"></div></div>'+
           '<div class="ev-card"><div class="ev-h"><span class="t">Movimientos y conteo</span><span class="s" id="ev-hd"></span><span class="ev-sp"></span><button class="btn btn-primary" id="ev-bc" onclick="envContar()"></button></div>'+
             '<div class="ev-t" id="ev-t"></div>'+
             '<div class="ev-ft">Esperado = conteo inicial + entradas − devoluciones − ventas + botellas que devolvieron los motorizados, de los días anteriores. Diferencia = conteo del día − esperado. Dentro de una familia, las diferencias de llenas y vacías se compensan. Las cajas plásticas solo se cuentan. ENT y DEV de Marcaje se suman solos (aparecen como + debajo del número).</div></div>'
@@ -229,40 +229,45 @@ function _evResumen(){
   _evGrafico();
 }
 
-/* gráfico de barras: un valor por día con conteo (el inicial no tiene diferencia) */
+/* gráfico semanal: una columna por día, barras apiladas por familia (faltantes abajo, sobrantes arriba) */
+var ENV_FCOL = { C6:'#F0A3AA', B6:'#E3A53A', C3:'#8FDCEB', B3:'#9480E8' };
 function _evGrafico(){
   var m=ENV.m, el=document.getElementById('ev-ch'); if(!el) return;
-  var pts=m.days.map(function(d,i){
-    if(m.b<0||i<=m.b||!m.C[i].has) return { i:i, v:null };
-    var t=_evTotDif(_evDifs(i)); return { i:i, v:ENV.met==='val'?t.v:t.u };
+  var val=ENV.met==='val', f=0, sob=0, max=1, H=95;
+  var dias=m.days.map(function(d,i){
+    if(m.b<0||i<=m.b||!m.C[i].has) return null;
+    var o=_evDifs(i), v={}; Object.keys(ENV_FAM).forEach(function(k){ v[k]=val?o[k]*_evPrecio(ENV_FAM[k].g):o[k]; });
+    var up=0, dn=0; Object.keys(v).forEach(function(k){ if(v[k]>0) up+=v[k]; else dn+=-v[k]; });
+    f+=dn; sob+=up; max=Math.max(max,up,dn); return { o:o, v:v, tot:up-dn };
   });
-  var W=700,H=210,pl=44,pr=10,pt=14,pb=34,iw=W-pl-pr,ih=H-pt-pb;
-  var vals=pts.filter(function(p){ return p.v!=null; }).map(function(p){ return p.v; });
-  var mx=Math.max.apply(null,vals.concat([ENV.met==='val'?5:10])), mn=Math.min.apply(null,vals.concat([ENV.met==='val'?-5:-10]));
-  var pad=(mx-mn)*0.12; mx+=pad; mn-=pad;
-  var y=function(v){ return pt+ih*(mx-v)/(mx-mn); };
-  var step=iw/7, bw=Math.min(46,step*0.55), s='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">';
-  [mx,0,mn].forEach(function(t){ s+='<line class="gl" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y(t)+'" y2="'+y(t)+'"/><text x="'+(pl-6)+'" y="'+(y(t)+4)+'" text-anchor="end">'+(t<0?'−':'')+Math.abs(Math.round(t))+'</text>'; });
-  s+='<line class="ax" x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y(0)+'" y2="'+y(0)+'"/>';
-  pts.forEach(function(p){
-    var cx=pl+step*p.i+step/2, lab=ENV_DN[p.i]+' '+parseInt(m.days[p.i].slice(8),10);
-    if(p.v!=null){
-      var col=p.v<0?'#F0A3AA':p.v>0?'#8FDCEB':'#7ADBB3', top=Math.min(y(p.v),y(0)), hh=Math.max(Math.abs(y(p.v)-y(0)),p.v===0?3:0);
-      s+='<rect class="bar" x="'+(cx-bw/2)+'" y="'+(p.v===0?y(0)-1.5:top)+'" width="'+bw+'" height="'+hh+'" rx="5" fill="'+col+'" onmousemove="envTip(event,'+p.i+')" onmouseleave="document.getElementById(\'ev-tip\').style.display=\'none\'" onclick="envSel('+p.i+')"/>';
-      s+='<text x="'+cx+'" y="'+(p.v<0?y(p.v)+14:y(p.v)-6)+'" text-anchor="middle" style="fill:'+col+';font-weight:600">'+(ENV.met==='val'?_evMoney(p.v).replace('S/ ',''):(p.v>0?'+':'')+p.v)+'</text>';
-    } else if(p.i===m.b){
-      s+='<text x="'+cx+'" y="'+(y(0)-8)+'" text-anchor="middle" style="font-size:10px">inicial</text>';
+  var fm=function(n){ return val?_evMoney(n):(n>0?'+':'')+n; };
+  var net=sob-f;
+  var h='<div class="evg-k"><div><small>Faltante de la semana</small><b class="ev-neg">'+(val?_evMoney(-f):(f?'−'+f:'0'))+'</b></div>'+
+    '<div><small>Sobrante de la semana</small><b class="ev-pos">'+(val?_evMoney(sob):'+'+sob)+'</b></div>'+
+    '<div><small>Neto</small><b class="'+_evCls(net)+'">'+fm(net)+'</b></div></div><div class="evg-cols">';
+  m.days.forEach(function(dia,i){
+    var d=dias[i], plot='', vv='';
+    if(i===m.b) plot='<div class="evg-none">punto de partida</div>';
+    else if(!d) plot='<div class="evg-none">sin conteo</div>';
+    else {
+      var up='', dn='';
+      Object.keys(ENV_FAM).forEach(function(k){
+        var x=d.v[k]; if(!x) return; var hh=Math.max(4,Math.abs(x)/max*H);
+        var seg='<div class="evg-s" style="height:'+hh+'px;background:'+ENV_FCOL[k]+'" title="'+ENV_FAM[k].n+'"></div>';
+        if(x>0) up+=seg; else dn+=seg;
+      });
+      plot='<div class="evg-plot"><div class="evg-up">'+up+'</div><div class="evg-z"></div><div class="evg-dn">'+(up||dn?dn:'<div class="evg-ok"></div>')+'</div></div>';
+      vv='<div class="evg-v '+_evCls(d.tot)+'">'+(d.tot===0?'Cuadra':fm(d.tot))+'</div>';
     }
-    s+='<text x="'+cx+'" y="'+(H-12)+'" text-anchor="middle" '+(p.i===ENV.sel?'style="fill:var(--accent2);font-weight:700"':'')+'>'+lab+'</text>';
+    h+='<div class="evg-d'+(i===ENV.sel?' on':'')+'" onclick="envSel('+i+')">'+(vv||'<div class="evg-v"></div>')+plot+'<div class="evg-l">'+ENV_DN[i]+'<b>'+parseInt(dia.slice(8),10)+'</b></div><div class="evg-tag">'+(i===m.b?'inicial':'')+'</div></div>';
   });
-  el.innerHTML=s+'</svg><div class="ev-tip" id="ev-tip"></div>';
-}
-function envTip(e,i){
-  var o=_evDifs(i), t=document.getElementById('ev-tip'), h='<b>'+ENV_DL[i]+' '+parseInt(ENV.m.days[i].slice(8),10)+'</b>', tot=0;
-  Object.keys(ENV_FAM).forEach(function(f){ var v=o[f]*_evPrecio(ENV_FAM[f].g); tot+=v; h+='<div><span>'+ENV_FAM[f].n+'</span><span class="'+_evCls(o[f])+'">'+(o[f]>0?'+':'')+o[f]+' · '+(v===0?'—':_evMoney(v))+'</span></div>'; });
-  h+='<div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px"><b style="margin:0">Total</b><b style="margin:0">'+_evMoney(tot)+'</b></div>';
-  t.innerHTML=h; t.style.display='block';
-  var r=document.getElementById('ev-ch').getBoundingClientRect(); t.style.left=Math.min(e.clientX-r.left+12,r.width-170)+'px'; t.style.top=Math.max(e.clientY-r.top-20,0)+'px';
+  h+='</div>';
+  var sd=dias[ENV.sel];
+  h+='<div class="evg-det">'+(sd?Object.keys(ENV_FAM).map(function(k){ var u=sd.o[k], v=u*_evPrecio(ENV_FAM[k].g);
+      return '<div><small>'+ENV_FAM[k].n+'</small><b class="'+_evCls(u)+'">'+(u>0?'+':'')+u+' und.</b><small> · '+(v===0?'—':_evMoney(v))+'</small></div>'; }).join('')
+    :'<div style="grid-column:1/-1;color:var(--text3);font-size:12.5px">'+(ENV.sel===m.b?'El primer conteo de la semana es el inicial: no tiene diferencia.':'Este día aún no tiene conteo.')+'</div>')+'</div>'+
+    '<div class="evg-lg">'+Object.keys(ENV_FAM).map(function(k){ return '<span><i style="background:'+ENV_FCOL[k]+'"></i>'+ENV_FAM[k].n+'</span>'; }).join('')+'<span><i style="background:#7ADBB3"></i>Cuadra</span></div>';
+  el.innerHTML=h;
 }
 
 /* ══ Pantalla de conteo: formulario "Agregar al conteo" (estado, envase, ubicación, cajas y botellas) ══ */

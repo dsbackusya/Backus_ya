@@ -3872,3 +3872,30 @@ body.evc-abierto{overflow:hidden}
 .evcf-rt span:first-child{text-align:left;font:600 13px 'DM Sans'}
 .evcf-rt.h{border:0;font:600 10px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--text3)}
 @media (max-width:1000px){ .evcf-body{grid-template-columns:1fr} }
+
+.evg-k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:8px 0 16px}
+.evg-k div{padding:11px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border)}
+.evg-k small{display:block;font:600 9.5px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text3)}
+.evg-k b{display:block;margin-top:4px;font:700 20px var(--font-mono)}
+.evg-cols{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.evg-d{border-radius:14px;padding:8px 6px 10px;cursor:pointer;border:1px solid transparent;display:flex;flex-direction:column;align-items:center}
+.evg-d:hover{background:var(--surface2)}
+.evg-d.on{background:var(--accent-ghost);border-color:var(--accent-line)}
+.evg-v{height:22px;font:700 13px var(--font-mono);display:flex;align-items:center}
+.evg-plot{width:100%;height:190px;display:flex;flex-direction:column}
+.evg-up,.evg-dn{flex:1;display:flex;flex-direction:column;align-items:center}
+.evg-up{justify-content:flex-end}.evg-dn{justify-content:flex-start}
+.evg-z{height:1px;background:var(--border2);width:100%}
+.evg-s{width:min(46px,70%)}
+.evg-up .evg-s:first-child{border-radius:8px 8px 0 0}.evg-dn .evg-s:last-child{border-radius:0 0 8px 8px}
+.evg-ok{width:min(46px,70%);height:6px;border-radius:3px;background:#7ADBB3;margin-top:-3px}
+.evg-none{width:min(46px,70%);height:190px;border:1px dashed var(--border2);border-radius:10px;display:grid;place-items:center;font:500 10px var(--font-mono);color:var(--text4);text-align:center;padding:4px;box-sizing:border-box}
+.evg-l{margin-top:8px;font:600 11px var(--font-mono);color:var(--text3);text-align:center}
+.evg-l b{display:block;font:700 15px 'DM Sans',sans-serif;color:var(--text);margin-top:1px}
+.evg-d.on .evg-l b{color:var(--accent2)}
+.evg-tag{font:600 9px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:#8FDCEB;margin-top:2px;height:11px}
+.evg-det{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.evg-det small{font-size:11.5px;color:var(--text3)}.evg-det small:first-child{display:block}.evg-det b{font:700 15px var(--font-mono)}
+.evg-lg{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)}
+.evg-lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+@media (max-width:760px){.evg-plot,.evg-none{height:150px}.evg-cols{gap:3px}.evg-d{padding:6px 2px}.evg-det{grid-template-columns:1fr 1fr}.evg-v{font-size:10.5px}.evg-k b{font-size:15px}}
