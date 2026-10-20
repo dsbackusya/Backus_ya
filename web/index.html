@@ -782,7 +782,8 @@ window.addEventListener('load', function(){
       <div id="cnt-ean-status" class="cnt-foot"></div>
 
       <div id="cnt-manual-wrap" style="display:none">
-        <div class="cnt-foot" style="padding-top:12px">Búscalo por SKU o nombre:</div>
+        <div style="padding-top:12px"><button type="button" class="btn btn-ghost btn-sm" onclick="cntAsociarEAN()">Asociar este código a un producto del Stock</button></div>
+        <div class="cnt-foot" style="padding-top:12px">O búscalo por SKU o nombre:</div>
         <div class="cnt-grp" style="margin-top:6px">
           <div class="cnt-rw">
             <div class="autocomplete-wrap" style="flex:1">
@@ -974,6 +975,14 @@ window.addEventListener('load', function(){
       Al escanear un código en Conteo, el EAN se busca aquí para traer el SKU, el producto y el multiplicador (unidades por pack).
     </div>
     <div class="form-grid">
+      <div class="form-field span2">
+        <div class="form-label">Producto del Stock <span style="font-weight:400;color:var(--text3)">(busca por nombre o SKU y se completan los datos)</span></div>
+        <div class="autocomplete-wrap">
+          <input class="inp" id="mc-buscar" placeholder="Ej: pilsen 355 o 10000001" oninput="acSearch('mc-buscar',null,null,'ac-mc','mconteoElegirStock')" autocomplete="off"/>
+          <div class="ac-list" id="ac-mc"></div>
+        </div>
+        <div id="mc-stock-sel" style="font-size:12px;margin-top:4px"></div>
+      </div>
       <div class="form-field">
         <div class="form-label">EAN (código de barras) <span class="req">*</span></div>
         <div style="display:flex;gap:8px;align-items:stretch">

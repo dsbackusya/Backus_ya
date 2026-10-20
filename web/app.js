@@ -3598,6 +3598,7 @@ function exportMaestro(){
 ══════════════════════════════════════ */
 var MCONTEO={data:[],vista:[]};
 var _MC_EDIT=null;   // id de la fila que se edita (null = nueva)
+var _MC_AL_GUARDAR=null; // qué hacer al guardar (p. ej. volver a resolver el código en Conteo)
 
 function _setSbGrp(abrir){
   var grp=document.getElementById('sb-grp-maestro'); if(!grp) return;
@@ -3680,11 +3681,15 @@ function filterMconteo(){
 }
 
 /* idx = posición en la vista filtrada; null = nuevo */
-function abrirMConteoForm(idx){
+function abrirMConteoForm(idx,eanPrefill,alGuardar){
   var m=(idx===null||idx===undefined)?null:MCONTEO.vista[idx];
   _MC_EDIT=m?m.id:null;
+  _MC_AL_GUARDAR=alGuardar||null;
+  document.getElementById('mc-buscar').value='';
+  document.getElementById('mc-stock-sel').innerHTML='';
+  document.getElementById('ac-mc').classList.remove('open');
   document.getElementById('fs-mconteo-title').textContent=m?'Editar maestro de conteo':'Agregar al maestro de conteo';
-  document.getElementById('mc-ean').value=m?m.ean:'';
+  document.getElementById('mc-ean').value=m?m.ean:(eanPrefill||'');
   document.getElementById('mc-sku').value=m?m.sku:'';
   document.getElementById('mc-producto').value=m?m.producto:'';
   document.getElementById('mc-sap').value=m?m.sap:'';
@@ -3693,7 +3698,34 @@ function abrirMConteoForm(idx){
   mconteoEanCambio();
   mconteoSkuCambio();
   openFS('fs-mconteo');
-  setTimeout(function(){document.getElementById(m?'mc-producto':'mc-ean').focus();},120);
+  setTimeout(function(){document.getElementById(m||eanPrefill?'mc-buscar':'mc-ean').focus();},120);
+}
+
+/* Elegir un producto del Stock: completa SKU y nombre; si el SKU ya tiene otro EAN, copia también SAP y multiplicador */
+function mconteoElegirStock(idx){
+  var item=(AC_CACHE['ac-mc']||[])[idx];
+  if(!item) return;
+  document.getElementById('ac-mc').classList.remove('open');
+  document.getElementById('mc-buscar').value='';
+  document.getElementById('mc-sku').value=item.sku;
+  document.getElementById('mc-producto').value=item.desc;
+  document.getElementById('mc-stock-sel').innerHTML='<span style="color:var(--text3)">'+ICO('right',12)+esc(item.sku)+' · '+esc(item.desc)+'</span>';
+  mconteoSkuCambio();
+  var otro=MCONTEO.data.filter(function(m){return m.id!==_MC_EDIT&&m.sku.toLowerCase()===String(item.sku).toLowerCase();})[0];
+  if(otro){ document.getElementById('mc-sap').value=otro.sap; document.getElementById('mc-mult').value=otro.multiplicador; }
+  var e=document.getElementById('mc-ean');
+  var sig=document.getElementById(e.value?'mc-mult':'mc-ean'); sig.focus(); if(sig.select) sig.select();
+}
+
+/* Desde Conteo: un código que no está en el maestro se asocia a un producto del Stock y se vuelve a resolver */
+function cntAsociarEAN(){
+  var ean=(document.getElementById('cnt-ean').value||'').trim();
+  ean=/[eE]/.test(ean)?String(Math.round(Number(ean))):ean.replace(/\.0+$/,'');
+  if(!MCONTEO.data.length && _MCONTEO_LOCAL) MCONTEO.data=_MCONTEO_LOCAL; // para copiar datos de un SKU que ya tiene otro EAN
+  abrirMConteoForm(null,ean,function(){
+    var inp=document.getElementById('cnt-ean'); if(inp) inp.value=ean;
+    _cargarMConteo(function(){ resolverEAN(); },true);
+  });
 }
 
 /* Avisa si el EAN escrito o escaneado ya existe en el maestro */
@@ -3750,6 +3782,7 @@ function guardarMConteoForm(){
       showToast('Maestro de conteo actualizado','ok');
       _mconteoInvalidarConteo();
       loadMconteo();
+      if(_MC_AL_GUARDAR){ var f=_MC_AL_GUARDAR; _MC_AL_GUARDAR=null; f(); return; }
       // el producto nuevo queda a la vista: se filtra por su EAN
       if(eraNuevo) setTimeout(function(){ var b=document.getElementById('mc-busq'); if(b){b.value=ean;filterMconteo();} },400);
     })
