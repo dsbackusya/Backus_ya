@@ -104,6 +104,7 @@ function dcTab(t){
 
 function _dcCabecera(){
   var tr=DCX.tab==='tr';
+  if(tr) return '';
   return '<div class="dc-card dc-cab"><div class="dc-h"><span class="t">'+(tr?'Datos del traslado':'Datos del reparto')+'</span>'+
     '<span class="s">'+(tr?'':'se usan en Marcaje y en la orden de NC')+'</span></div>'+
     '<div class="dc-g">'+
@@ -204,10 +205,12 @@ function _dcListaHtml(w){
   return (nc
     ? '<div class="dc-card"><div class="dc-h"><span class="t">Nota de crédito</span><span class="s">la factura se guarda en M-T, en la columna Motivo</span></div>'+
         '<div class="dc-g dc-g2"><div class="dc-f"><label>Nro. de factura</label><input class="inp" value="'+esc(DCX.nc.fac)+'" placeholder="Ej: F001-000123" oninput="DCX.nc.fac=this.value"></div></div></div>'
-    : '<div class="dc-card"><div class="dc-h"><span class="t">Cargo de despacho</span></div><div class="dc-g dc-g3">'+
+    : '<div class="dc-card"><div class="dc-h"><span class="t">Cargo de despacho</span><span class="s">la placa y el destino salen en la hoja impresa</span></div><div class="dc-g">'+
         '<div class="dc-f"><label>Origen</label><input class="inp" value="'+esc(_dcSede())+'" disabled></div>'+
         '<div class="dc-f"><label>Destino</label><select onchange="DCX.tr.destino=this.value">'+(DCX_DESTINOS.indexOf(DCX.tr.destino)<0?[DCX.tr.destino].concat(DCX_DESTINOS):DCX_DESTINOS).map(function(d){ return '<option'+(d===DCX.tr.destino?' selected':'')+'>'+esc(d)+'</option>'; }).join('')+'</select></div>'+
-        '<div class="dc-f"><label>Observaciones</label><input class="inp" value="'+esc(DCX.tr.obs)+'" placeholder="Opcional" oninput="DCX.tr.obs=this.value"></div></div></div>')+
+        '<div class="dc-f"><label>Placa *</label><input class="inp" id="dc-placa-tr" value="'+esc(DCX.h.placa)+'" placeholder="Ej: BMN-760" oninput="DCX.h.placa=this.value.toUpperCase()" style="text-transform:uppercase"></div>'+
+        '<div class="dc-f"><label>Fecha</label><input class="inp" type="date" value="'+esc(DCX.h.fecha)+'" oninput="DCX.h.fecha=this.value"></div></div>'+
+        '<div class="dc-f" style="margin-top:12px"><label>Observaciones</label><input class="inp" value="'+esc(DCX.tr.obs)+'" placeholder="Opcional" oninput="DCX.tr.obs=this.value"></div></div>')+
     '<div class="dc-card"><div class="dc-h"><span class="t">'+(nc?'Productos que no dejaron':'Productos')+'</span><span class="s">busca por nombre o SKU y escribe '+(nc?'solo las unidades':'las cantidades')+'</span></div>'+
       '<div class="dc-sr"><input class="inp" id="dc-q-'+w+'" placeholder="Buscar producto: pilsen, guaraná, 10000092…" autocomplete="off" oninput="dcBuscar(\''+w+'\')" onblur="setTimeout(function(){dcCerrarAc(\''+w+'\')},180)"><div class="dc-ac" id="dc-ac-'+w+'"></div></div>'+
       '<div id="dc-ln-'+w+'"></div></div>'+
@@ -274,6 +277,11 @@ function dcGuardar(tipo,imprimir){
     if(!d.lineas.length){ showToast('Agrega al menos un producto con unidades','err'); return; }
     d.reparto=DCX.h.reparto; d.transporte=DCX.h.transporte; d.nroFactura=String(DCX.nc.fac).trim();
   } else {
+    if(!String(DCX.h.placa||'').trim()){
+      showToast('Escribe la placa del vehículo','err');
+      var pl=document.getElementById('dc-placa-tr'); if(pl) pl.focus();
+      return;
+    }
     d.lineas=DCX.tr.lineas.filter(function(x){ return x.und>0; }).map(function(x){ return { sku:x.sku, sap:x.sap, desc:x.desc, und:x.und }; });
     if(!d.lineas.length){ showToast('Agrega al menos un producto con cantidad','err'); return; }
     d.destino=DCX.tr.destino; d.observaciones=DCX.tr.obs;
