@@ -694,14 +694,13 @@ function dashExportStock(){
     .withSuccessHandler(function(r){
       if(btn){btn.disabled=false;btn.innerHTML=orig;}
       if(!r||!r.ok){showToast(r?r.error:'Error al exportar','err');return;}
-      DATA.stock=r.data||[];
-      _dashExportStockExcel();
+      _dashExportStockExcel(r.data||[]);
     })
     .withFailureHandler(function(e){ if(btn){btn.disabled=false;btn.innerHTML=orig;} showToast(e.message,'err'); })
-    .getStock(S.token,false);
+    .getStockPackTodasSedes(S.token);
 }
-function _dashExportStockExcel(){
-  var data=DATA.stock||[];
+function _dashExportStockExcel(data){
+  data=data||[];
   if(!data.length){showToast('Sin datos','err');return;}
   var sedes=[...new Set(data.map(function(x){return x.sede;}).filter(Boolean))].sort();
   if(!sedes.length){showToast('Sin datos multi-sede','err');return;}

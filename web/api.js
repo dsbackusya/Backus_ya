@@ -225,6 +225,18 @@
     return { ok: true, data: data, usuario: p.usuario, rol: p.rol };
   });
 
+  // Stock en packs de todas las sedes (para la descarga del Dashboard); una tienda solo ve su sede en el resto de la app.
+  API.getStockPackTodasSedes = guard(async function () {
+    var filas = await todas(function () { return sb.rpc('stock_pack_todas_sedes'); });
+    return {
+      ok: true,
+      data: filas.map(function (r) {
+        return { sede: sedeNombre(r.sede_id), sku: str(r.sku), desc: str(r.descripcion), marca: str(r.marca),
+          categoria: str(r.categoria), stockPack: num(r.stock_pack) };
+      })
+    };
+  });
+
   API.registrarSKU = guard(async function (p, fila) {
     var sku = str(fila.sku);
     if (!sku) return { ok: false, error: 'SKU obligatorio' };
