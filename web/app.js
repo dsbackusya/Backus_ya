@@ -3690,9 +3690,22 @@ function abrirMConteoForm(idx){
   document.getElementById('mc-sap').value=m?m.sap:'';
   document.getElementById('mc-mult').value=m?m.multiplicador:1;
   document.getElementById('mc-err').textContent='';
+  mconteoEanCambio();
   mconteoSkuCambio();
   openFS('fs-mconteo');
   setTimeout(function(){document.getElementById(m?'mc-producto':'mc-ean').focus();},120);
+}
+
+/* Avisa si el EAN escrito o escaneado ya existe en el maestro */
+function mconteoEanCambio(){
+  var inp=document.getElementById('mc-ean');
+  var v=(inp.value||'').replace(/\s+/g,'');
+  if(v!==inp.value) inp.value=v;
+  var el=document.getElementById('mc-ean-info');
+  var otro=v&&MCONTEO.data.filter(function(m){return m.id!==_MC_EDIT&&m.ean===v;})[0];
+  el.innerHTML=otro
+    ? '<span style="color:var(--warn)">'+ICO('warn',12)+'Este EAN ya está en el maestro: '+esc(otro.producto||otro.sku)+' (SKU '+esc(otro.sku)+')</span>'
+    : '';
 }
 
 /* Si el SKU ya está en el maestro con otro EAN, ofrece su nombre y multiplicador */
@@ -4169,6 +4182,13 @@ window.addEventListener('message', function(event) {
 
 function _applyScanResult(code, targetId){
   showToast('Escaneado: ' + code, 'ok');
+
+  // ── MAESTRO DE CONTEO: el código va al campo EAN del formulario ────────
+  if(targetId === 'mc-ean'){
+    var mcEl = document.getElementById('mc-ean');
+    if(mcEl){ mcEl.value = code; mconteoEanCambio(); var sk=document.getElementById('mc-sku'); if(sk) sk.focus(); }
+    return;
+  }
 
   // ── MODO CONTEO: código va al campo EAN y dispara resolución ──────────
   if(targetId === 'cnt-ean' || _scannerTarget.conteoMode){

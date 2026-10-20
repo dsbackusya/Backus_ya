@@ -976,7 +976,11 @@ window.addEventListener('load', function(){
     <div class="form-grid">
       <div class="form-field">
         <div class="form-label">EAN (código de barras) <span class="req">*</span></div>
-        <input class="inp" id="mc-ean" inputmode="numeric" placeholder="Ej: 7753749000697" style="font-family:var(--font-mono);font-weight:600"/>
+        <div style="display:flex;gap:8px;align-items:stretch">
+          <input class="inp" id="mc-ean" inputmode="numeric" autocomplete="off" placeholder="Escanea o escribe el código" style="flex:1;font-family:var(--font-mono);font-weight:600" oninput="mconteoEanCambio()" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('mc-sku').focus();}"/>
+          <button type="button" class="cam-btn" title="Escanear con la cámara" onclick="openScanner('mc-ean')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="11"/></svg></button>
+        </div>
+        <div id="mc-ean-info" style="font-size:12px;margin-top:4px"></div>
       </div>
       <div class="form-field">
         <div class="form-label">SKU / Dynamics <span class="req">*</span></div>
