@@ -919,6 +919,82 @@
     };
   });
 
+  /* ── ENVASES SEMANAL: conteo por sector (Palet, Cámara, PFN que se mantiene), movimientos del día y motorizados ── */
+  function mapEnvMoto(r) {
+    return { id: r.id, fecha: r.fecha, motorizado: str(r.motorizado), tamano: r.tamano, tipo: r.tipo, cantidad: num(r.cantidad), nota: str(r.nota) };
+  }
+  // lunes = ISO del lunes de la semana a mostrar. Trae la semana (lunes a domingo), el último PFN anterior y todo el libro de motorizados.
+  API.getEnvSemana = guard(async function (p, lunes) {
+    var sede = exigirSede(p, null);
+    var lun = parseFecha(lunes) || hoyISO(), dom = restarDias(lun, -6);
+    var res = await Promise.all([
+      todas(function () { return sb.from('envases_conteo').select('*').eq('sede_id', sede).gte('fecha', lun).lte('fecha', dom).order('fecha').order('id'); }),
+      sb.from('envases_conteo').select('*').eq('sede_id', sede).eq('ubicacion', 'PFN').lt('fecha', lun).order('fecha', { ascending: false }).limit(200),
+      todas(function () { return sb.from('envases_mov').select('*').eq('sede_id', sede).gte('fecha', lun).lte('fecha', dom).order('id'); }),
+      todas(function () { return sb.from('envases_moto').select('*').eq('sede_id', sede).order('fecha').order('id'); }),
+      sb.from('envases_precio').select('grupo,precio').eq('sede_id', sede)
+    ]);
+    if (res[1].error) throw res[1].error;
+    if (res[4].error) throw res[4].error;
+    var precios = {};
+    res[4].data.forEach(function (r) { precios[r.grupo] = Number(r.precio); });
+    return { ok: true, hoy: hoyISO(), sede: sedeNombre(sede), desde: lun, hasta: dom,
+      conteo: res[0].map(mapEnvConteo), pfnPrev: res[1].data.map(mapEnvConteo),
+      mov: res[2].map(function (r) { var m = mapEnvMov(r); m.doc = r.documento_id ? 1 : 0; return m; }),
+      moto: res[3].map(mapEnvMoto), precios: precios };
+  });
+
+  // d: { fecha, lineas: [{ estado, tamano, ubicacion, packs, solas, unidades }] } reemplaza todo el conteo de ese día
+  API.guardarEnvConteo = guard(async function (p, d) {
+    var sede = exigirSede(p, null), fecha = parseFecha(d.fecha);
+    if (!fecha) return { ok: false, error: 'Fecha inválida' };
+    var lineas = [];
+    for (var i = 0; i < (d.lineas || []).length; i++) {
+      var l = d.lineas[i];
+      var packs = enteroNoNeg(l.packs), solas = enteroNoNeg(l.solas), und = enteroNoNeg(l.unidades);
+      if (l.estado !== 'llena' && l.estado !== 'vacia') return { ok: false, error: 'Estado inválido' };
+      if (ENV_TAMANOS.indexOf(Number(l.tamano)) < 0) return { ok: false, error: 'Envase inválido' };
+      if (packs === null || solas === null || und === null) return { ok: false, error: 'Cantidades inválidas' };
+      if (packs + solas + und === 0) continue;
+      lineas.push({ estado: l.estado, tamano: Number(l.tamano), ubicacion: str(l.ubicacion) || 'Palet', packs: packs, solas: solas, unidades: und });
+    }
+    var r = await sb.rpc('guardar_envases_conteo', { p_sede: sede, p_fecha: fecha, p_lineas: lineas, p_usuario: p.usuario });
+    if (r.error) return { ok: false, error: mensaje(r.error) };
+    return { ok: true, lineas: r.data };
+  });
+
+  // d: { fecha, tipo: entrada | devolucion | venta, tamano, estado, unidades } fija la cantidad manual del día (0 la quita)
+  API.setEnvMov = guard(async function (p, d) {
+    var sede = exigirSede(p, null), fecha = parseFecha(d.fecha), und = enteroNoNeg(d.unidades);
+    if (!fecha) return { ok: false, error: 'Fecha inválida' };
+    if (und === null) return { ok: false, error: 'Cantidad inválida' };
+    if (ENV_TAMANOS.indexOf(Number(d.tamano)) < 0) return { ok: false, error: 'Envase inválido' };
+    var r = await sb.rpc('set_envase_mov', { p_sede: sede, p_fecha: fecha, p_tipo: str(d.tipo), p_tamano: Number(d.tamano),
+      p_estado: d.estado === 'vacia' ? 'vacia' : 'llena', p_unidades: und, p_usuario: p.usuario });
+    if (r.error) return { ok: false, error: mensaje(r.error) };
+    return { ok: true };
+  });
+
+  // d: { fecha, motorizado, tamano, tipo: debe | dev, cantidad, nota }
+  API.guardarEnvMoto = guard(async function (p, d) {
+    var sede = exigirSede(p, null), fecha = parseFecha(d.fecha), cant = enteroNoNeg(d.cantidad), nombre = str(d.motorizado);
+    if (!fecha) return { ok: false, error: 'Fecha inválida' };
+    if (!nombre) return { ok: false, error: 'Escribe el nombre del motorizado' };
+    if (!cant) return { ok: false, error: 'Ingresa una cantidad' };
+    if (ENV_TAMANOS.indexOf(Number(d.tamano)) < 0) return { ok: false, error: 'Envase inválido' };
+    if (d.tipo !== 'debe' && d.tipo !== 'dev') return { ok: false, error: 'Tipo inválido' };
+    var r = await sb.from('envases_moto').insert({ sede_id: sede, fecha: fecha, motorizado: nombre, tamano: Number(d.tamano), tipo: d.tipo,
+      cantidad: cant, nota: nulo(d.nota), created_by: p.usuario }).select('*').single();
+    if (r.error) throw r.error;
+    return { ok: true, fila: mapEnvMoto(r.data) };
+  });
+  API.eliminarEnvMoto = guard(async function (p, id) {
+    var r = await sb.from('envases_moto').delete().eq('id', Number(id)).select('id');
+    if (r.error) throw r.error;
+    if (!r.data.length) return { ok: false, error: 'No se pudo quitar (sin permiso o ya no existe)' };
+    return { ok: true };
+  });
+
   /* ── DOCUMENTOS DE DESPACHO: Marcaje, Orden de NC y Traslado (con historial) ── */
   function mapDoc(r) {
     return { id: r.id, tipo: r.tipo, fecha: r.fecha, reparto: str(r.reparto), transporte: str(r.transporte), placa: str(r.placa),
