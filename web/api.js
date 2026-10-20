@@ -919,6 +919,74 @@
     };
   });
 
+  /* ── DOCUMENTOS DE DESPACHO: Marcaje, Orden de NC y Traslado (con historial) ── */
+  function mapDoc(r) {
+    return { id: r.id, tipo: r.tipo, fecha: r.fecha, reparto: str(r.reparto), transporte: str(r.transporte), placa: str(r.placa),
+      horaInicio: str(r.hora_inicio), horaFin: str(r.hora_fin), nroFactura: str(r.nro_factura), destino: str(r.destino),
+      observaciones: str(r.observaciones), lineas: r.lineas || [], usuario: str(r.created_by), creado: r.created_at };
+  }
+  API.getDocumentos = guard(async function (p) {
+    var sede = exigirSede(p, null);
+    var res = await Promise.all([
+      sb.from('documentos').select('*').eq('sede_id', sede).order('id', { ascending: false }).limit(300),
+      sb.from('envases_precio').select('grupo,precio').eq('sede_id', sede)
+    ]);
+    if (res[0].error) throw res[0].error;
+    if (res[1].error) throw res[1].error;
+    var precios = {};
+    res[1].data.forEach(function (r) { precios[r.grupo] = Number(r.precio); });
+    return { ok: true, hoy: hoyISO(), sede: sedeNombre(sede), docs: res[0].data.map(mapDoc), precios: precios };
+  });
+
+  // Busca en el Stock de la sede por nombre o SKU (todas las palabras) y trae el SAP: primero el del maestro, si no el del maestro de conteo.
+  API.buscarProductoDoc = guard(async function (p, query) {
+    var sede = exigirSede(p, null);
+    var terms = String(query || '').replace(/[,()*%\\]/g, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 5);
+    if (!terms.length || terms.join('').length < 2) return { ok: true, results: [] };
+    var q = sb.from('sede_productos').select('sku,descripcion').eq('sede_id', sede);
+    // las vocales y la ñ se buscan como comodín para que "guarana" encuentre "GUARANÁ"
+    terms.forEach(function (t) { q = q.or('descripcion.ilike.%' + t.replace(/[aeiouáéíóúüñ]/gi, '_') + '%,sku.ilike.%' + t + '%'); });
+    var r = await q.order('descripcion').limit(12);
+    if (r.error) throw r.error;
+    var skus = r.data.map(function (x) { return x.sku; });
+    var sap = {};
+    if (skus.length) {
+      var res = await Promise.all([
+        sb.from('maestro_sku').select('sku,cod_sap').in('sku', skus),
+        sb.from('mconteo').select('sku,sap').eq('sede_id', sede).in('sku', skus)
+      ]);
+      if (res[0].error) throw res[0].error;
+      if (res[1].error) throw res[1].error;
+      res[1].data.forEach(function (x) {
+        var v = str(x.sap);
+        if (/^[0-9]+$/.test(v) && v !== x.sku) sap[x.sku] = v;
+      });
+      res[0].data.forEach(function (x) {
+        var v = str(x.cod_sap);
+        if (/^[0-9]+$/.test(v)) sap[x.sku] = v;
+      });
+    }
+    return { ok: true, results: r.data.map(function (x) { return { sku: str(x.sku), desc: str(x.descripcion), sap: sap[x.sku] || '' }; }) };
+  });
+
+  // d: { tipo, fecha, reparto, transporte, placa, horaInicio, horaFin, nroFactura, destino, observaciones, lineas, movs }
+  API.guardarDocumento = guard(async function (p, d) {
+    var sede = exigirSede(p, null);
+    var tipo = str(d.tipo), fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(d.fecha || '')) ? d.fecha : null;
+    if (['marcaje', 'nc', 'traslado'].indexOf(tipo) < 0) return { ok: false, error: 'Tipo de documento inválido' };
+    if (!fecha) return { ok: false, error: 'La fecha es obligatoria' };
+    var lineas = d.lineas || [];
+    if (!lineas.length) return { ok: false, error: 'No hay productos para guardar' };
+    if (tipo === 'nc' && !str(d.nroFactura)) return { ok: false, error: 'El nro. de factura es obligatorio' };
+    var r = await sb.rpc('guardar_documento', {
+      p_sede: sede, p_tipo: tipo, p_usuario: p.usuario, p_movs: d.movs || [],
+      p_datos: { fecha: fecha, reparto: str(d.reparto), transporte: str(d.transporte), placa: str(d.placa), horaInicio: str(d.horaInicio),
+        horaFin: str(d.horaFin), nroFactura: str(d.nroFactura), destino: str(d.destino), observaciones: str(d.observaciones), lineas: lineas }
+    });
+    if (r.error) throw r.error;
+    return { ok: true, id: r.data };
+  });
+
   /* ── EXPORT MULTI-SEDE ── */
   API.getExportMultiSede = guard(async function (p, modulo) {
     var cfg = {

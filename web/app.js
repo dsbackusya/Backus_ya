@@ -160,7 +160,7 @@ var _STOCK_ESTADO_FILTRO = ''; // '', 'con', 'sin', 'neg'
 
 
 /* ── LOADER — anillo lavanda + texto (único para todas las pantallas) ── */
-var _LD_NOM={dashboard:'dashboard',stock:'stock',entradas:'entradas',salidas:'salidas',mt:'mermas y traslados',cancelados:'cancelados',maestro:'maestro',mconteo:'maestro de conteo',conteo:'conteo',envases:'envases',validacion:'validación'};
+var _LD_NOM={dashboard:'dashboard',stock:'stock',entradas:'entradas',salidas:'salidas',mt:'mermas y traslados',cancelados:'cancelados',maestro:'maestro',mconteo:'maestro de conteo',conteo:'conteo',envases:'envases',documentos:'documentos',validacion:'validación'};
 function LD(txt){
   return '<div class="loading ld"><div class="ld-ring"></div><div class="ld-txt">'+esc(txt)+'<span class="ld-dots"></span></div></div>';
 }
@@ -234,7 +234,7 @@ function doLogout(){
   if(_sessionPingInterval){clearInterval(_sessionPingInterval);_sessionPingInterval=null;}
   if(window.TadaRealtime) TadaRealtime.detener();
   S={};DATA={stock:[],salidas:[],entradas:[],mt:[],conteo:[],cancelados:[],oc:[]};window.sal_rango=null;window.ent_rango=null;window.cnt_rango=null;window.mt_rango=null;window.canc_rango=null;
-  PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,mconteo:false,conteo:false,envases:false,validacion:false,oc:false};
+  PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,mconteo:false,conteo:false,envases:false,documentos:false,validacion:false,oc:false};
   clearSession();
   document.getElementById('s-app').classList.remove('active');
   document.getElementById('s-login').classList.add('active');
@@ -319,8 +319,8 @@ function initApp(){
 /* ── AUTO-RESTORE SESSION ON LOAD ── */
 
 /* NAV state — declarado ANTES del auto-restore para evitar undefined si GAS responde rápido */
-var PAGE_TITLES={'dashboard':'Dashboard','stock':'Stock Actual','entradas':'Entradas','salidas':'Salidas','mt':'Mermas & Traslados','cancelados':'Pedidos Cancelados','maestro':'Maestro de Productos (Bees)','mconteo':'Maestro de Conteo','conteo':'Conteo de Inventario','envases':'Control de Envases','validacion':'Validación de Inventario'};
-var PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,mconteo:false,conteo:false,envases:false,validacion:false,oc:false};
+var PAGE_TITLES={'dashboard':'Dashboard','stock':'Stock Actual','entradas':'Entradas','salidas':'Salidas','mt':'Mermas & Traslados','cancelados':'Pedidos Cancelados','maestro':'Maestro de Productos (Bees)','mconteo':'Maestro de Conteo','conteo':'Conteo de Inventario','envases':'Control de Envases','documentos':'Documentos de despacho','validacion':'Validación de Inventario'};
+var PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,mconteo:false,conteo:false,envases:false,documentos:false,validacion:false,oc:false};
 
 (function(){
   var saved=loadSession();
@@ -353,7 +353,7 @@ var CURRENT_PAGE = '';
 
 function navTo(name,btn){
   CURRENT_PAGE = name;
-  ['dashboard','stock','entradas','salidas','mt','cancelados','maestro','mconteo','conteo','envases','validacion'].forEach(function(n){
+  ['dashboard','stock','entradas','salidas','mt','cancelados','maestro','mconteo','conteo','envases','documentos','validacion'].forEach(function(n){
     document.getElementById('p-'+n).classList.remove('active');
     document.getElementById('nav-'+n).classList.remove('active');
   });
@@ -413,6 +413,8 @@ function renderTopbarActions(name){
       '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Actualizar" onclick="reloadConteoForce()">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>';
   } else if(name==='envases'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="envAbrirConteo()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar conteo</span></button>'+btnExport+btnRefresh;
+  } else if(name==='documentos'){
+    el.innerHTML=btnRefresh;
   } else if(name==='validacion'){
     el.innerHTML='<button class="btn btn-ghost btn-sm tb-btn-icon" title="Actualizar" onclick="correrValidacion(true)">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>'+
       '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Exportar Excel" onclick="exportValidacion()">'+icoExport+'<span class="tb-btn-label"> Exportar Excel</span></button>';
@@ -488,6 +490,7 @@ function loadPage(name){
   if(name==='mconteo')    loadMconteo();
   if(name==='conteo')     loadConteo();
   if(name==='envases')    loadEnvases();
+  if(name==='documentos') loadDocumentos();
   if(name==='validacion') initValidacion();
 }
 
