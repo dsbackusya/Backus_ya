@@ -160,7 +160,7 @@ var _STOCK_ESTADO_FILTRO = ''; // '', 'con', 'sin', 'neg'
 
 
 /* ── LOADER — anillo lavanda + texto (único para todas las pantallas) ── */
-var _LD_NOM={dashboard:'dashboard',stock:'stock',entradas:'entradas',salidas:'salidas',mt:'mermas y traslados',cancelados:'cancelados',maestro:'maestro',conteo:'conteo',envases:'envases',validacion:'validación'};
+var _LD_NOM={dashboard:'dashboard',stock:'stock',entradas:'entradas',salidas:'salidas',mt:'mermas y traslados',cancelados:'cancelados',maestro:'maestro',mconteo:'maestro de conteo',conteo:'conteo',envases:'envases',validacion:'validación'};
 function LD(txt){
   return '<div class="loading ld"><div class="ld-ring"></div><div class="ld-txt">'+esc(txt)+'<span class="ld-dots"></span></div></div>';
 }
@@ -234,7 +234,7 @@ function doLogout(){
   if(_sessionPingInterval){clearInterval(_sessionPingInterval);_sessionPingInterval=null;}
   if(window.TadaRealtime) TadaRealtime.detener();
   S={};DATA={stock:[],salidas:[],entradas:[],mt:[],conteo:[],cancelados:[],oc:[]};window.sal_rango=null;window.ent_rango=null;window.cnt_rango=null;window.mt_rango=null;window.canc_rango=null;
-  PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,conteo:false,envases:false,validacion:false,oc:false};
+  PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,mconteo:false,conteo:false,envases:false,validacion:false,oc:false};
   clearSession();
   document.getElementById('s-app').classList.remove('active');
   document.getElementById('s-login').classList.add('active');
@@ -319,8 +319,8 @@ function initApp(){
 /* ── AUTO-RESTORE SESSION ON LOAD ── */
 
 /* NAV state — declarado ANTES del auto-restore para evitar undefined si GAS responde rápido */
-var PAGE_TITLES={'dashboard':'Dashboard','stock':'Stock Actual','entradas':'Entradas','salidas':'Salidas','mt':'Mermas & Traslados','cancelados':'Pedidos Cancelados','maestro':'Maestro de Productos','conteo':'Conteo de Inventario','envases':'Control de Envases','validacion':'Validación de Inventario'};
-var PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,conteo:false,envases:false,validacion:false,oc:false};
+var PAGE_TITLES={'dashboard':'Dashboard','stock':'Stock Actual','entradas':'Entradas','salidas':'Salidas','mt':'Mermas & Traslados','cancelados':'Pedidos Cancelados','maestro':'Maestro de Productos (Bees)','mconteo':'Maestro de Conteo','conteo':'Conteo de Inventario','envases':'Control de Envases','validacion':'Validación de Inventario'};
+var PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,mconteo:false,conteo:false,envases:false,validacion:false,oc:false};
 
 (function(){
   var saved=loadSession();
@@ -353,12 +353,19 @@ var CURRENT_PAGE = '';
 
 function navTo(name,btn){
   CURRENT_PAGE = name;
-  ['dashboard','stock','entradas','salidas','mt','cancelados','maestro','conteo','envases','validacion'].forEach(function(n){
+  ['dashboard','stock','entradas','salidas','mt','cancelados','maestro','mconteo','conteo','envases','validacion'].forEach(function(n){
     document.getElementById('p-'+n).classList.remove('active');
     document.getElementById('nav-'+n).classList.remove('active');
   });
   document.getElementById('p-'+name).classList.add('active');
   if(btn)btn.classList.add('active');
+  // Maestro es un grupo: se abre y se resalta cuando se entra a Conteo o Bees
+  var enMaestro=(name==='maestro'||name==='mconteo');
+  var grp=document.getElementById('sb-grp-maestro');
+  if(grp){
+    grp.classList.toggle('has-active',enMaestro);
+    if(enMaestro) _setSbGrp(true);
+  }
   document.getElementById('pg-title').textContent=PAGE_TITLES[name]||name;
   renderTopbarActions(name);
   if(name==='cancelados'){PAGE_LOADED[name]=false;} // siempre fresco al entrar
@@ -399,6 +406,8 @@ function renderTopbarActions(name){
     el.innerHTML=btnExport+btnRefresh;
   } else if(name==='maestro'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMaestroForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar al maestro</span></button>'+btnExport+btnRefresh;
+  } else if(name==='mconteo'){
+    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMConteoForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar producto</span></button>'+btnExport+btnRefresh;
   } else if(name==='conteo'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirConteo()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar conteo</span></button>'+btnExport+
       '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Actualizar" onclick="reloadConteoForce()">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>';
@@ -433,7 +442,7 @@ function reloadPage(name){
   _FORCE_REFRESH[name]=true; // forzar bypass de caché en el servidor
   if(DATA[name] !== undefined) DATA[name]=[]; // limpiar datos stale
   // Al recargar conteo, invalidar caché local de MCONTEO — el SS puede haber cambiado
-  if(name === 'conteo'){ _MCONTEO_LOCAL=null; _MCONTEO_PENDING=[]; _MCONTEO_EAN_IDX={}; _MCONTEO_SKU_IDX={}; }
+  if(name === 'conteo' || name === 'mconteo'){ _MCONTEO_LOCAL=null; _MCONTEO_PENDING=[]; _MCONTEO_EAN_IDX={}; _MCONTEO_SKU_IDX={}; }
   var skRoot=document.getElementById(name+'-root');
   if(name==='cancelados'){
     skRoot.innerHTML=skeletonCancelados();
@@ -476,6 +485,7 @@ function loadPage(name){
   if(name==='mt')         loadMT();
   if(name==='cancelados') loadCancelados();
   if(name==='maestro')    loadMaestro();
+  if(name==='mconteo')    loadMconteo();
   if(name==='conteo')     loadConteo();
   if(name==='envases')    loadEnvases();
   if(name==='validacion') initValidacion();
@@ -3580,6 +3590,189 @@ function exportMaestro(){
     MAESTRO.data,
     function(m){return[m.descripcion,m.sku,MAESTRO.prod[m.sku]||'',m.factor];},
     'Maestro','maestro'
+  );
+}
+
+/* ══════════════════════════════════════
+   MAESTRO DE CONTEO (MCONTEO): EAN -> SKU, producto y multiplicador
+══════════════════════════════════════ */
+var MCONTEO={data:[],vista:[]};
+var _MC_EDIT=null;   // id de la fila que se edita (null = nueva)
+
+function _setSbGrp(abrir){
+  var grp=document.getElementById('sb-grp-maestro'); if(!grp) return;
+  grp.classList.toggle('open',!!abrir);
+  var hd=document.getElementById('nav-maestro-grp'); if(hd) hd.setAttribute('aria-expanded',abrir?'true':'false');
+}
+function toggleSbGrp(){
+  var grp=document.getElementById('sb-grp-maestro'); if(!grp) return;
+  _setSbGrp(!grp.classList.contains('open'));
+}
+
+function loadMconteo(){
+  if(!S||!S.token){errBox('mconteo-root','Sin sesión activa. Recarga la página.','mconteo');PAGE_LOADING['mconteo']=false;return;}
+  var t=(REQ_TOKEN.mconteo=(REQ_TOKEN.mconteo||0)+1);
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(t!==REQ_TOKEN.mconteo) return;
+      PAGE_LOADING['mconteo']=false;
+      renderMconteo(r);
+    })
+    .withFailureHandler(function(e){
+      if(t!==REQ_TOKEN.mconteo) return;
+      PAGE_LOADING['mconteo']=false;errBox('mconteo-root',e.message,'mconteo');
+    })
+    .getMConteo(S.token);
+}
+
+function renderMconteo(r){
+  if(_handleExpired(r,'mconteo-root')) return;
+  if(!r||!r.ok){errBox('mconteo-root',r&&r.error?r.error:'Error al cargar el maestro de conteo','mconteo');return;}
+  MCONTEO.data=r.data;
+  DATA.mconteo=r.data;
+  var ico='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12M8 6v12M12 6v12M16 6v12M20 6v12"/></svg>';
+  var skus={}; MCONTEO.data.forEach(function(m){ skus[m.sku]=true; });
+  var nSku=Object.keys(skus).length;
+  var sinProd=MCONTEO.data.filter(function(m){return !m.producto;}).length;
+  document.getElementById('mconteo-root').innerHTML=
+    '<div class="stats">'+
+      '<div class="stat-card"><div class="stat-ico">'+ico+'</div><div class="stat-label">Códigos EAN</div><div class="stat-val-row"><div class="stat-val">'+fmt(MCONTEO.data.length)+'</div><span class="stat-unit-pill">filas</span></div></div>'+
+      '<div class="stat-card"><div class="stat-ico">'+ico+'</div><div class="stat-label">SKU distintos</div><div class="stat-val-row"><div class="stat-val">'+fmt(nSku)+'</div><span class="stat-unit-pill">sku</span></div></div>'+
+      '<div class="stat-card"><div class="stat-ico">'+ico+'</div><div class="stat-label">Sin nombre de producto</div><div class="stat-val-row"><div class="stat-val" style="color:'+(sinProd?'var(--warn)':'inherit')+'">'+fmt(sinProd)+'</div><span class="stat-unit-pill">filas</span></div></div>'+
+    '</div>'+
+    '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
+      '<input class="filter-inp" id="mc-busq" placeholder="Buscar EAN, SKU, SAP o producto..." style="width:300px" oninput="filterMconteo()"/>'+
+      '<span class="result-count" id="mc-count"></span>'+
+    '</div>'+
+    '<div class="table-wrap"><table style="min-width:0">'+
+      '<thead><tr><th>EAN</th><th>SKU</th><th class="col-hide-mobile">SAP</th><th>Producto</th><th class="r">Multiplicador</th><th class="c">Acciones</th></tr></thead>'+
+      '<tbody id="mconteo-tbody"></tbody>'+
+    '</table></div>';
+  filterMconteo();
+}
+
+function filterMconteo(){
+  var q=((document.getElementById('mc-busq')||{}).value||'').toLowerCase().trim();
+  var rows=MCONTEO.data.filter(function(m){
+    return !q||m.ean.toLowerCase().indexOf(q)>-1||m.sku.toLowerCase().indexOf(q)>-1||
+      m.sap.toLowerCase().indexOf(q)>-1||m.producto.toLowerCase().indexOf(q)>-1;
+  });
+  var MAX=500, total=rows.length;
+  if(rows.length>MAX) rows=rows.slice(0,MAX);
+  MCONTEO.vista=rows;
+  var el=document.getElementById('mc-count');
+  if(el) el.textContent=total>MAX ? ('Mostrando '+MAX+' de '+total+' — usa el buscador') : (total+' registros');
+  var html=rows.map(function(m,i){
+    return '<tr style="cursor:pointer" title="Tocar para editar" onclick="abrirMConteoForm('+i+')">'+
+      '<td class="mono" style="font-weight:600">'+esc(m.ean)+'</td>'+
+      '<td class="mono">'+esc(m.sku||'—')+'</td>'+
+      '<td class="mono col-hide-mobile" style="color:var(--text3)">'+esc(m.sap||'—')+'</td>'+
+      '<td class="td-desc" title="'+esc(m.producto)+'">'+(m.producto?esc(m.producto):'<span style="color:var(--text3)">—</span>')+'</td>'+
+      '<td class="r">'+fmt(m.multiplicador)+'</td>'+
+      '<td class="c" style="white-space:nowrap">'+
+        '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirMConteoForm('+i+')">Editar</button> '+
+        '<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();eliminarMConteoFila('+i+')">Eliminar</button>'+
+      '</td>'+
+    '</tr>';
+  }).join('');
+  var t=document.getElementById('mconteo-tbody');
+  if(t) t.innerHTML=html||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:40px">Sin resultados</td></tr>';
+}
+
+/* idx = posición en la vista filtrada; null = nuevo */
+function abrirMConteoForm(idx){
+  var m=(idx===null||idx===undefined)?null:MCONTEO.vista[idx];
+  _MC_EDIT=m?m.id:null;
+  document.getElementById('fs-mconteo-title').textContent=m?'Editar maestro de conteo':'Agregar al maestro de conteo';
+  document.getElementById('mc-ean').value=m?m.ean:'';
+  document.getElementById('mc-sku').value=m?m.sku:'';
+  document.getElementById('mc-producto').value=m?m.producto:'';
+  document.getElementById('mc-sap').value=m?m.sap:'';
+  document.getElementById('mc-mult').value=m?m.multiplicador:1;
+  document.getElementById('mc-err').textContent='';
+  mconteoSkuCambio();
+  openFS('fs-mconteo');
+  setTimeout(function(){document.getElementById(m?'mc-producto':'mc-ean').focus();},120);
+}
+
+/* Si el SKU ya está en el maestro con otro EAN, ofrece su nombre y multiplicador */
+function mconteoSkuCambio(){
+  var sku=(document.getElementById('mc-sku').value||'').trim().toLowerCase();
+  var el=document.getElementById('mc-sku-info');
+  if(!sku){el.innerHTML='';return;}
+  var otro=MCONTEO.data.filter(function(m){return m.id!==_MC_EDIT&&m.sku.toLowerCase()===sku;})[0];
+  el.innerHTML=otro
+    ? '<span style="color:var(--text3)">'+ICO('right',12)+'Ya está con otro EAN: '+esc(otro.producto||otro.sku)+' · x'+fmt(otro.multiplicador)+
+      ' <a href="#" onclick="mconteoCopiarSku();return false" style="color:var(--accent);font-weight:600">Usar estos datos</a></span>'
+    : '';
+}
+function mconteoCopiarSku(){
+  var sku=(document.getElementById('mc-sku').value||'').trim().toLowerCase();
+  var otro=MCONTEO.data.filter(function(m){return m.id!==_MC_EDIT&&m.sku.toLowerCase()===sku;})[0];
+  if(!otro) return;
+  document.getElementById('mc-producto').value=otro.producto;
+  document.getElementById('mc-sap').value=otro.sap;
+  document.getElementById('mc-mult').value=otro.multiplicador;
+}
+
+function guardarMConteoForm(){
+  var ean =(document.getElementById('mc-ean').value ||'').trim();
+  var sku =(document.getElementById('mc-sku').value ||'').trim();
+  var prod=(document.getElementById('mc-producto').value||'').trim();
+  var sap =(document.getElementById('mc-sap').value ||'').trim();
+  var mult=Number(document.getElementById('mc-mult').value);
+  var err =document.getElementById('mc-err');
+  if(!ean){err.textContent='El EAN es obligatorio';return;}
+  if(!sku){err.textContent='El SKU es obligatorio';return;}
+  if(!(mult>0)){err.textContent='El multiplicador debe ser mayor a 0';return;}
+  err.textContent='';
+  var btn=document.getElementById('btn-mc-save');
+  btn.disabled=true;btn.textContent='Guardando...';
+  var eraNuevo=(_MC_EDIT===null);
+  google.script.run
+    .withSuccessHandler(function(r){
+      btn.disabled=false;btn.textContent='Guardar';
+      if(!r.ok){err.textContent=r.error;return;}
+      closeFS('fs-mconteo');
+      showToast('Maestro de conteo actualizado','ok');
+      _mconteoInvalidarConteo();
+      loadMconteo();
+      // el producto nuevo queda a la vista: se filtra por su EAN
+      if(eraNuevo) setTimeout(function(){ var b=document.getElementById('mc-busq'); if(b){b.value=ean;filterMconteo();} },400);
+    })
+    .withFailureHandler(function(e){btn.disabled=false;btn.textContent='Guardar';err.textContent=e.message;})
+    .guardarMConteo(S.token,{id:_MC_EDIT,ean:ean,sku:sku,producto:prod,sap:sap,multiplicador:mult});
+}
+
+function eliminarMConteoFila(i){
+  var m=MCONTEO.vista[i]; if(!m) return;
+  _confirmDialog('Eliminar del maestro de conteo',
+    'El EAN '+m.ean+(m.producto?' ('+m.producto+')':'')+' se quitará del maestro. Al escanearlo en Conteo ya no se reconocerá. Los conteos registrados no cambian.',
+    function(){
+      google.script.run
+        .withSuccessHandler(function(r){
+          if(!r.ok){showToast(r.error||'No se pudo eliminar','err');return;}
+          showToast('Eliminado del maestro de conteo','ok');
+          _mconteoInvalidarConteo();
+          loadMconteo();
+        })
+        .withFailureHandler(function(e){showToast(e.message,'err');})
+        .eliminarMConteo(S.token,m.id);
+    },'Eliminar');
+}
+
+// La pantalla de Conteo guarda una copia del maestro; hay que descartarla para que tome los cambios.
+function _mconteoInvalidarConteo(){
+  _MCONTEO_LOCAL=null; _MCONTEO_PENDING=[]; _MCONTEO_EAN_IDX={}; _MCONTEO_SKU_IDX={};
+  try{ localStorage.removeItem('ds_mconteo_cache_v1'); }catch(e){}
+}
+
+function exportMconteo(){
+  _exportXLSX(
+    ['EAN','DYNAMICS','SAP','PRODUCTO','MULTIPLICADOR'],
+    MCONTEO.data,
+    function(m){return[m.ean,m.sku,m.sap,m.producto,m.multiplicador];},
+    'MCONTEO','maestro_conteo'
   );
 }
 

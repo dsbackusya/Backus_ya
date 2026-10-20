@@ -3477,3 +3477,18 @@ input.filter-inp:focus{
   .env-kp3{grid-template-columns:1fr}
 }
 @media (max-width:520px){.env-kp{grid-template-columns:1fr 1fr;gap:8px}.env-kp>.sal2-card:first-child{grid-column:1/-1}.env-kp .sal2-card{padding:14px 16px}.env-kp .sal2-v{font-size:26px}.env-kp3{grid-template-columns:1fr}.env-pr{grid-template-columns:1fr}.env-chip{flex:1 1 100%}.env-chip select,.env-chip input{flex:1}}
+
+/* ── Menú Maestro: grupo con Conteo y Bees ── */
+.sb-grp{display:flex;flex-direction:column}
+.sb-grp-hd{width:100%}
+.sb-chev{margin-left:auto;display:inline-flex;color:var(--text3);transition:transform .2s ease}
+.sb-grp.open .sb-chev{transform:rotate(180deg)}
+.sb-grp.has-active .sb-grp-hd,.sb-grp.has-active .sb-grp-hd .ic{color:var(--accent)}
+.sb-sub{display:none;flex-direction:column;gap:2px;margin:2px 0 4px 20px;padding-left:8px;border-left:1px solid var(--border)}
+.sb-grp.open .sb-sub{display:flex}
+.sb-subitem{font-size:12.5px;padding:7px 10px}
+.sb-subitem.active::before{display:none}
+/* con el menú colapsado se ven solo los dos iconos */
+.sidebar.collapsed .sb-grp-hd{display:none}
+.sidebar.collapsed .sb-sub{display:flex;margin:0;padding:0;border:0}
+.sidebar.collapsed .sb-chev{display:none}

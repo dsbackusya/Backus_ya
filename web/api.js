@@ -586,9 +586,43 @@
     return {
       ok: true,
       data: filas.map(function (r) {
-        return { ean: str(r.ean), sku: str(r.sku), sap: str(r.sap), producto: str(r.producto), multiplicador: Number(r.multiplicador || 1) };
+        return { id: r.id, ean: str(r.ean), sku: str(r.sku), sap: str(r.sap), producto: str(r.producto), multiplicador: Number(r.multiplicador || 1) };
       })
     };
+  });
+
+  // Alta y edición de una fila de MCONTEO (f.id = fila a editar; sin id = nueva). El EAN no puede repetirse en la sede.
+  API.guardarMConteo = guard(async function (p, f) {
+    var sede = exigirSede(p, null);
+    var ean = normEan(f.ean), sku = str(f.sku), mult = Number(f.multiplicador);
+    if (!ean) return { ok: false, error: 'El EAN es obligatorio' };
+    if (!sku) return { ok: false, error: 'El SKU es obligatorio' };
+    if (!(mult > 0)) return { ok: false, error: 'El multiplicador debe ser mayor a 0' };
+    var dup = sb.from('mconteo').select('id').eq('sede_id', sede).eq('ean', ean).limit(1);
+    if (f.id) dup = dup.neq('id', Number(f.id));
+    dup = await dup;
+    if (dup.error) throw dup.error;
+    if (dup.data.length) return { ok: false, error: 'Ya existe ese EAN en el maestro de conteo.' };
+    var fila = { ean: ean, sku: sku, sap: nulo(f.sap), producto: nulo(f.producto), multiplicador: mult };
+    var r;
+    if (f.id) {
+      r = await sb.from('mconteo').update(fila).eq('id', Number(f.id)).eq('sede_id', sede).select('id');
+      if (!r.error && !r.data.length) return { ok: false, error: 'No se pudo guardar (sin permiso o la fila ya no existe). Actualiza la pantalla.' };
+    } else {
+      fila.sede_id = sede;
+      r = await sb.from('mconteo').insert(fila).select('id');
+      if (!r.error && !r.data.length) return { ok: false, error: 'No se pudo guardar. Revisa tus permisos.' };
+    }
+    if (r.error) throw r.error;
+    return { ok: true };
+  });
+
+  API.eliminarMConteo = guard(async function (p, id) {
+    var sede = exigirSede(p, null);
+    var r = await sb.from('mconteo').delete().eq('id', Number(id)).eq('sede_id', sede).select('id');
+    if (r.error) throw r.error;
+    if (!r.data.length) return { ok: false, error: 'No se pudo eliminar (sin permiso o la fila ya no existe).' };
+    return { ok: true };
   });
 
   /* ── MAESTRO (MBEES): descripción del pedido -> SKU y unidades por pack ── */

@@ -130,9 +130,19 @@ window.addEventListener('load', function(){
       <button class="sb-item sb-store-only" id="nav-cancelados" data-tip="Cancelados" onclick="navTo('cancelados',this)">
         <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg></span><span class="sb-item-label">Cancelados</span>
       </button>
-      <button class="sb-item sb-store-only" id="nav-maestro" data-tip="Maestro de productos" onclick="navTo('maestro',this)">
-        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span class="sb-item-label">Maestro</span>
-      </button>
+      <div class="sb-grp sb-store-only" id="sb-grp-maestro">
+        <button class="sb-item sb-grp-hd" id="nav-maestro-grp" data-tip="Maestro" aria-expanded="false" onclick="toggleSbGrp('maestro')">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span><span class="sb-item-label">Maestro</span><span class="sb-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+        </button>
+        <div class="sb-sub">
+          <button class="sb-item sb-subitem" id="nav-mconteo" data-tip="Maestro · Conteo" onclick="navTo('mconteo',this)">
+            <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6v12M8 6v12M12 6v12M16 6v12M20 6v12"/></svg></span><span class="sb-item-label">Conteo</span>
+          </button>
+          <button class="sb-item sb-subitem" id="nav-maestro" data-tip="Maestro · Bees" onclick="navTo('maestro',this)">
+            <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span><span class="sb-item-label">Bees</span>
+          </button>
+        </div>
+      </div>
       <div class="sb-section sb-store-only">Operaciones</div>
       <button class="sb-item sb-store-only" id="nav-validacion" data-tip="Validación" onclick="navTo('validacion',this)">
         <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span class="sb-item-label">Validación</span>
@@ -207,6 +217,11 @@ window.addEventListener('load', function(){
       <!-- CANCELADOS -->
       <div id="p-cancelados" class="page">
         <div id="cancelados-root"><div class="loading ld"><div class="ld-ring"></div><div class="ld-txt">Cargando cancelados<span class="ld-dots"></span></div></div></div>
+      </div>
+
+      <!-- MAESTRO CONTEO (MCONTEO) -->
+      <div id="p-mconteo" class="page">
+        <div id="mconteo-root"><div class="loading ld"><div class="ld-ring"></div><div class="ld-txt">Cargando maestro de conteo<span class="ld-dots"></span></div></div></div>
       </div>
 
       <!-- MAESTRO -->
@@ -944,6 +959,49 @@ window.addEventListener('load', function(){
   <div class="fs-footer">
     <button class="btn btn-ghost" onclick="closeFS('fs-maestro')">Cancelar</button>
     <button class="btn btn-primary" id="btn-mae-save" onclick="guardarMaestro()">Guardar</button>
+  </div>
+</div>
+
+<!-- ══ FORM: MAESTRO CONTEO ══ -->
+<div class="fscreen" id="fs-mconteo">
+  <div class="fs-header">
+    <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-mconteo')"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Volver</button>
+    <div class="fs-title" id="fs-mconteo-title">Agregar al maestro de conteo</div>
+  </div>
+  <div class="fs-body">
+    <div class="fs-section">Producto del conteo</div>
+    <div style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--blue);margin-bottom:16px;font-family:var(--font-mono)">
+      Al escanear un código en Conteo, el EAN se busca aquí para traer el SKU, el producto y el multiplicador (unidades por pack).
+    </div>
+    <div class="form-grid">
+      <div class="form-field">
+        <div class="form-label">EAN (código de barras) <span class="req">*</span></div>
+        <input class="inp" id="mc-ean" inputmode="numeric" placeholder="Ej: 7753749000697" style="font-family:var(--font-mono);font-weight:600"/>
+      </div>
+      <div class="form-field">
+        <div class="form-label">SKU / Dynamics <span class="req">*</span></div>
+        <input class="inp" id="mc-sku" placeholder="Ej: 10000001" oninput="mconteoSkuCambio()" style="font-family:var(--font-mono);font-weight:600"/>
+        <div id="mc-sku-info" style="font-size:12px;margin-top:4px"></div>
+      </div>
+      <div class="form-field span2">
+        <div class="form-label">Producto</div>
+        <input class="inp" id="mc-producto" placeholder="Ej: PILSEN CALLAO 355ML AL 12"/>
+      </div>
+      <div class="form-field">
+        <div class="form-label">SAP</div>
+        <input class="inp" id="mc-sap" placeholder="Ej: 3375" style="font-family:var(--font-mono)"/>
+      </div>
+      <div class="form-field">
+        <div class="form-label">Multiplicador <span class="req">*</span></div>
+        <input class="inp" id="mc-mult" type="number" min="0.01" step="any" value="1"/>
+        <div style="font-size:12px;margin-top:4px;color:var(--text3)">Unidades que trae cada pack</div>
+      </div>
+    </div>
+    <div id="mc-err" class="err-msg" style="margin-top:12px"></div>
+  </div>
+  <div class="fs-footer">
+    <button class="btn btn-ghost" onclick="closeFS('fs-mconteo')">Cancelar</button>
+    <button class="btn btn-primary" id="btn-mc-save" onclick="guardarMConteoForm()">Guardar</button>
   </div>
 </div>
 
