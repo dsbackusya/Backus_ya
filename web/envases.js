@@ -296,122 +296,134 @@ function _evMerge(){
   el.innerHTML=L+R;
 }
 
-/* ══ Pantalla de conteo: formulario "Agregar al conteo" (estado, envase, ubicación, cajas y botellas) ══ */
-var ENV_UBIS = ['Palet','Cámara','Z3','Pendientes','PFN'];
+/* ══ Pantalla de conteo: cada línea se guarda al agregarla; el historial y el resumen aparecen al cerrar el conteo ══ */
+var ENV_UBIS_BASE = [['Palet','Palet'],['Cámara','Cámara de frío']]; // [valor guardado, nombre que se ve]; las demás son de cada sede
 var ENV_CAJA = { 630:'620/650 (3500192)', 310:'330 (3500240)', 1000:'1100 (3500193)' };
 function _evNLin(l){ var n=ENV_MULT[l.tamano]; return { cajas:l.packs+l.solas, bot:l.packs*n+l.unidades }; }
 function _evFechaPfn(lineas,hasta){ var f=''; lineas.forEach(function(l){ if(_evSec(l.ubicacion)==='PFN'&&l.fecha<=hasta&&l.fecha>f) f=l.fecha; }); return f; }
+function _evUbiEtq(u){ var k=String(u||'').trim().toLowerCase(); if(k==='cámara'||k==='camara') return 'Cámara de frío'; return String(u||'Palet').trim()||'Palet'; }
+function _evUbiLista(){
+  var o=ENV_UBIS_BASE.slice();
+  ((ENV.d&&ENV.d.ubicaciones)||[]).forEach(function(n){ if(!o.some(function(x){ return x[0].toLowerCase()===String(n).toLowerCase(); })) o.push([n,n]); });
+  return o;
+}
+function _evcLineas(){ var s=ENV.ses; return ENV.d.conteo.filter(function(l){ return l.fecha===s.fecha&&_evSec(l.ubicacion)!=='PFN'; }); }
 function envContar(){
   if(!ENV.d||!ENV.m){ showToast('Espera a que cargue la semana','err'); return; }
   if(ENV.vista!=='ctl'){ ENV.vista='ctl'; _evRender(); }
-  var di=ENV.sel, fecha=ENV.m.days[di], todas=ENV.d.conteo.concat(ENV.d.pfnPrev);
-  var ses={ di:di, fecha:fecha, lineas:[], pfnDirty:false, pfnHoy:false,
-    f:{ estado:'vacia', tam:null, ubi:'Palet', solas:'', packs:'', und:'' } };
-  var propias=ENV.d.conteo.filter(function(l){ return l.fecha===fecha; });
-  propias.forEach(function(l){ if(_evSec(l.ubicacion)==='PFN') ses.pfnHoy=true; ses.lineas.push({ estado:l.estado, tamano:l.tamano, ubi:_evUbi(l.ubicacion), packs:l.packs, solas:l.solas, unidades:l.unidades, h:'—', carry:false }); });
-  if(!ses.pfnHoy){ // PFN de días anteriores: se muestra y se mantiene
-    var fp=_evFechaPfn(todas.filter(function(l){ return l.fecha<fecha; }),fecha);
-    todas.filter(function(l){ return l.fecha===fp&&_evSec(l.ubicacion)==='PFN'; }).forEach(function(l){ ses.lineas.push({ estado:l.estado, tamano:l.tamano, ubi:'PFN', packs:l.packs, solas:l.solas, unidades:l.unidades, h:'—', carry:true }); });
-  }
-  ENV.ses=ses; _evcMontar(); _evcPinta();
+  var di=ENV.sel;
+  ENV.ses={ di:di, fecha:ENV.m.days[di], cerrado:false, addUbi:false, guardando:false,
+    f:{ estado:'llena', tam:null, ubi:'Palet', solas:'', packs:'', und:'' } };
+  _evcMontar(); _evcPinta();
 }
-function _evUbi(u){ u=String(u||'').trim(); var k=u.toLowerCase(); if(k==='cámara'||k==='camara') return 'Cámara'; if(k==='z3') return 'Z3'; if(k==='pendientes') return 'Pendientes'; if(k==='pfn') return 'PFN'; return 'Palet'; }
 function _evcMontar(){
   var el=document.getElementById('evc');
   if(!el){ el=document.createElement('div'); el.id='evc'; el.className='evc'; document.body.appendChild(el); }
   el.innerHTML=
-    '<div class="evc-top"><button class="btn btn-ghost btn-sm" onclick="envCerrarConteo()">‹ Volver</button><h2 id="evc-t"></h2><span class="ev-sp"></span></div>'+
-    '<div class="evc-body evcf-body"><div class="evc-card evcf" id="evcf"></div>'+
-      '<div class="evcf-r"><div class="evc-card evc-l"><h3>Conteo del día</h3><div class="s" id="evc-ls"></div><div id="evc-ll"></div></div>'+
-      '<div class="evc-card evcf-sum"><h3>Lo que verá el Control</h3><div id="evc-sum"></div></div></div></div>'+
-    '<div class="evc-ft"><span class="t">Botellas contadas<b id="evc-n">0</b></span><span class="ev-sp"></span>'+
-      '<button class="btn btn-ghost" onclick="envCerrarConteo()">Cancelar</button><button class="btn btn-primary" id="evc-gb" onclick="envGuardarConteo()">Guardar conteo</button></div>';
+    '<div class="evc-top"><button class="btn btn-ghost btn-sm" onclick="envCerrarConteo()">‹ Volver</button><h2 id="evc-t"></h2><span class="sp"></span>'+
+      '<span class="pill-g" id="evc-n"></span><button class="btn btn-primary btn-sm" id="evc-cerrar" onclick="envCierre()">Cerrar conteo</button></div>'+
+    '<div class="evc-body mq" id="evc-cuerpo"></div>';
   el.className='evc on'; document.body.classList.add('evc-abierto');
 }
-function envCerrarConteo(){ var el=document.getElementById('evc'); if(el) el.className='evc'; document.body.classList.remove('evc-abierto'); ENV.ses=null; }
+function envCerrarConteo(){
+  var el=document.getElementById('evc'); if(el) el.className='evc'; document.body.classList.remove('evc-abierto'); ENV.ses=null;
+  if(ENV.d&&ENV.m) _evRender();
+}
+function envCierre(){ ENV.ses.cerrado=true; _evcPinta(); window.scrollTo(0,0); var b=document.getElementById('evc-cuerpo'); if(b) b.scrollTop=0; }
+function envSeguir(){ ENV.ses.cerrado=false; _evcPinta(); }
 function envF(campo,v){ var f=ENV.ses.f; f[campo]=(campo==='tam')?Number(v):v; _evcPinta(); }
-function _evcEtq(f){ return (f.estado==='llena'?'Llenas':'Vacías')+' · '+(f.tam?ENV_TAMN[f.tam]:'elige el envase')+' · '+f.ubi; }
+function _evcEtq(f){ return _evUbiEtq(f.ubi)+' · '+(f.estado==='llena'?'Llenas':'Vacías')+' · '+(f.tam?ENV_TAMN[f.tam]:'elige el envase'); }
 function envFIn(campo,el){ ENV.ses.f[campo]=el.value; _evcForm(); }
 function _evcForm(){
   var f=ENV.ses.f, n=ENV_MULT[f.tam]||0, packs=_evNum(f.packs)||0, solas=_evNum(f.solas)||0, und=_evNum(f.und)||0;
   var c=document.getElementById('evcf-c'), b=document.getElementById('evcf-b'); if(!c||!b) return;
   c.innerHTML=packs+' + '+solas+' = <b>'+(packs+solas)+'</b> cajas';
-  b.innerHTML=packs+' × '+n+' = '+(packs*n)+' + '+und+' = <b>'+(packs*n+und)+'</b> botellas';
+  b.innerHTML=packs+' × '+(n||'—')+' = '+(packs*n)+' + '+und+' = <b>'+(packs*n+und)+'</b> botellas';
   var a=document.getElementById('evcf-auto'); if(a) a.textContent=packs;
 }
 function envAgregar(){
   var s=ENV.ses, f=s.f, packs=_evNum(f.packs)||0, solas=_evNum(f.solas)||0, und=_evNum(f.und)||0;
+  if(s.guardando) return;
   if(!f.tam){ showToast('Elige el envase antes de agregar','err'); return; }
   if(packs+solas+und===0){ showToast('Ingresa al menos una cantidad','err'); return; }
-  var rep_=s.lineas.filter(function(l){ return !l.carry&&l.estado===f.estado&&l.tamano===f.tam&&l.ubi===f.ubi; });
+  var ya=_evcLineas().filter(function(l){ return l.estado===f.estado&&l.tamano===f.tam&&_evUbiEtq(l.ubicacion)===_evUbiEtq(f.ubi); });
   var hacer=function(){
-    var d=new Date(); s.lineas.push({ estado:f.estado, tamano:f.tam, ubi:f.ubi, packs:packs, solas:solas, unidades:und, h:('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2), carry:false });
-    if(f.ubi==='PFN') s.pfnDirty=true;
-    showToast('Agregado: '+_evcEtq(f).replace(/ · /g,' · '),'ok');
-    f.packs=''; f.solas=''; f.und=''; f.tam=null; _evcPinta();
+    var etq=_evcEtq(f), dato={ fecha:s.fecha, estado:f.estado, tamano:f.tam, ubicacion:f.ubi, packs:packs, solas:solas, unidades:und };
+    s.guardando=true; var btn=document.getElementById('evcf-add'); if(btn){ btn.disabled=true; btn.textContent='Guardando…'; }
+    google.script.run.withSuccessHandler(function(r){
+      s.guardando=false;
+      if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo guardar la línea','err'); _evcPinta(); return; }
+      ENV.d.conteo.push(r.fila); _evCalc();
+      s.f.tam=null; s.f.packs=''; s.f.solas=''; s.f.und=''; s.ult=etq+' — '+_evNLin(r.fila).bot+' botellas, '+_evNLin(r.fila).cajas+' cajas';
+      showToast('Guardado: '+etq,'ok'); _evcPinta();
+    }).withFailureHandler(function(e){ s.guardando=false; showToast(e.message,'err'); _evcPinta(); }).agregarEnvConteoLinea(S.token,dato);
   };
-  if(rep_.length){
-    var ya=rep_.map(function(l){ var x=_evNLin(l); return x.bot+' botellas'; }).join(' y ');
-    _confirmDialog('¿Mismo envase otra vez?','Ya agregaste '+ENV_TAMN[f.tam]+' '+(f.estado==='llena'?'llena':'vacía')+' en '+f.ubi+' ('+ya+'). Si esta línea es de otro envase, cámbialo antes de agregar. ¿Agregarla igual?',hacer,'Agregar igual');
+  if(ya.length){
+    var q=ya.map(function(l){ return _evNLin(l).bot+' botellas'; }).join(' y ');
+    _confirmDialog('¿Mismo envase otra vez?','Ya guardaste '+ENV_TAMN[f.tam]+' '+(f.estado==='llena'?'llena':'vacía')+' en '+_evUbiEtq(f.ubi)+' ('+q+'). Si esta línea es de otro envase, cámbialo antes de agregar. ¿Guardarla igual?',hacer,'Guardar igual');
   } else hacer();
 }
-function envQuitar(k){ var s=ENV.ses, l=s.lineas[k]; if(l.ubi==='PFN') s.pfnDirty=true; s.lineas.splice(k,1); _evcPinta(); }
-function _evcSeg(opts,sel,fn){ return '<div class="ev-seg evcf-seg">'+opts.map(function(o){ return '<button class="'+(String(o[0])===String(sel)?'on':'')+'" onclick="'+fn+'(\''+o[0]+'\')">'+o[1]+'</button>'; }).join('')+'</div>'; }
+function _evcQuitar(id,fin){
+  google.script.run.withSuccessHandler(function(r){
+    if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo quitar la línea','err'); return; }
+    ENV.d.conteo=ENV.d.conteo.filter(function(x){ return x.id!==id; }); _evCalc(); fin();
+  }).withFailureHandler(function(e){ showToast(e.message,'err'); }).quitarEnvConteoLinea(S.token,id);
+}
+function envDeshacer(){
+  var ls=_evcLineas(); if(!ls.length) return; var l=ls[ls.length-1];
+  _evcQuitar(l.id,function(){ ENV.ses.ult=''; showToast('Quitaste la última línea','ok'); _evcPinta(); });
+}
+function envQuitarLinea(id){
+  _confirmDialog('Quitar línea','Se borra esta línea del conteo de '+ENV_DL[ENV.ses.di]+'. Cambia el total del día.',function(){ _evcQuitar(id,function(){ showToast('Línea quitada','ok'); _evcPinta(); }); },'Quitar');
+}
+function envOtraUbi(){ ENV.ses.addUbi=!ENV.ses.addUbi; _evcPinta(); var i=document.getElementById('evcf-nueva'); if(i) i.focus(); }
+function envGuardarUbi(){
+  var i=document.getElementById('evcf-nueva'), v=(i&&i.value||'').trim(); if(!v){ if(i) i.focus(); return; }
+  google.script.run.withSuccessHandler(function(r){
+    if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo guardar la ubicación','err'); return; }
+    ENV.d.ubicaciones=ENV.d.ubicaciones||[]; if(ENV.d.ubicaciones.indexOf(r.nombre)<0) ENV.d.ubicaciones.push(r.nombre);
+    ENV.ses.f.ubi=r.nombre; ENV.ses.addUbi=false; showToast('Ubicación guardada para esta sede: '+r.nombre,'ok'); _evcPinta();
+  }).withFailureHandler(function(e){ showToast(e.message,'err'); }).guardarEnvUbicacion(S.token,v);
+}
+function _evcSeg(opts,sel,fn,extra){ return '<div class="ev-seg evcf-seg">'+opts.map(function(o){ return '<button class="'+(String(o[0])===String(sel)?'on':'')+'" onclick="'+fn+'(\''+String(o[0]).replace(/'/g,"\\'")+'\')">'+o[1]+'</button>'; }).join('')+(extra||'')+'</div>'; }
+function envFE(v){ envF('estado',v); } function envFT(v){ envF('tam',v); } function envFU(v){ envF('ubi',v); }
 function _evcPinta(){
-  var s=ENV.ses, m=ENV.m; if(!s) return; var f=s.f;
-  document.getElementById('evc-t').textContent='Conteo del '+ENV_DL[s.di]+' '+parseInt(s.fecha.slice(8),10)+(s.di===m.b?' · inicial':'');
-  var n=ENV_MULT[f.tam];
-  document.getElementById('evcf').innerHTML=
-    '<div class="evcf-k">Agregar al conteo</div>'+
-    '<div style="padding:10px 12px;border-radius:10px;margin-bottom:12px;font-size:13px;border:1px solid '+(f.tam?'var(--accent)':'var(--warn)')+';background:'+(f.tam?'var(--accent-bg,rgba(148,128,232,.12))':'var(--warn-bg,rgba(255,180,60,.12))')+'">Vas a agregar: <b>'+_evcEtq(f)+'</b></div>'+
+  var s=ENV.ses, m=ENV.m; if(!s) return;
+  var ls=_evcLineas(), nl=ls.length;
+  document.getElementById('evc-t').textContent=(s.cerrado?'Conteo cerrado · ':'Conteo del ')+ENV_DL[s.di]+' '+parseInt(s.fecha.slice(8),10)+(s.di===m.b?' · inicial':'');
+  document.getElementById('evc-n').textContent=nl+(nl===1?' línea guardada':' líneas guardadas');
+  document.getElementById('evc-cerrar').style.display=s.cerrado?'none':'';
+  if(s.cerrado){ _evcCierre(ls); return; }
+  var f=s.f, n=ENV_MULT[f.tam]||0, ubis=_evUbiLista();
+  var ultima=ls.length?ls[ls.length-1]:null;
+  document.getElementById('evc-cuerpo').innerHTML=
+   '<div class="evc-card evcf"><div class="evcf-k">Agregar al conteo</div>'+
+    '<div class="sel-aviso'+(f.tam?'':' w')+'">Vas a agregar: <b>'+_evcEtq(f)+'</b></div>'+
+    '<label class="evcf-l">Ubicación</label>'+_evcSeg(ubis.map(function(u){ return [u[0],u[1]]; }),f.ubi,'envFU','<button class="mas" onclick="envOtraUbi()" title="Solo para esta sede">+ Otra</button>')+
+    (s.addUbi?'<div class="nueva-ubi"><input class="inp" id="evcf-nueva" maxlength="30" placeholder="Ej: Pasillo, Mezanine" onkeydown="if(event.key===\'Enter\')envGuardarUbi()"><button class="btn btn-primary btn-sm" onclick="envGuardarUbi()">Guardar ubicación</button></div><div class="ubi-nota">Solo aparecerá en esta sede.</div>':'')+
     '<label class="evcf-l">Estado</label>'+_evcSeg([['llena','Llenas'],['vacia','Vacías']],f.estado,'envFE')+
     '<label class="evcf-l">Envase</label>'+_evcSeg([[630,'Botella 630'],[310,'Botella 305'],[1000,'Botella 1000']],f.tam,'envFT')+
     '<div class="evcf-h">'+(f.tam?'Multiplica ×'+n+' · caja plástica asociada: '+ENV_CAJA[f.tam]:'Elige el envase de esta línea.')+'</div>'+
-    '<label class="evcf-l">Ubicación</label>'+_evcSeg(ENV_UBIS.map(function(u){ return [u,u]; }),f.ubi,'envFU')+
-    (f.ubi==='PFN'?'<div class="evcf-h">El PFN se mantiene todos los días siguientes hasta que lo cambies. Se suma al conteo del día (Palet + Cámara + PFN).</div>':'')+
-    '<div class="evcf-box"><div class="evcf-bt"><b>Cajas plásticas</b><span>'+(f.tam?ENV_CAJA[f.tam].split(' ')[0]:'—')+'</span></div><div class="evcf-g">'+
-      '<div><label>Con botellas</label><div class="evcf-auto"><em>AUTO</em><b id="evcf-auto">'+(_evNum(f.packs)||0)+'</b></div></div>'+
-      '<div><label>Solas (sin botellas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.solas)+'" oninput="envFIn(\'solas\',this)"></div></div>'+
-      '<div class="evcf-eq" id="evcf-c"></div></div>'+
-    '<div class="evcf-box"><div class="evcf-bt"><b>Botellas</b><span>× '+(n||'—')+' automático</span></div><div class="evcf-g">'+
+    '<div class="evcf-box"><div class="evcf-bt"><b>1 · Botellas</b><span>× '+(n||'—')+' automático</span></div><div class="evcf-g">'+
       '<div><label>Packs (cajas completas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.packs)+'" oninput="envFIn(\'packs\',this)"></div>'+
       '<div><label>Unidades sueltas</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.und)+'" oninput="envFIn(\'und\',this)"></div></div>'+
       '<div class="evcf-eq" id="evcf-b"></div></div>'+
+    '<div class="evcf-box"><div class="evcf-bt"><b>2 · Cajas plásticas</b><span>'+(f.tam?ENV_CAJA[f.tam].split(' ')[0]:'—')+'</span></div><div class="evcf-g">'+
+      '<div><label>Con botellas</label><div class="evcf-auto"><em>AUTO</em><b id="evcf-auto">'+(_evNum(f.packs)||0)+'</b></div></div>'+
+      '<div><label>Solas (sin botellas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.solas)+'" oninput="envFIn(\'solas\',this)"></div></div>'+
+      '<div class="evcf-eq" id="evcf-c"></div></div>'+
     '<div class="evcf-h">Los packs de botellas ya cuentan como "cajas con botellas": solo se escriben una vez.</div>'+
-    '<button class="btn btn-primary evcf-add" onclick="envAgregar()">✓ Agregar: '+_evcEtq(f)+'</button>';
+    '<button class="btn btn-primary evcf-add" id="evcf-add" onclick="envAgregar()">✓ Agregar y guardar: '+_evcEtq(f)+'</button>'+
+    '<div class="lista-ult">'+(s.ult?'Último guardado: <b>'+esc(s.ult)+'</b> · <a href="#" onclick="envDeshacer();return false">Deshacer</a>':(ultima?'<a href="#" onclick="envDeshacer();return false">Deshacer última línea</a>':'Cada línea se guarda al instante; no hace falta guardar al final.'))+'</div>'+
+   '</div>';
   _evcForm();
-  // lista de líneas
-  var L=s.lineas.length?s.lineas.map(function(l,k){ return k; }).reverse().map(function(k){
-    var l=s.lineas[k], x=_evNLin(l);
-    return '<div class="evc-li evcf-li"><span class="sc '+(l.estado==='llena'?'ll':'va')+'">'+(l.estado==='llena'?'Llena':'Vacía')+'</span><span class="e">'+ENV_TAMN[l.tamano]+' · '+l.ubi+(l.carry?' <small>de días anteriores</small>':'')+'</span>'+
-      '<span class="q">'+x.cajas+' cajas · '+x.bot+' bot.</span><button title="Quitar" onclick="envQuitar('+k+')">✕</button></div>'; }).join('')
-    :'<div class="evc-le">Aún no agregaste nada.<br>Llena el formulario y toca "Agregar al conteo".</div>';
-  document.getElementById('evc-ll').innerHTML=L;
-  document.getElementById('evc-ls').textContent=s.lineas.length+(s.lineas.length===1?' línea':' líneas');
-  // resumen por envase
-  var tot={}; [630,310,1000].forEach(function(t){ tot[t]={ caja:0, vac:0, lle:0 }; });
-  s.lineas.forEach(function(l){ var x=_evNLin(l); tot[l.tamano].caja+=x.cajas; tot[l.tamano][l.estado==='llena'?'lle':'vac']+=x.bot; });
-  var nb=0; var h='<div class="evcf-rt h"><span>Envase</span><span>Caja plástica</span><span>Vacías</span><span>Llenas</span></div>';
-  [630,310,1000].forEach(function(t){ nb+=tot[t].vac+tot[t].lle; h+='<div class="evcf-rt"><span>'+ENV_TAMN[t]+'</span><span>'+tot[t].caja+'</span><span>'+tot[t].vac+'</span><span>'+tot[t].lle+'</span></div>'; });
-  document.getElementById('evc-sum').innerHTML=h; document.getElementById('evc-n').textContent=nb.toLocaleString('es-PE');
 }
-function envFE(v){ envF('estado',v); } function envFT(v){ envF('tam',v); } function envFU(v){ envF('ubi',v); }
-// Conteo que quedaría guardado por fila (Palet + Cámara + PFN + lo que deben los motorizados), para compararlo con lo esperado.
-function _evcPrevio(){
-  var s=ENV.ses, o=ENV_FILAS.map(function(){ return 0; });
-  s.lineas.forEach(function(l){
-    var bot=l.packs*ENV_MULT[l.tamano]+l.unidades, caj=l.packs+l.solas, i;
-    if(bot){ i=_evFilaIdx(l.tamano,l.estado==='llena'?'lle':'vac'); if(i>=0) o[i]+=bot; }
-    if(caj){ i=_evFilaIdx(l.tamano,'caja'); if(i>=0) o[i]+=caj; }
-  });
-  var pe=ENV.m.PEND[s.di]; return o.map(function(v,j){ return v+(pe?pe[j]:0); });
-}
+// Diferencias grandes por familia: sirven para notar un envase mal elegido (se muestran al cerrar).
 function _evcSospechas(){
-  // Se compara por familia (llenas + vacías juntas), porque entre llenas y vacías las diferencias se compensan de forma normal.
-  var s=ENV.ses, cnt=_evcPrevio(), fam={}, out=[];
+  var s=ENV.ses, m=ENV.m, fam={}, out=[];
   ENV_FILAS.forEach(function(r,j){
-    var esp=_evEsp(s.di,j); if(esp==null) return;
-    var f=fam[r.fam]||(fam[r.fam]={ c:0, e:0 }); f.c+=cnt[j]; f.e+=esp;
+    var esp=_evEsp(s.di,j), c=m.tot[s.di]?m.tot[s.di][j]:null; if(esp==null||c==null) return;
+    var f=fam[r.fam]||(fam[r.fam]={ c:0, e:0 }); f.c+=c; f.e+=esp;
   });
   Object.keys(fam).forEach(function(k){
     var f=fam[k], dif=f.c-f.e, tol=ENV_FAM[k].g==='caja'?15:Math.max(100,Math.abs(f.e)*0.05);
@@ -419,25 +431,21 @@ function _evcSospechas(){
   });
   return out;
 }
-function envGuardarConteo(){
-  var s=ENV.ses; if(!s||ENV.busy) return;
-  var sos=_evcSospechas();
-  if(sos.length&&!s.confirmado){
-    _confirmDialog('Revisa tu conteo','Estas familias se alejan mucho de lo esperado:\n• '+sos.slice(0,7).join('\n• ')+'\n\nPuede ser un envase mal elegido en alguna línea. ¿Guardar igual?',function(){ s.confirmado=true; envGuardarConteo(); },'Guardar igual');
-    return;
-  }
-  var escribirPfn=s.pfnDirty||s.pfnHoy, lineas=[];
-  s.lineas.forEach(function(l){
-    if(l.ubi==='PFN'&&!escribirPfn) return;
-    lineas.push({ estado:l.estado, tamano:l.tamano, ubicacion:l.ubi, packs:l.packs, solas:l.solas, unidades:l.unidades });
-  });
-  var btn=document.getElementById('evc-gb'); ENV.busy=true; btn.disabled=true; btn.textContent='Guardando…';
-  google.script.run.withSuccessHandler(function(r){
-    ENV.busy=false; btn.disabled=false; btn.textContent='Guardar conteo';
-    if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo guardar el conteo','err'); return; }
-    showToast('Conteo guardado','ok'); envCerrarConteo(); _evRecargar();
-  }).withFailureHandler(function(e){ ENV.busy=false; btn.disabled=false; btn.textContent='Guardar conteo'; showToast(e.message,'err'); })
-    .guardarEnvConteo(S.token,{ fecha:s.fecha, lineas:lineas });
+function _evcCierre(ls){
+  var s=ENV.ses, m=ENV.m, sos=_evcSospechas();
+  var hist=ls.length
+    ? ls.slice().reverse().map(function(l){ var x=_evNLin(l);
+        return '<div class="hist-li"><span class="sc '+(l.estado==='llena'?'ll':'va')+'">'+(l.estado==='llena'?'Llena':'Vacía')+'</span><span>'+ENV_TAMN[l.tamano]+' · '+esc(_evUbiEtq(l.ubicacion))+'</span><span class="q">'+x.bot+' bot · '+x.cajas+' cajas</span><button title="Quitar" onclick="envQuitarLinea('+l.id+')">✕</button></div>'; }).join('')
+    : '<div class="evc-le">Aún no hay líneas en este conteo.</div>';
+  var tot=m.tot[s.di], filas=[630,310,1000].map(function(t){
+    var c=ENV_FILAS.map(function(r,j){ return r.tam===t?[r.k,tot?tot[j]:0]:null; }).filter(Boolean), o={}; c.forEach(function(x){ o[x[0]]=x[1]; });
+    return '<div class="resumen-fila"><span>'+ENV_TAMN[t]+'</span><span>'+(o.caja||0)+'</span><span>'+(o.vac||0)+'</span><span>'+(o.lle||0)+'</span></div>'; }).join('');
+  document.getElementById('evc-cuerpo').innerHTML=
+   (sos.length?'<div class="sel-aviso w" style="display:block;margin-bottom:12px"><b>Revisa tu conteo.</b> Estas familias se alejan mucho de lo esperado; puede ser un envase mal elegido en alguna línea:<br>• '+sos.map(esc).join('<br>• ')+'</div>':'')+
+   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Historial del conteo</h3><div class="evcf-h" style="margin:0 0 8px">Cada línea ya está guardada. Puedes quitar una si te equivocaste.</div>'+hist+'</div>'+
+   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Lo que verá el Control</h3><div class="evcf-h" style="margin:0 0 8px">Conteo total del día: lo contado + PFN + lo que deben los motorizados.</div>'+
+     '<div class="resumen-fila h"><span>Envase</span><span>Caja plástica</span><span>Vacías</span><span>Llenas</span></div>'+filas+'</div>'+
+   '<div style="display:flex;gap:10px"><button class="btn btn-ghost" style="flex:1" onclick="envSeguir()">‹ Seguir contando</button><button class="btn btn-primary" style="flex:1" onclick="envCerrarConteo()">Terminar</button></div>';
 }
 
 /* ══ Motorizados ══ */

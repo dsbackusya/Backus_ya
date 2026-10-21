@@ -931,19 +931,54 @@
       sb.from('envases_conteo').select('*').eq('sede_id', sede).eq('ubicacion', 'PFN').lt('fecha', lun).order('fecha', { ascending: false }).limit(200),
       todas(function () { return sb.from('envases_mov').select('*').eq('sede_id', sede).gte('fecha', lun).lte('fecha', dom).order('id'); }),
       todas(function () { return sb.from('envases_moto').select('*').eq('sede_id', sede).order('fecha').order('id'); }),
-      sb.from('envases_precio').select('grupo,precio').eq('sede_id', sede)
+      sb.from('envases_precio').select('grupo,precio').eq('sede_id', sede),
+      sb.from('envases_ubicacion').select('nombre').eq('sede_id', sede).order('id')
     ]);
     if (res[1].error) throw res[1].error;
     if (res[4].error) throw res[4].error;
+    if (res[5].error) throw res[5].error;
     var precios = {};
     res[4].data.forEach(function (r) { precios[r.grupo] = Number(r.precio); });
     return { ok: true, hoy: hoyISO(), sede: sedeNombre(sede), desde: lun, hasta: dom,
       conteo: res[0].map(mapEnvConteo), pfnPrev: res[1].data.map(mapEnvConteo),
       mov: res[2].map(function (r) { var m = mapEnvMov(r); m.doc = r.documento_id ? 1 : 0; return m; }),
-      moto: res[3].map(mapEnvMoto), precios: precios };
+      moto: res[3].map(mapEnvMoto), precios: precios, ubicaciones: res[5].data.map(function (r) { return r.nombre; }) };
   });
 
-  // d: { fecha, lineas: [{ estado, tamano, ubicacion, packs, solas, unidades }] } reemplaza todo el conteo de ese día
+  // d: { fecha, estado, tamano, ubicacion, packs, solas, unidades } guarda UNA línea del conteo al instante.
+  API.agregarEnvConteoLinea = guard(async function (p, d) {
+    var sede = exigirSede(p, null), fecha = parseFecha(d.fecha);
+    var packs = enteroNoNeg(d.packs), solas = enteroNoNeg(d.solas), und = enteroNoNeg(d.unidades);
+    if (!fecha) return { ok: false, error: 'Fecha inválida' };
+    if (d.estado !== 'llena' && d.estado !== 'vacia') return { ok: false, error: 'Estado inválido' };
+    if (ENV_TAMANOS.indexOf(Number(d.tamano)) < 0) return { ok: false, error: 'Elige el envase' };
+    if (packs === null || solas === null || und === null) return { ok: false, error: 'Cantidades inválidas' };
+    if (packs + solas + und === 0) return { ok: false, error: 'Ingresa al menos una cantidad' };
+    var ubi = str(d.ubicacion) || 'Palet';
+    if (ubi.toLowerCase() === 'pfn') return { ok: false, error: 'El PFN se registra en su pestaña' };
+    var r = await sb.from('envases_conteo').insert({ sede_id: sede, fecha: fecha, estado: d.estado, tamano: Number(d.tamano),
+      ubicacion: ubi, packs: packs, cajas_solas: solas, unidades: und, created_by: p.usuario }).select('*').single();
+    if (r.error) throw r.error;
+    return { ok: true, fila: mapEnvConteo(r.data) };
+  });
+  API.quitarEnvConteoLinea = guard(async function (p, id) {
+    var r = await sb.from('envases_conteo').delete().eq('id', Number(id)).select('id');
+    if (r.error) throw r.error;
+    if (!r.data.length) return { ok: false, error: 'La línea ya no existe. Actualiza la pantalla.' };
+    return { ok: true };
+  });
+  // Ubicación extra del conteo (solo para esta sede). Palet y Cámara de frío no se guardan: son fijas.
+  API.guardarEnvUbicacion = guard(async function (p, nombre) {
+    var sede = exigirSede(p, null), n = str(nombre);
+    if (!n) return { ok: false, error: 'Escribe el nombre de la ubicación' };
+    if (n.length > 30) return { ok: false, error: 'Máximo 30 letras' };
+    if (['pfn', 'palet', 'cámara', 'camara', 'cámara de frío', 'camara de frio'].indexOf(n.toLowerCase()) >= 0) return { ok: false, error: 'Esa ubicación ya existe' };
+    var r = await sb.from('envases_ubicacion').insert({ sede_id: sede, nombre: n, created_by: p.usuario });
+    if (r.error) { if (String(r.error.code) === '23505') return { ok: false, error: 'Esa ubicación ya existe' }; throw r.error; }
+    return { ok: true, nombre: n };
+  });
+
+  // d: { fecha, lineas: [{ estado, tamano, ubicacion, packs, solas, unidades }] } reemplaza todo el conteo de ese día (ya no lo usa la pantalla)
   API.guardarEnvConteo = guard(async function (p, d) {
     var sede = exigirSede(p, null), fecha = parseFecha(d.fecha);
     if (!fecha) return { ok: false, error: 'Fecha inválida' };
