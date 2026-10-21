@@ -354,6 +354,8 @@ function entEditarLinea(row){
       '<div><div class="ent-lbl">SKU</div><input class="inp" id="ee-sku" style="width:100%" autocomplete="off"/></div>'+
       '<div><div class="ent-lbl">Descripción</div><input class="inp" id="ee-desc" style="width:100%" autocomplete="off"/></div>'+
       '<div><div class="ent-lbl">Unidades</div><input class="inp" id="ee-und" type="number" min="0" step="1" style="width:100%"/></div>'+
+      '<div><div class="ent-lbl">Fecha de ingreso</div><input class="inp" id="ee-fecha" type="date" style="width:100%"/></div>'+
+      '<label id="ee-todos-w" style="display:none;align-items:center;gap:8px;font-size:12px;color:var(--text2)"><input type="checkbox" id="ee-todos" checked/> <span id="ee-todos-t"></span></label>'+
       '<div id="ee-err" style="color:var(--danger);font-size:12px;min-height:14px"></div>'+
       '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'modal-ent-edit\').style.display=\'none\'">Cancelar</button>'+
       '<button class="btn btn-primary btn-sm" id="ee-ok" onclick="entGuardarEdicion()">Guardar</button></div></div>';
@@ -369,6 +371,14 @@ function entEditarLinea(row){
   m.dataset.row=row;
   document.getElementById('ee-sku').value=r.sku; document.getElementById('ee-desc').value=r.desc;
   document.getElementById('ee-und').value=r.unidades; document.getElementById('ee-err').textContent='';
+  var p=String(r.fecha||'').split('/'), hoy=_hoyISO();
+  var fe=document.getElementById('ee-fecha'); fe.max=hoy; fe.value=p.length===3?p[2]+'-'+p[1]+'-'+p[0]:'';
+  m.dataset.fecha0=fe.value;
+  var hermanos=(DATA.entradas||[]).filter(function(x){return x.fecha===r.fecha&&x.factura===r.factura&&x.proveedor===r.proveedor&&x.oc===r.oc;});
+  m.dataset.ids=hermanos.map(function(x){return x._row;}).join(',');
+  document.getElementById('ee-todos-w').style.display=hermanos.length>1?'flex':'none';
+  document.getElementById('ee-todos').checked=true;
+  document.getElementById('ee-todos-t').textContent='Cambiar la fecha en los '+hermanos.length+' productos de esta factura';
   m.style.display='flex';
 }
 function entGuardarEdicion(){
@@ -376,6 +386,10 @@ function entGuardarEdicion(){
   var d={ sku:document.getElementById('ee-sku').value.trim(), desc:document.getElementById('ee-desc').value.trim(), unidades:document.getElementById('ee-und').value };
   if(!d.sku){ err.textContent='El SKU no puede quedar vacío'; return; }
   if(d.unidades===''||Number(d.unidades)<0||Math.floor(Number(d.unidades))!==Number(d.unidades)){ err.textContent='Unidades: un entero igual o mayor a 0'; return; }
+  d.fecha=document.getElementById('ee-fecha').value;
+  if(!d.fecha){ err.textContent='Elige la fecha de ingreso'; return; }
+  if(d.fecha>_hoyISO()){ err.textContent='La fecha no puede ser futura'; return; }
+  if(d.fecha!==m.dataset.fecha0 && document.getElementById('ee-todos').checked && m.dataset.ids) d.ids=m.dataset.ids.split(',').map(Number);
   var b=document.getElementById('ee-ok'); b.disabled=true;
   google.script.run
     .withSuccessHandler(function(x){ b.disabled=false; if(!x.ok){ err.textContent=x.error; return; } m.style.display='none'; showToast('Entrada actualizada','ok'); _entRecargar(); })

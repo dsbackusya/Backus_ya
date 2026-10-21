@@ -543,9 +543,20 @@
     var sku = str(d.sku), und = entero(d.unidades);
     if (!sku) return { ok: false, error: 'SKU vacío' };
     if (und === null || und < 0) return { ok: false, error: 'Unidades inválidas' };
-    var r = await sb.from('entradas').update({ sku: sku, descripcion: str(d.desc), unidades: und }).eq('id', Number(rowNum)).select('id');
+    var fecha = str(d.fecha);
+    if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { ok: false, error: 'Fecha de ingreso inválida' };
+    if (fecha > hoyISO()) return { ok: false, error: 'La fecha de ingreso no puede ser futura' };
+    var cambios = { sku: sku, descripcion: str(d.desc), unidades: und };
+    if (fecha) cambios.fecha = fecha;
+    var r = await sb.from('entradas').update(cambios).eq('id', Number(rowNum)).select('id');
     if (r.error) throw r.error;
     if (!r.data.length) return { ok: false, error: 'No se pudo editar (fila no encontrada o sin permiso)' };
+    // Fecha de toda la factura: el resto de sus productos solo cambia de fecha
+    var otros = (d.ids || []).map(Number).filter(function (x) { return x && x !== Number(rowNum); });
+    if (fecha && otros.length) {
+      var r2 = await sb.from('entradas').update({ fecha: fecha }).in('id', otros).select('id');
+      if (r2.error) throw r2.error;
+    }
     return { ok: true };
   });
   API.eliminarEntradas = guard(async function (p, ids) {
