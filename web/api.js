@@ -436,18 +436,12 @@
     return r.data;
   });
 
-  // Elimina de Salidas sin pasar a Cancelados. modo 'fila': solo esa fila; 'pedido' (por defecto): todas las filas con ese numero de pedido.
-  API.eliminarSalida = guard(async function (p, rowNum, nroPedido, modo) {
-    var ref = await sb.from('salidas').select('id,sede_id,nro_pedido').eq('id', Number(rowNum)).maybeSingle();
-    if (ref.error) throw ref.error;
-    if (!ref.data) return { ok: false, stale: true, error: 'Esta fila ya no existe en Salidas.' };
-    var nro = str(ref.data.nro_pedido);
-    var q = sb.from('salidas').delete().eq('sede_id', ref.data.sede_id);
-    q = (modo !== 'fila' && nro) ? q.eq('nro_pedido', nro) : q.eq('id', Number(rowNum));
-    var r = await q.select('id');
+  // Elimina una fila de Salidas SOLO si es un duplicado (otro registro del mismo pedido con igual SKU, pack y unidades).
+  // La base garantiza que siempre quede al menos una; no pasa a Cancelados.
+  API.eliminarSalidaDuplicada = guard(async function (p, rowNum) {
+    var r = await sb.rpc('eliminar_salida_duplicada', { p_id: Number(rowNum) });
     if (r.error) throw r.error;
-    if (!r.data.length) return { ok: false, error: 'No se eliminó nada (sin permiso o ya no existe).' };
-    return { ok: true, eliminados: r.data.length, nroPedido: nro };
+    return r.data;
   });
 
   // Edición manual de una fila: SKU (p. ej. SKU espejo) y/o cantidades. Queda marcada para que la revalidación no la pise.

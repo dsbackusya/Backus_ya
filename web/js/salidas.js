@@ -117,70 +117,46 @@ function _salMenuContextual(row){
     '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 10px;color:var(--danger);border-color:var(--danger);white-space:nowrap" '+
     'data-row="'+row._row+'" data-nro="'+esc(row.nroPedido)+'" '+
     'onclick="abrirModalCancelarBtn(this)">'+ICO('x',12)+'Cancelar</button> '+
-    '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--text3);white-space:nowrap" title="Elimina el pedido sin enviarlo a Cancelados" '+
-    'onclick="eliminarPedidoSalida('+row._row+')">'+ICO('trash',12,'s')+'Eliminar</button>';
+    (_salEsDup(row)?'<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--text3);white-space:nowrap" title="Fila duplicada: elimina solo esta, la otra se conserva" '+
+    'onclick="eliminarDuplicadoSalida('+row._row+')">'+ICO('trash',12,'s')+'Duplicado</button>':'');
 }
 
-// Elimina filas de Salidas sin registrarlas en Cancelados.
-// Pedido con una sola fila: confirma y borra. Con varias (p. ej. una fila duplicada): se elige entre solo esa fila o todo el pedido.
-function eliminarPedidoSalida(rowNum){
+// Una fila es duplicada si otra del mismo pedido tiene el mismo SKU, pack y unidades. Solo esas se pueden eliminar,
+// y siempre queda al menos una (la base lo exige tambien).
+function _salDupClave(x){ return [x.nroPedido,x.sku,x.pack,x.unidad].join('|'); }
+var _salDupCache={ ref:null, n:-1, mapa:{} };
+function _salEsDup(row){
+  var d=DATA.salidas||[];
+  if(_salDupCache.ref!==d||_salDupCache.n!==d.length){
+    var m={}; d.forEach(function(x){ if(x.nroPedido){ var k=_salDupClave(x); m[k]=(m[k]||0)+1; } });
+    _salDupCache={ ref:d, n:d.length, mapa:m };
+  }
+  return !!row.nroPedido && _salDupCache.mapa[_salDupClave(row)]>1;
+}
+function eliminarDuplicadoSalida(rowNum){
   var fila=DATA.salidas.find(function(r){return r._row===rowNum;});
   if(!fila){ showToast('Recarga la página — los datos están desactualizados.','err'); return; }
-  var nro=fila.nroPedido||'';
-  var filas=nro?DATA.salidas.filter(function(x){return x.nroPedido===nro;}):[fila];
-  if(filas.length<2){
-    _confirmDialog('Eliminar pedido','Se eliminará '+(nro?'el pedido '+nro:'esta fila')+' ('+fmt(Number(fila.unidad)||0)+' und.) de Salidas. NO pasa a Cancelados y el stock se devuelve. No se puede deshacer.',function(){
-      _salEliminar(rowNum,nro,'pedido');
-    },'Eliminar');
-    return;
-  }
-  var m=document.getElementById('modal-elim-ped');
-  if(!m){
-    m=document.createElement('div'); m.id='modal-elim-ped';
-    m.style.cssText='display:none;position:fixed;inset:0;z-index:120;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px);padding:12px';
-    document.body.appendChild(m);
-  }
-  var und=filas.reduce(function(a,x){return a+(Number(x.unidad)||0);},0);
-  m.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--danger);border-radius:var(--r2);padding:22px 26px;width:620px;max-width:100%;max-height:92vh;overflow:auto;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:14px">'+
-    '<div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)">Eliminar de Salidas</div>'+
-    '<div style="font-size:13px;color:var(--text2)">El pedido <b class="mono">'+esc(nro)+'</b> tiene <b>'+filas.length+' filas</b> ('+fmt(und)+' und.). La fila que elegiste está marcada. Nada de esto pasa a Cancelados y el stock se devuelve.</div>'+
-    '<div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;font-size:12.5px">'+
-      filas.map(function(x){
-        var es=x._row===rowNum;
-        return '<div style="display:grid;grid-template-columns:54px 92px 1fr 54px 1fr;gap:10px;padding:8px 12px;align-items:center;border-top:1px solid var(--border);'+(es?'background:var(--accent-ghost)':'')+'">'+
-          '<span class="mono">'+esc(x.hora||'')+'</span><span class="mono">'+esc(x.sku)+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(esc(x.desc)||'<i style="color:var(--text4)">sin descripción</i>')+'</span>'+
-          '<b style="text-align:right">'+fmt(x.unidad)+'</b><span style="color:var(--text3);font-size:11.5px">'+[x.motorizado?'Moto: '+esc(x.motorizado):'',x.envases?esc(x.envases):'',x.estado?esc(x.estado):''].filter(Boolean).join(' · ')+(es?' ← esta':'')+'</span></div>';
-      }).join('')+'</div>'+
-    '<div style="font-size:12px;color:var(--text3)">Si es una fila repetida, elimina solo esa. Fíjate en cuál conserva el motorizado o el estado de envases que necesitas.</div>'+
-    '<div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">'+
-      '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'modal-elim-ped\').style.display=\'none\'">Volver</button>'+
-      '<button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="_salElimTodo('+rowNum+')">Eliminar las '+filas.length+' filas</button>'+
-      '<button class="btn btn-danger btn-sm" onclick="_salElimUna('+rowNum+')">Eliminar solo esta fila</button></div></div>';
-  m.style.display='flex';
-}
-function _salElimUna(rowNum){
-  var fila=DATA.salidas.find(function(r){return r._row===rowNum;});
-  document.getElementById('modal-elim-ped').style.display='none';
-  _salEliminar(rowNum,(fila&&fila.nroPedido)||'','fila');
-}
-function _salElimTodo(rowNum){
-  var fila=DATA.salidas.find(function(r){return r._row===rowNum;});
-  var nro=(fila&&fila.nroPedido)||'', n=DATA.salidas.filter(function(x){return x.nroPedido===nro;}).length;
-  document.getElementById('modal-elim-ped').style.display='none';
-  _confirmDialog('Eliminar pedido completo','Se eliminarán las '+n+' filas del pedido '+nro+'. NO pasa a Cancelados. No se puede deshacer.',function(){ _salEliminar(rowNum,nro,'pedido'); },'Eliminar todo');
-}
-function _salEliminar(rowNum,nro,modo){
-  google.script.run
-    .withSuccessHandler(function(r){
-      if(!r.ok){ showToast(r.error,'err'); if(r.stale) setTimeout(function(){reloadPage('salidas');},1200); return; }
-      DATA.salidas=(modo==='pedido'&&nro)?DATA.salidas.filter(function(x){return x.nroPedido!==nro;}):DATA.salidas.filter(function(x){return x._row!==rowNum;});
-      _SAL.mantener=true;
-      filterSalidas();
-      PAGE_LOADED['stock']=false;
-      showToast(modo==='pedido'&&nro?'Pedido eliminado ('+r.eliminados+' fila'+(r.eliminados>1?'s':'')+')':'Fila eliminada','ok');
-    })
-    .withFailureHandler(function(e){ showToast(e.message,'err'); })
-    .eliminarSalida(S.token,rowNum,nro,modo);
+  var k=_salDupClave(fila);
+  var otras=DATA.salidas.filter(function(x){return x._row!==rowNum&&_salDupClave(x)===k;});
+  if(!otras.length){ showToast('No es un duplicado: no se puede eliminar.','err'); return; }
+  var det=function(x){ return (x.hora||'')+(x.desc?' · '+x.desc:' · sin descripción')+(x.motorizado?' · Moto: '+x.motorizado:'')+(x.envases?' · '+x.envases:'')+(x.estado?' · '+x.estado:''); };
+  _confirmDialog('Eliminar fila duplicada',
+    'Pedido '+fila.nroPedido+', SKU '+fila.sku+' ('+fmt(fila.unidad)+' und.) está repetido '+(otras.length+1)+' veces.\n\n'+
+    'SE ELIMINA solo esta: '+det(fila)+'\n'+
+    'SE CONSERVA: '+otras.map(det).join('\n            ')+'\n\n'+
+    'No pasa a Cancelados. El stock devuelve '+fmt(fila.unidad)+' und. No se puede deshacer.',function(){
+    google.script.run
+      .withSuccessHandler(function(r){
+        if(!r.ok){ showToast(r.error,'err'); if(r.stale) setTimeout(function(){reloadPage('salidas');},1200); return; }
+        DATA.salidas=DATA.salidas.filter(function(x){return x._row!==rowNum;});
+        _SAL.mantener=true;
+        filterSalidas();
+        PAGE_LOADED['stock']=false;
+        showToast('Duplicado eliminado','ok');
+      })
+      .withFailureHandler(function(e){ showToast(e.message,'err'); })
+      .eliminarSalidaDuplicada(S.token,rowNum);
+  },'Eliminar este');
 }
 
 function _salEstadoBadge(r){
