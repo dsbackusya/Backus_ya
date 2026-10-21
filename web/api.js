@@ -69,9 +69,11 @@
   }
   function lcEsc(s) { return String(s).replace(/[%_\\]/g, '\\$&'); }
 
+  // Solo errores de autenticación reales (antes bastaba con que el texto dijera "token" o "expired")
   function esExpirada(error) {
+    if (error && error.status === 401) return true;
     var t = (error && (error.message || error.code || '')) + '';
-    return /jwt|token|not authenticated|expired/i.test(t) && !/violates/i.test(t);
+    return /jwt|not authenticated|session_not_found|refresh_token_not_found|invalid refresh token|auth session missing/i.test(t) && !/violates/i.test(t);
   }
   function mensaje(error) {
     var m = (error && error.message) || String(error);
@@ -118,13 +120,21 @@
   function guard(fn) {
     return async function () {
       var args = Array.prototype.slice.call(arguments);
-      try {
-        var p = await contexto();
-        if (!p) return { ok: false, error: 'Sesión expirada', expired: true };
-        return await fn.apply(null, [p].concat(args.slice(1))); // args[0] = token (se ignora)
-      } catch (e) {
-        if (esExpirada(e)) return { ok: false, error: 'Sesión expirada', expired: true };
-        return { ok: false, error: mensaje(e) };
+      for (var intento = 0; intento < 2; intento++) {
+        try {
+          var p = await contexto();
+          if (!p) return { ok: false, error: 'Sesión expirada', expired: true };
+          return await fn.apply(null, [p].concat(args.slice(1))); // args[0] = token (se ignora)
+        } catch (e) {
+          if (esExpirada(e)) {
+            // antes de cerrar la sesión se intenta renovarla una vez y repetir la operación
+            if (intento === 0) {
+              try { var rr = await sb.auth.refreshSession(); if (rr.data && rr.data.session) continue; } catch (e2) { /* se informa abajo */ }
+            }
+            return { ok: false, error: 'Sesión expirada', expired: true };
+          }
+          return { ok: false, error: mensaje(e) };
+        }
       }
     };
   }
@@ -182,7 +192,8 @@
   };
 
   API.cerrarSesion = async function () {
-    try { await sb.auth.signOut(); } catch (e) { /* ignorar */ }
+    // scope local: cierra solo ESTE equipo; el valor por defecto (global) cerraba la cuenta en todos los equipos
+    try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* ignorar */ }
     _perfil = null;
     return { ok: true };
   };
