@@ -299,8 +299,10 @@ function _filterEntradas(){
     if(!_ENT_ABIERTOS[g.key]) return '';
     return '<div class="ent-its on">'+g.items.map(function(x){
       return '<div class="ent-it"><span class="mono">'+esc(x.sku)+'</span><span class="d">'+esc(x.desc)+'</span><span class="r"><b>'+fmt(x.unidades)+'</b></span><span>'+_entPillLinea(x.dynamics)+'</span>'+
-        '<span class="r">'+(g.oc?'':lapiz(x._row,'Cambiar estado de Dynamics'))+'</span></div>';
-    }).join('')+'</div>';
+        '<span class="r ent-acc">'+(g.oc?'':lapiz(x._row,'Cambiar estado de Dynamics'))+
+          '<button class="ent-edb" title="Editar SKU o cantidad" onclick="event.stopPropagation();entEditarLinea('+x._row+')">'+ICO('edit',13,'s')+'</button>'+
+          '<button class="ent-edb d" title="Eliminar este producto" onclick="event.stopPropagation();entEliminarLinea('+x._row+')">'+ICO('trash',13,'s')+'</button></span></div>';
+    }).join('')+'<div class="ent-pie"><button class="ent-edb d" onclick="event.stopPropagation();entEliminarFactura('+i+')">'+ICO('trash',13,'s')+' Eliminar ingreso completo</button></div></div>';
   };
   document.getElementById('ent-rows').innerHTML=vis.map(function(g,i){
     var o=!!_ENT_ABIERTOS[g.key];
@@ -320,6 +322,65 @@ function _filterEntradas(){
   }).join('')||'<div class="ent-vacio">Sin registros</div>';
 }
 
+/* ── Editar / eliminar entradas ── */
+function _entRecargar(){ reloadPage('entradas'); }
+function entEliminarLinea(row){
+  var r=(window._ENT_ROWS||{})[row]; if(!r) return;
+  _confirmDialog('Eliminar producto','Se eliminará '+r.sku+' ('+fmt(r.unidades)+' und.) de la factura '+(r.factura||'—')+'. El stock se descuenta. No se puede deshacer.',function(){
+    google.script.run
+      .withSuccessHandler(function(x){ if(!x.ok){ showToast(x.error,'err'); return; } showToast('Producto eliminado','ok'); _entRecargar(); })
+      .withFailureHandler(function(e){ showToast(e.message,'err'); })
+      .eliminarEntradas(S.token,[row]);
+  },'Eliminar');
+}
+function entEliminarFactura(i){
+  var g=_ENT_GRUPOS[i]; if(!g) return;
+  _confirmDialog('Eliminar ingreso completo','Se eliminarán los '+g.items.length+' productos ('+fmt(g.und)+' und.) de la factura '+(g.factura||'—')+' del '+g.fecha+'. El stock se descuenta. No se puede deshacer.',function(){
+    google.script.run
+      .withSuccessHandler(function(x){ if(!x.ok){ showToast(x.error,'err'); return; } showToast('Ingreso eliminado ('+x.eliminados+' productos)','ok'); _entRecargar(); })
+      .withFailureHandler(function(e){ showToast(e.message,'err'); })
+      .eliminarEntradas(S.token,g.items.map(function(x){return x._row;}));
+  },'Eliminar todo');
+}
+function entEditarLinea(row){
+  var r=(window._ENT_ROWS||{})[row]; if(!r) return;
+  var m=document.getElementById('modal-ent-edit');
+  if(!m){
+    m=document.createElement('div'); m.id='modal-ent-edit';
+    m.style.cssText='display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)';
+    m.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--r2);padding:24px 28px;width:400px;max-width:94vw;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:14px">'+
+      '<div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)">Editar producto de la entrada</div>'+
+      '<div><div class="ent-lbl">SKU</div><input class="inp" id="ee-sku" style="width:100%" autocomplete="off"/></div>'+
+      '<div><div class="ent-lbl">Descripción</div><input class="inp" id="ee-desc" style="width:100%" autocomplete="off"/></div>'+
+      '<div><div class="ent-lbl">Unidades</div><input class="inp" id="ee-und" type="number" min="0" step="1" style="width:100%"/></div>'+
+      '<div id="ee-err" style="color:var(--danger);font-size:12px;min-height:14px"></div>'+
+      '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'modal-ent-edit\').style.display=\'none\'">Cancelar</button>'+
+      '<button class="btn btn-primary btn-sm" id="ee-ok" onclick="entGuardarEdicion()">Guardar</button></div></div>';
+    document.body.appendChild(m);
+    document.getElementById('ee-sku').addEventListener('change',function(){
+      var v=this.value.trim(); if(!v) return;
+      google.script.run.withSuccessHandler(function(x){
+        var h=(x.results||[]).filter(function(a){return a.sku===v;})[0];
+        if(h) document.getElementById('ee-desc').value=h.desc;
+      }).buscarSKU(S.token,v);
+    });
+  }
+  m.dataset.row=row;
+  document.getElementById('ee-sku').value=r.sku; document.getElementById('ee-desc').value=r.desc;
+  document.getElementById('ee-und').value=r.unidades; document.getElementById('ee-err').textContent='';
+  m.style.display='flex';
+}
+function entGuardarEdicion(){
+  var m=document.getElementById('modal-ent-edit'), row=Number(m.dataset.row), err=document.getElementById('ee-err');
+  var d={ sku:document.getElementById('ee-sku').value.trim(), desc:document.getElementById('ee-desc').value.trim(), unidades:document.getElementById('ee-und').value };
+  if(!d.sku){ err.textContent='El SKU no puede quedar vacío'; return; }
+  if(d.unidades===''||Number(d.unidades)<0||Math.floor(Number(d.unidades))!==Number(d.unidades)){ err.textContent='Unidades: un entero igual o mayor a 0'; return; }
+  var b=document.getElementById('ee-ok'); b.disabled=true;
+  google.script.run
+    .withSuccessHandler(function(x){ b.disabled=false; if(!x.ok){ err.textContent=x.error; return; } m.style.display='none'; showToast('Entrada actualizada','ok'); _entRecargar(); })
+    .withFailureHandler(function(e){ b.disabled=false; err.textContent=e.message; })
+    .editarEntradaLinea(S.token,row,d);
+}
 function entTg(i){ var g=_ENT_GRUPOS[i]; if(!g) return; _ENT_ABIERTOS[g.key]=!_ENT_ABIERTOS[g.key]; _filterEntradas(); }
 function entSetEstado(k){ _ENT_EST=(_ENT_EST===k?'':k); _filterEntradas(); }
 

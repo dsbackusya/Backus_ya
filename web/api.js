@@ -536,6 +536,24 @@
     return { ok: true, actualizados: r.data.length, oc: oc };
   });
 
+  API.editarEntradaLinea = guard(async function (p, rowNum, d) {
+    var sku = str(d.sku), und = entero(d.unidades);
+    if (!sku) return { ok: false, error: 'SKU vacío' };
+    if (und === null || und < 0) return { ok: false, error: 'Unidades inválidas' };
+    var r = await sb.from('entradas').update({ sku: sku, descripcion: str(d.desc), unidades: und }).eq('id', Number(rowNum)).select('id');
+    if (r.error) throw r.error;
+    if (!r.data.length) return { ok: false, error: 'No se pudo editar (fila no encontrada o sin permiso)' };
+    return { ok: true };
+  });
+  API.eliminarEntradas = guard(async function (p, ids) {
+    var lista = (ids || []).map(Number).filter(Boolean);
+    if (!lista.length) return { ok: false, error: 'Nada que eliminar' };
+    var r = await sb.from('entradas').delete().in('id', lista).select('id');
+    if (r.error) throw r.error;
+    if (!r.data.length) return { ok: false, error: 'No se eliminó nada (sin permiso o ya no existe)' };
+    return { ok: true, eliminados: r.data.length };
+  });
+
   /* ── M-T ── */
   // Solo trae el rango pedido (por defecto, hoy)
   API.getMT = guard(async function (p, force, rango) {
