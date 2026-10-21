@@ -106,6 +106,8 @@ function _evCalc(){
     if(m.tipo==='entrada'&&m.estado==='llena'){ j=_evFilaIdx(m.tamano,'lle'); if(j>=0) M[di][j]['ent'+f]+=bot; }
     else if(m.tipo==='devolucion'&&m.estado==='vacia'){ j=_evFilaIdx(m.tamano,'vac'); if(j>=0) M[di][j]['dev'+f]+=bot; }
     else if(m.tipo==='venta'){ j=_evFilaIdx(m.tamano,'lle'); if(j>=0) M[di][j]['ven'+f]+=bot; }
+    // las cajas que vienen en un Marcaje (packs) entran o salen junto con las botellas
+    if(m.packs&&(m.tipo==='entrada'||m.tipo==='devolucion')){ j=_evFilaIdx(m.tamano,'caja'); if(j>=0) M[di][j][(m.tipo==='entrada'?'ent':'dev')+f]+=m.packs; }
   });
   var MR=days.map(function(){ return {630:0,310:0,1000:0}; });
   d.moto.forEach(function(x){ var di=days.indexOf(x.fecha); if(di>=0&&x.tipo==='dev') MR[di][x.tamano]+=x.cantidad; });
@@ -173,8 +175,8 @@ function _evTabla(){
     h+='<div class="ev-r" data-j="'+j+'">'+
       '<div class="ev-n1"><b>'+r.t+' '+tipo+'</b><small>'+r.sku+' · '+r.n+'</small></div>'+
       '<div class="ev-c mut q" data-l="Inicial">'+(ini==null?'—':ini)+'</div>'+
-      '<div class="q'+(r.k==='lle'?'':' na')+'" data-l="ENT">'+inp('ent',r.k==='lle',mm.entD)+'</div>'+
-      '<div class="q'+(r.k==='vac'?'':' na')+'" data-l="DEV">'+inp('dev',r.k==='vac',mm.devD)+'</div>'+
+      '<div class="q'+(r.k==='lle'||mm.entD&&r.k==='caja'?'':' na')+'" data-l="ENT">'+(r.k==='caja'?(mm.entD?'<div class="ev-c">+'+mm.entD+'</div>':'<div class="ev-na"></div>'):inp('ent',r.k==='lle',mm.entD))+'</div>'+
+      '<div class="q'+(r.k==='vac'||mm.devD&&r.k==='caja'?'':' na')+'" data-l="DEV">'+(r.k==='caja'?(mm.devD?'<div class="ev-c">+'+mm.devD+'</div>':'<div class="ev-na"></div>'):inp('dev',r.k==='vac',mm.devD))+'</div>'+
       '<div class="q'+(r.k==='lle'?'':' na')+'" data-l="Venta">'+inp('ven',r.k==='lle',mm.venD)+'</div>'+
       '<div class="ev-c q'+(r.k==='vac'?'':' na')+'" data-l="Moto" title="Botellas que devolvieron los motorizados">'+(r.k==='vac'?(mr?'+'+mr:'—'):'')+'</div>'+
       '<div class="ev-c q" data-l="Esperado">'+(esp==null?'—':esp)+'</div>'+
@@ -497,7 +499,7 @@ function exportEnvases(){
     var r=ENV_FILAS[j], out=[r.sku,r.t+' ('+r.n+')', m.b>=0&&m.tot[m.b]?m.tot[m.b][j]:''];
     m.days.forEach(function(d,i){
       var mm=m.M[i][j], c=m.tot[i]?m.tot[i][j]:null, x=_evDif(i,j);
-      out.push(r.k==='lle'?mm.ent+mm.entD:'', r.k==='vac'?mm.dev+mm.devD:'', r.k==='lle'?mm.ven+mm.venD:'', r.k==='vac'?m.MR[i][r.tam]||'':'', c==null?'':c, x==null?'':x);
+      out.push(r.k==='vac'?'':mm.ent+mm.entD||'', r.k==='lle'?'':mm.dev+mm.devD||'', r.k==='lle'?mm.ven+mm.venD:'', r.k==='vac'?m.MR[i][r.tam]||'':'', c==null?'':c, x==null?'':x);
     });
     return out;
   },'Envases semana','control_envases_'+m.days[0]);
