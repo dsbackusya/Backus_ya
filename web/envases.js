@@ -98,7 +98,7 @@ function _evCalc(){
   });
   var sd=Object.keys(snaps).sort();
   var pfn=days.map(function(dia){ var f=null; sd.forEach(function(x){ if(x<=dia) f=x; }); return f?snaps[f].slice():_evCeros(); });
-  var tot=days.map(function(dia,di){ return C[di].has ? ENV_FILAS.map(function(r,j){ return C[di].pal[j]+C[di].cam[j]+pfn[di][j]; }) : null; });
+  var tot=days.map(function(dia,di){ return C[di].has ? ENV_FILAS.map(function(r,j){ return C[di].pal[j]+C[di].cam[j]; }) : null; });  // el PFN se muestra aparte: ya está dentro del total contado
   var M=days.map(function(){ return ENV_FILAS.map(function(){ return { ent:0,entD:0,dev:0,devD:0,ven:0,venD:0 }; }); });
   d.mov.forEach(function(m){
     var di=days.indexOf(m.fecha); if(di<0||!ENV_MULT[m.tamano]) return;
@@ -165,10 +165,10 @@ function _evDias(){
 }
 
 function _evTabla(){
-  var m=ENV.m, s=ENV.sel, h='<div class="ev-th"><span>Envase</span><span>Inicial</span><span>ENT</span><span>DEV</span><span>Venta</span><span>Moto</span><span>Esperado</span><span>Conteo</span><span>Diferencia</span></div>';
+  var m=ENV.m, s=ENV.sel, h='<div class="ev-th"><span>Envase</span><span>Inicial</span><span>ENT</span><span>DEV</span><span>Venta</span><span>Moto</span><span>PFN</span><span>Esperado</span><span>Conteo</span><span>Diferencia</span></div>';
   ENV_FILAS.forEach(function(r,j){
     if(r.g) h+='<div class="ev-gp">'+r.g+'</div>';
-    var ini=m.b>=0&&m.tot[m.b]?m.tot[m.b][j]:null, esp=_evEsp(s,j), c=m.tot[s]?m.tot[s][j]:null, d=_evDif(s,j), mm=m.M[s][j], mr=r.k==='vac'?m.MR[s][r.tam]:0;
+    var ini=m.b>=0&&m.tot[m.b]?m.tot[m.b][j]:null, esp=_evEsp(s,j), c=m.tot[s]?m.tot[s][j]:null, d=_evDif(s,j), mm=m.M[s][j], mr=r.k==='vac'?m.MR[s][r.tam]:0, pf=m.pfn[s]?m.pfn[s][j]:0;
     var tipo=r.k==='caja'?'<em class="c">solo se cuenta</em>':r.k==='lle'?'<em class="l">llena</em>':'<em class="v">vacía</em>';
     var inp=function(k,ok,doc){
       return ok?'<input class="inp ev-in" inputmode="numeric" value="'+(mm[k]||'')+'" placeholder="0" oninput="envMovIn('+j+',\''+k+'\',this)" onchange="envMovGuardar('+j+',\''+k+'\',this)">'+(doc?'<small class="ev-doc" title="Viene de un Marcaje">+'+doc+'</small>':''):'<div class="ev-na"></div>';
@@ -180,6 +180,7 @@ function _evTabla(){
       '<div class="q'+(r.k==='lle'?' na':(mm.dev+mm.devD?'':' na'))+'" data-l="DEV">'+(r.k!=='lle'&&mm.dev+mm.devD?'<div class="ev-c">+'+(mm.dev+mm.devD)+'</div>':'<div class="ev-na"></div>')+'</div>'+
       '<div class="q'+(r.k==='vac'?' na':'')+'" data-l="Venta">'+inp('ven',r.k!=='vac',mm.venD)+'</div>'+
       '<div class="ev-c q'+(r.k==='vac'?'':' na')+'" data-l="Moto" title="Botellas que devolvieron los motorizados">'+(r.k==='vac'?(mr?'+'+mr:'—'):'')+'</div>'+
+      '<div class="ev-c mut q" data-l="PFN" title="PFN del último conteo (se mantiene hasta que se edite)">'+(pf?pf:'—')+'</div>'+
       '<div class="ev-c q" data-l="Esperado">'+(esp==null?'—':esp)+'</div>'+
       '<div class="ev-c q" data-l="Conteo"><b>'+(c==null?'—':c)+'</b></div>'+
       '<div class="q" data-l="Dif."><div class="ev-s '+(d==null?'':_evCls(d))+'">'+(d==null?'—':_evSg(d))+'</div></div>'+
