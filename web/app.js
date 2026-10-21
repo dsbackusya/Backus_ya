@@ -5352,7 +5352,7 @@ function _backCapa(){
 }
 function _backCerrarModal(el){
   var f = {'modal-confirm':'_confirmCancel','modal-input':'_modalInputCancel','modal-cancelar':'closeModalCancelar',
-    'modal-anular-canc':'anularCancCerrar','modal-mov':'cerrarModalMov','modal-reemplazar-sku':'cerrarModalRSKU',
+    'modal-anular-canc':'anularCancCerrar','modal-mov':'cerrarModalMov',
     'modal-editar-sku-fila':'cerrarModalESKU'}[el.id];
   if(f && typeof window[f]==='function') window[f]();
   if(el.style.display!=='none') el.style.display='none';
@@ -6850,7 +6850,7 @@ function validarRecepcionOC(){
     .validarRecepcionOC(S.token);
 }
 
-/* ── Catálogo MAESTRO en memoria (Validación + Reemplazar SKU) ── */
+/* ── Catálogo MAESTRO en memoria (Validación) ── */
 var _MAESTRO_LOCAL = null; // caché en memoria del catálogo MAESTRO propio de la tienda
 
 function _cargarMaestro(cb){
@@ -6865,214 +6865,9 @@ function _cargarMaestro(cb){
 }
 
 /* ══════════════════════════════════════
-   REEMPLAZAR SKU — SALIDAS
+   EDITAR SKU POR FILA — SALIDAS
 ══════════════════════════════════════ */
-var _rskuOrigenSKU='', _rskuDestSKU='', _rskuDestDesc='';
 var _eskuRow=null, _eskuNuevoSKU='', _eskuNuevaDesc='';
-
-// ── Modal Reemplazar masivo ──
-function abrirReemplazarSKU(){
-  _rskuOrigenSKU=''; _rskuDestSKU=''; _rskuDestDesc='';
-  ['rsku-origen','rsku-destino'].forEach(function(id){ document.getElementById(id).value=''; });
-  ['rsku-origen-sel','rsku-destino-sel','rsku-preview','rsku-sel-panel','rsku-confirm-btn'].forEach(function(id){
-    document.getElementById(id).style.display='none';
-  });
-  document.getElementById('rsku-preview-btn').style.display='';
-  document.getElementById('rsku-err').textContent='';
-  var m=document.getElementById('modal-reemplazar-sku');
-  m.style.display='flex';
-  // Cargar MAESTRO y cuando esté listo re-disparar búsqueda si hay texto
-  if(!_MAESTRO_LOCAL){
-    _cargarMaestro(function(){
-      ['origen','destino'].forEach(function(t){
-        var inp=document.getElementById('rsku-'+t);
-        if(inp&&inp.value.trim()) buscarRSKU(t);
-      });
-    });
-  }
-  setTimeout(function(){ document.getElementById('rsku-origen').focus(); },200);
-}
-
-function cerrarModalRSKU(){
-  document.getElementById('modal-reemplazar-sku').style.display='none';
-}
-
-function buscarRSKU(tipo){
-  var inputId='rsku-'+tipo;
-  var resId='rsku-'+tipo+'-results';
-  var q=(document.getElementById(inputId).value||'').trim().toLowerCase();
-  var res=document.getElementById(resId);
-  if(!q){ res.style.display='none'; return; }
-
-  function doSearch(){
-    var skuSet={};
-    (DATA.salidas||[]).forEach(function(r){
-      if(!skuSet[r.sku]) skuSet[r.sku]={sku:r.sku, desc:r.desc};
-    });
-    var matches=Object.values(skuSet).filter(function(p){
-      return p.sku.toLowerCase().includes(q)||p.desc.toLowerCase().includes(q);
-    });
-    if(_MAESTRO_LOCAL){
-      dbg('[RSKU] MAESTRO cargado, items:', _MAESTRO_LOCAL.length, '| query:', q);
-      var sample=_MAESTRO_LOCAL.find(function(p){ return p.lovis&&p.lovis.includes('10000235'); });
-      dbg('[RSKU] muestra 10000235:', sample);
-      _MAESTRO_LOCAL.filter(function(p){
-        return !skuSet[p.lovis]&&(p.lovis.toLowerCase().includes(q)||p.desc.toLowerCase().includes(q));
-      }).forEach(function(p){ matches.push({sku:p.lovis,desc:p.desc}); });
-    } else {
-      dbg('[RSKU] MAESTRO no cargado aún');
-    }
-    matches=matches.slice(0,25);
-    if(!matches.length){
-      res.innerHTML='<div style="padding:10px;font-size:12px;color:var(--text3)">Sin resultados para "'+esc(q)+'"</div>';
-      res.style.display='block'; return;
-    }
-    res.innerHTML=matches.map(function(p,i){
-      return '<div class="bees-opt" id="rsku-opt-'+tipo+'-'+i+'" style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">'
-        +'<span style="font-family:monospace;font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:3px;margin-right:6px">'+esc(p.sku)+'</span>'
-        +esc(p.desc)+'</div>';
-    }).join('');
-    res.querySelectorAll('.bees-opt').forEach(function(el,i){
-      el.addEventListener('click',function(){ seleccionarRSKU(tipo, matches[i]); });
-    });
-    res.style.display='block';
-  }
-
-  if(_MAESTRO_LOCAL){ doSearch(); }
-  else {
-    res.innerHTML=LDm('Cargando catálogo');
-    res.style.display='block';
-    _cargarMaestro(doSearch);
-  }
-}
-
-function seleccionarRSKU(tipo, p){
-  document.getElementById('rsku-'+tipo).value=p.desc||p.sku;
-  document.getElementById('rsku-'+tipo+'-results').style.display='none';
-  document.getElementById('rsku-'+tipo+'-val').textContent=p.sku;
-  var descEl=document.getElementById('rsku-'+tipo+'-desc');
-  if(descEl) descEl.textContent=p.desc||'—';
-  document.getElementById('rsku-'+tipo+'-sel').style.display='block';
-  if(tipo==='origen') _rskuOrigenSKU=p.sku;
-  else { _rskuDestSKU=p.sku; _rskuDestDesc=p.desc; }
-  // Resetear preview al cambiar selección
-  document.getElementById('rsku-preview').style.display='none';
-  document.getElementById('rsku-confirm-btn').style.display='none';
-  document.getElementById('rsku-preview-btn').style.display='';
-}
-
-var _rskuAfectados=[]; // cache de filas afectadas para el panel
-
-function previewReemplazarSKU(){
-  var err=document.getElementById('rsku-err');
-
-  // Aceptar SKU escrito manualmente si no se seleccionó del dropdown
-  if(!_rskuOrigenSKU){
-    var origenInput=(document.getElementById('rsku-origen').value||'').trim();
-    var matchOrigen=(DATA.salidas||[]).find(function(r){ return r.sku===origenInput; });
-    if(matchOrigen){ _rskuOrigenSKU=matchOrigen.sku; }
-    else { err.textContent='Seleccioná el SKU origen del listado'; return; }
-  }
-  if(!_rskuDestSKU){
-    var destInput=(document.getElementById('rsku-destino').value||'').trim();
-    if(!destInput){ err.textContent='Ingresá o seleccioná el SKU nuevo'; return; }
-    var matchDest=null;
-    if(_MAESTRO_LOCAL) matchDest=_MAESTRO_LOCAL.find(function(p){ return p.lovis===destInput; });
-    if(!matchDest) matchDest=(DATA.salidas||[]).map(function(r){ return {lovis:r.sku,desc:r.desc}; }).find(function(p){ return p.lovis===destInput; });
-    if(matchDest){ _rskuDestSKU=matchDest.lovis; _rskuDestDesc=matchDest.desc||destInput; }
-    else { _rskuDestSKU=destInput; _rskuDestDesc=destInput; }
-  }
-
-  if(_rskuOrigenSKU===_rskuDestSKU){ err.textContent='El SKU origen y destino son iguales'; return; }
-  err.textContent='';
-
-  _rskuAfectados=(DATA.salidas||[]).filter(function(r){ return r.sku===_rskuOrigenSKU; });
-  var prev=document.getElementById('rsku-preview');
-  var panel=document.getElementById('rsku-sel-panel');
-
-  if(!_rskuAfectados.length){
-    prev.innerHTML='<span style="color:var(--text3)">No hay registros con SKU <strong>'+esc(_rskuOrigenSKU)+'</strong> en las salidas cargadas.</span>';
-    prev.style.display='block';
-    panel.style.display='none';
-    document.getElementById('rsku-confirm-btn').style.display='none';
-    return;
-  }
-
-  prev.style.display='none';
-  panel.style.display='flex';
-  document.getElementById('rsku-preview-btn').style.display='none';
-
-  // Construir lista de filas con checkbox
-  var list=document.getElementById('rsku-sel-list');
-  list.innerHTML='';
-  _rskuAfectados.forEach(function(r,i){
-    var und=Number(r.unidad)||0;
-    var nro=r.nroPedido||'—';
-    var fecha=r.fecha||'';
-    var row=document.createElement('label');
-    row.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;';
-    row.innerHTML=
-      '<input type="checkbox" data-row="'+r._row+'" data-und="'+und+'" checked '+
-        'onchange="rskuUpdateSel()" '+
-        'style="width:14px;height:14px;flex-shrink:0;cursor:pointer;accent-color:var(--accent)"/>'+
-      '<span style="flex:1;min-width:0">'+
-        '<span style="font-weight:600;color:var(--text)">'+esc(nro)+'</span>'+
-        '<span style="color:var(--text3);font-size:11px;margin-left:6px">'+esc(fecha)+'</span>'+
-      '</span>'+
-      '<span style="color:var(--accent);font-weight:700;white-space:nowrap;font-size:12px">'+und+' und</span>';
-    list.appendChild(row);
-  });
-
-  // Marcar "seleccionar todos" como checked
-  var selAll=document.getElementById('rsku-sel-all');
-  selAll.checked=true;
-  selAll.indeterminate=false;
-
-  rskuUpdateSel();
-}
-
-function rskuToggleAll(checked){
-  document.querySelectorAll('#rsku-sel-list input[type=checkbox]').forEach(function(cb){ cb.checked=checked; });
-  rskuUpdateSel();
-}
-
-function rskuUpdateSel(){
-  var cbs=document.querySelectorAll('#rsku-sel-list input[type=checkbox]');
-  var checkedCbs=Array.prototype.filter.call(cbs,function(cb){ return cb.checked; });
-  var totalUnd=checkedCbs.reduce(function(acc,cb){ return acc+(Number(cb.dataset.und)||0); },0);
-  document.getElementById('rsku-sel-count').textContent=checkedCbs.length;
-  document.getElementById('rsku-sel-units').textContent=totalUnd;
-  // Estado del "seleccionar todos"
-  var selAll=document.getElementById('rsku-sel-all');
-  if(checkedCbs.length===0){ selAll.checked=false; selAll.indeterminate=false; }
-  else if(checkedCbs.length===cbs.length){ selAll.checked=true; selAll.indeterminate=false; }
-  else { selAll.checked=false; selAll.indeterminate=true; }
-  // Mostrar/ocultar botón confirmar
-  document.getElementById('rsku-confirm-btn').style.display=checkedCbs.length>0?'':'none';
-}
-
-function confirmarReemplazarSKU(){
-  // Obtener las _row seleccionadas
-  var cbs=document.querySelectorAll('#rsku-sel-list input[type=checkbox]:checked');
-  var rowsSeleccionadas=Array.prototype.map.call(cbs,function(cb){ return Number(cb.dataset.row); });
-  if(!rowsSeleccionadas.length){ document.getElementById('rsku-err').textContent='Seleccioná al menos un pedido'; return; }
-
-  var btn=document.getElementById('rsku-confirm-btn');
-  btn.disabled=true; btn.textContent='Reemplazando...';
-  google.script.run
-    .withSuccessHandler(function(r){
-      btn.disabled=false; btn.textContent='Reemplazar seleccionados';
-      if(!r||!r.ok){ document.getElementById('rsku-err').textContent=r?r.error:'Error al reemplazar'; return; }
-      cerrarModalRSKU();
-      showToast('SKU reemplazado en '+r.count+' registro'+(r.count!==1?'s':''),'ok');
-      PAGE_LOADED['salidas']=false; reloadPage('salidas');
-    })
-    .withFailureHandler(function(e){
-      btn.disabled=false; btn.textContent='Reemplazar seleccionados';
-      document.getElementById('rsku-err').textContent=e.message;
-    })
-    .reemplazarSKUEnFilas(S.token, rowsSeleccionadas, _rskuDestSKU, _rskuDestDesc);
-}
 
 // ── Modal Editar SKU por fila ──
 function abrirEditarSkuFila(rowNum){

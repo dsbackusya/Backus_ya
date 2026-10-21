@@ -456,18 +456,6 @@
     return { ok: true };
   });
 
-  API.reemplazarSKUEnFilas = guard(async function (p, rowNumbers, skuDestino) {
-    if (!rowNumbers || !rowNumbers.length) return { ok: true, count: 0 };
-    var ids = rowNumbers.map(Number);
-    var total = 0;
-    for (var i = 0; i < ids.length; i += 200) {
-      var r = await sb.from('salidas').update({ sku: str(skuDestino) }).in('id', ids.slice(i, i + 200)).select('id');
-      if (r.error) throw r.error;
-      total += r.data.length;
-    }
-    return { ok: true, count: total };
-  });
-
   /* ── CANCELADOS ── */
   // Solo trae el rango pedido (por defecto, hoy)
   API.getCancelados = guard(async function (p, force, rango) {

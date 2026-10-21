@@ -2063,13 +2063,11 @@ select.filter-select option{ background:var(--surface); color:var(--text); }
 /* Modales: backdrop más oscuro + cuerpo dark */
 #modal-cancelar,
 #modal-confirm,
-#modal-reemplazar-sku,
 #modal-editar-sku-fila{
   background:rgba(0,0,0,.65) !important;
 }
 #modal-cancelar > div,
 #modal-confirm > div,
-#modal-reemplazar-sku > div,
 #modal-editar-sku-fila > div{
   background:var(--surface) !important;
   border-color:var(--border) !important;
@@ -2217,7 +2215,6 @@ select.filter-select option{ background:var(--surface); color:var(--text); }
   /* Modal genérico (confirm, cancelar, etc.): ancho responsive */
   #modal-confirm > div,
   #modal-cancelar > div,
-  #modal-reemplazar-sku > div,
   #modal-editar-sku-fila > div{
     width:min(420px, 94vw) !important;
     max-width:94vw !important;

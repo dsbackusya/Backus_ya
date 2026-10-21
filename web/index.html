@@ -610,67 +610,6 @@ window.addEventListener('load', function(){
 </div>
 
 <!-- ══ MODAL CONFIRMACIÓN GENÉRICO — reemplaza confirm() nativo ══ -->
-<!-- ══ MODAL: REEMPLAZAR SKU MASIVO ══ -->
-<div id="modal-reemplazar-sku" style="display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(3px)">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);width:min(520px,96vw);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden">
-    <div style="padding:20px 24px 0;border-bottom:1px solid var(--border);padding-bottom:16px">
-      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)"><svg class="ico-s" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>Reemplazar SKU</div>
-      <div style="font-size:12px;color:var(--text3);margin-top:2px">Busca todos los registros con el SKU origen y los reemplaza por el nuevo</div>
-    </div>
-    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px">
-      <!-- SKU Origen -->
-      <div class="form-field" style="position:relative">
-        <div class="form-label">SKU origen <span class="req">*</span></div>
-        <input class="inp" id="rsku-origen" type="text" placeholder="SKU o descripción actual..."
-          autocomplete="off" oninput="buscarRSKU('origen')" onfocus="buscarRSKU('origen')"/>
-        <div id="rsku-origen-results" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-lg);max-height:180px;overflow-y:auto"></div>
-        <div id="rsku-origen-sel" style="display:none;margin-top:4px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:13px">
-          <div style="font-size:11px;color:var(--text3)">Producto origen</div>
-          <div style="font-weight:600;color:var(--text);margin-top:1px" id="rsku-origen-desc"></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:1px">SKU: <strong id="rsku-origen-val" style="color:var(--accent);font-family:monospace"></strong></div>
-        </div>
-      </div>
-      <!-- SKU Destino -->
-      <div class="form-field" style="position:relative">
-        <div class="form-label">SKU nuevo <span class="req">*</span></div>
-        <input class="inp" id="rsku-destino" type="text" placeholder="SKU o descripción nuevo..."
-          autocomplete="off" oninput="buscarRSKU('destino')" onfocus="buscarRSKU('destino')"/>
-        <div id="rsku-destino-results" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-lg);max-height:180px;overflow-y:auto"></div>
-        <div id="rsku-destino-sel" style="display:none;margin-top:4px;background:var(--surface2);border:1px solid var(--ok-border);border-radius:var(--r);padding:8px 12px;font-size:13px">
-          <div style="font-size:11px;color:var(--text3)">Producto nuevo</div>
-          <div style="font-weight:600;color:var(--text);margin-top:1px" id="rsku-destino-desc"></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:1px">SKU: <strong id="rsku-destino-val" style="color:var(--accent);font-family:monospace"></strong></div>
-        </div>
-      </div>
-      <!-- Preview simple (no hay resultados) -->
-      <div id="rsku-preview" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;font-size:13px;color:var(--text2)"></div>
-      <!-- Panel de selección de pedidos -->
-      <div id="rsku-sel-panel" style="display:none;flex-direction:column;gap:8px">
-        <!-- Cabecera con seleccionar todo + contador -->
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r)">
-          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);user-select:none">
-            <input type="checkbox" id="rsku-sel-all" onchange="rskuToggleAll(this.checked)"
-              style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent)"/>
-            Seleccionar todos
-          </label>
-          <div style="font-size:12px;color:var(--text3);text-align:right">
-            <span id="rsku-sel-count" style="font-weight:700;color:var(--accent)">0</span> pedido(s) ·
-            <span id="rsku-sel-units" style="font-weight:700;color:var(--accent)">0</span> unidades afectadas
-          </div>
-        </div>
-        <!-- Lista scrolleable de pedidos -->
-        <div id="rsku-sel-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)"></div>
-      </div>
-      <div id="rsku-err" style="color:var(--danger);font-size:12px;min-height:14px"></div>
-    </div>
-    <div style="padding:12px 24px 20px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--border)">
-      <button class="btn btn-ghost btn-sm" onclick="cerrarModalRSKU()">Cancelar</button>
-      <button class="btn btn-ghost btn-sm" id="rsku-preview-btn" onclick="previewReemplazarSKU()">Ver afectados</button>
-      <button class="btn btn-primary btn-sm" id="rsku-confirm-btn" style="display:none" onclick="confirmarReemplazarSKU()">Reemplazar seleccionados</button>
-    </div>
-  </div>
-</div>
-
 <!-- ══ MODAL: EDITAR SKU DE UNA FILA ══ -->
 <div id="modal-editar-sku-fila" style="display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(3px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);width:min(460px,96vw);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden">
