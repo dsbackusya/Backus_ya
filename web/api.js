@@ -1017,6 +1017,15 @@
     if (r.error) throw r.error;
     return { ok: true, fila: mapEnvMoto(r.data) };
   });
+  // Cambia el nombre de un motorizado en todos sus movimientos (si el nuevo ya existe, se juntan)
+  API.renombrarEnvMoto = guard(async function (p, viejo, nuevo) {
+    var sede = exigirSede(p, null), n = str(nuevo);
+    if (!n) return { ok: false, error: 'Escribe el nombre' };
+    var r = await sb.from('envases_moto').update({ motorizado: n }).eq('sede_id', sede).eq('motorizado', str(viejo)).select('id');
+    if (r.error) throw r.error;
+    if (!r.data.length) return { ok: false, error: 'No se encontró el motorizado' };
+    return { ok: true };
+  });
   API.eliminarEnvMoto = guard(async function (p, id) {
     var r = await sb.from('envases_moto').delete().eq('id', Number(id)).select('id');
     if (r.error) throw r.error;

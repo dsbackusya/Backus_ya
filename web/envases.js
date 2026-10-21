@@ -440,8 +440,20 @@ function _evMotPinta(){
       return '<div class="evm-c"><div class="evm-h"><div class="evm-av">'+esc(m.n.split(' ').map(function(x){ return x[0]; }).slice(0,2).join('').toUpperCase())+'</div><div class="evm-n"><b>'+esc(m.n)+'</b><small>'+m.led.length+' movimientos</small></div><div class="evm-bal">'+chips+'</div></div>'+
         '<div class="evm-act"><button class="btn btn-primary" '+(deb.length?'':'disabled style="opacity:.4"')+' onclick="envMotoPanel(\''+nq+'\',\'dev\')">Devolvió botellas</button>'+
         '<button class="btn btn-ghost" onclick="envMotoPanel(\''+nq+'\',\'debe\')">+ Debe más</button>'+
-        '<button class="btn btn-ghost" onclick="ENV.mHist[\''+nq+'\']=!ENV.mHist[\''+nq+'\'];_evMotPinta()">'+(ENV.mHist[m.n]?'Ocultar historial':'Ver historial')+'</button></div>'+panel+hist+'</div>';
+        '<button class="btn btn-ghost" onclick="ENV.mHist[\''+nq+'\']=!ENV.mHist[\''+nq+'\'];_evMotPinta()">'+(ENV.mHist[m.n]?'Ocultar historial':'Ver historial')+'</button>'+
+        '<button class="btn btn-ghost" onclick="envMotoRenPanel(\''+nq+'\')">Cambiar nombre</button></div>'+
+        (ENV.mRen&&ENV.mRen[m.n]?'<div class="evm-pn"><div class="r"><div><label>Nuevo nombre</label><input class="inp" id="evr-'+kk+'" value="'+esc(m.n)+'" autocomplete="off"></div><div></div><button class="btn btn-primary" onclick="envMotoRenombrar(\''+nq+'\')">Guardar nombre</button><div class="hint">Cambia el nombre en todos sus movimientos. Si escribes el nombre de otro motorizado, se juntan sus saldos.</div></div></div>':'')+
+        panel+hist+'</div>';
     }).join(''):'<div class="evm-empty">'+(lista.length?'Nadie debe botellas. Todos los motorizados están al día.':'Aún no hay motorizados. Agrega el primero con "+ Nuevo pendiente".')+'</div>');
+}
+function envMotoRenPanel(n){ ENV.mRen=ENV.mRen||{}; ENV.mRen[n]=!ENV.mRen[n]; _evMotPinta(); }
+function envMotoRenombrar(n){
+  var nuevo=document.getElementById('evr-'+_evK(n)).value.trim(); if(!nuevo){ document.getElementById('evr-'+_evK(n)).focus(); return; }
+  var ex=_evMotoLista().filter(function(x){ return x.n.toLowerCase()===nuevo.toLowerCase()&&x.n!==n; })[0]; if(ex) nuevo=ex.n;
+  google.script.run.withSuccessHandler(function(r){
+    if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo cambiar el nombre','err'); return; }
+    ENV.d.moto.forEach(function(x){ if(x.motorizado===n) x.motorizado=nuevo; }); ENV.mRen[n]=false; _evCalc(); _evRender(); showToast('Nombre cambiado','ok');
+  }).withFailureHandler(function(e){ showToast(e.message,'err'); }).renombrarEnvMoto(S.token,n,nuevo);
 }
 function envMotoPanel(n,tp){ ENV.mAb[n]=ENV.mAb[n]===tp?'':tp; _evMotPinta(); }
 function envMotoSel(n,t){
