@@ -17,15 +17,15 @@ function _salVivoCambio(c){
   if(!hubo) return; // p. ej. borrados de otra sede o de filas que no están cargadas
   c.upserts.forEach(function(r){ if(!porId[r._row]) _salFlash[r._row]=true; porId[r._row]=r; });
   DATA.salidas=Object.keys(porId).map(function(k){return porId[k];}).sort(function(a,b){return a._row-b._row;});
-  filterSalidas();
-  setTimeout(function(){ _salFlash={}; filterSalidas(); }, 3500);
+  _SAL.mantener=true; filterSalidas();
+  setTimeout(function(){ _salFlash={}; _SAL.mantener=true; filterSalidas(); }, 3500);
 }
 // Tras recuperar la conexión, vuelve a leer el rango visible sin tocar la pantalla
 function _salVivoResync(){
   _sbSalidasRefrescar();
   if(!S||!S.token||!document.getElementById('salidas-tbody')) return;
   google.script.run.withSuccessHandler(function(r){
-    if(r&&r.ok&&document.getElementById('salidas-tbody')){ DATA.salidas=r.data; filterSalidas(); }
+    if(r&&r.ok&&document.getElementById('salidas-tbody')){ DATA.salidas=r.data; _SAL.mantener=true; filterSalidas(); }
   }).getSalidas(S.token, true, window.sal_rango||null);
 }
 
@@ -248,30 +248,58 @@ function _filterSalidas(){
 
   if(el=document.getElementById('sal-count')) el.textContent = filtered.length + ' registros';
 
-  var tbody = filtered.map(function(r){
-    var cancelado=r.cancelado||r.estado==='cancelado'||r.estado==='CANCELADO';
-    var trStyle=cancelado?'opacity:0.45;':'';
-    var descCell=cancelado
-      ? '<td class="td-desc" title="'+esc(r.desc)+'"><span style="text-decoration:line-through">'+esc(r.desc)+'</span> <span style="background:var(--danger-bg,#fee2e2);color:var(--danger,#dc2626);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;vertical-align:middle">cancelado</span></td>'
-      : '<td class="td-desc" title="'+esc(r.desc)+'">'+esc(r.desc)+'</td>';
-    return '<tr'+(_salFlash[r._row]?' class="flash-new"':'')+' style="'+trStyle+'">'+
-      '<td class="mono" style="font-size:12px">'+esc(r.fecha)+'</td>'+
-      '<td class="mono col-hide-mobile" style="font-size:12px;color:var(--text3)">'+esc(r.hora)+'</td>'+
-      '<td class="pedido-link">'+(r.nroPedido?'<span class="sal-ped">'+esc(r.nroPedido)+'</span>':'<span style="color:var(--text4)">—</span>')+'</td>'+
-      '<td class="mono col-hide-mobile">'+esc(r.sku)+'</td>'+
-      descCell+
-      '<td class="col-hide-mobile" style="font-size:12px">'+(r.marca?'<span class="brand-pill">'+esc(r.marca)+'</span>':'<span style="color:var(--text4)">—</span>')+'</td>'+
-      '<td class="r col-hide-mobile">'+fmt(r.pack)+'</td>'+
-      '<td class="r" style="font-weight:600">'+fmt(r.unidad)+'</td>'+
-      '<td class="c col-hide-mobile" style="font-size:11px;color:var(--text3);white-space:nowrap">'+esc(r.motorizado||'—')+'</td>'+
-      '<td class="r col-hide-mobile" style="font-size:12px">'+esc(r.envases||'—')+'</td>'+
-      '<td class="c col-hide-mobile">'+_salEstadoBadge(r)+'</td>'+
-      '<td class="c col-hide-mobile" style="white-space:nowrap">'+_salRevisionCell(r)+'</td>'+
-      '<td class="c col-hide-mobile" style="white-space:nowrap;width:110px;padding-right:16px">'+_salMenuContextual(r)+'</td>'+
-    '</tr>';
-  }).join('');
+  // Rendimiento: se dibujan de a 60 filas y, al bajar, se agregan las siguientes (con miles de filas la tabla entera tardaba segundos).
+  _SAL.lista=filtered;
+  _SAL.n=0;
+  var hasta=_SAL.mantener?Math.max(_SAL.lote,_SAL.hasta||0):_SAL.lote;
+  _SAL.mantener=false;
   var t = document.getElementById('salidas-tbody');
-  if(t) t.innerHTML = tbody || '<tr><td colspan="13" style="text-align:center;color:var(--text3);padding:40px">Sin registros</td></tr>';
+  if(!t) return;
+  if(!filtered.length){ t.innerHTML='<tr><td colspan="13" style="text-align:center;color:var(--text3);padding:40px">Sin registros</td></tr>'; _salVigilar(null); return; }
+  t.innerHTML='';
+  _salMas(hasta);
+}
+
+var _SAL={ lista:[], n:0, lote:60, hasta:0, mantener:false, obs:null };
+function _salFila(r){
+  var cancelado=r.cancelado||r.estado==='cancelado'||r.estado==='CANCELADO';
+  var trStyle=cancelado?'opacity:0.45;':'';
+  var descCell=cancelado
+    ? '<td class="td-desc" title="'+esc(r.desc)+'"><span style="text-decoration:line-through">'+esc(r.desc)+'</span> <span style="background:var(--danger-bg,#fee2e2);color:var(--danger,#dc2626);font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;vertical-align:middle">cancelado</span></td>'
+    : '<td class="td-desc" title="'+esc(r.desc)+'">'+esc(r.desc)+'</td>';
+  return '<tr'+(_salFlash[r._row]?' class="flash-new"':'')+' style="'+trStyle+'">'+
+    '<td class="mono" style="font-size:12px">'+esc(r.fecha)+'</td>'+
+    '<td class="mono col-hide-mobile" style="font-size:12px;color:var(--text3)">'+esc(r.hora)+'</td>'+
+    '<td class="pedido-link">'+(r.nroPedido?'<span class="sal-ped">'+esc(r.nroPedido)+'</span>':'<span style="color:var(--text4)">—</span>')+'</td>'+
+    '<td class="mono col-hide-mobile">'+esc(r.sku)+'</td>'+
+    descCell+
+    '<td class="col-hide-mobile" style="font-size:12px">'+(r.marca?'<span class="brand-pill">'+esc(r.marca)+'</span>':'<span style="color:var(--text4)">—</span>')+'</td>'+
+    '<td class="r col-hide-mobile">'+fmt(r.pack)+'</td>'+
+    '<td class="r" style="font-weight:600">'+fmt(r.unidad)+'</td>'+
+    '<td class="c col-hide-mobile" style="font-size:11px;color:var(--text3);white-space:nowrap">'+esc(r.motorizado||'—')+'</td>'+
+    '<td class="r col-hide-mobile" style="font-size:12px">'+esc(r.envases||'—')+'</td>'+
+    '<td class="c col-hide-mobile">'+_salEstadoBadge(r)+'</td>'+
+    '<td class="c col-hide-mobile" style="white-space:nowrap">'+_salRevisionCell(r)+'</td>'+
+    '<td class="c col-hide-mobile" style="white-space:nowrap;width:110px;padding-right:16px">'+_salMenuContextual(r)+'</td>'+
+  '</tr>';
+}
+// Dibuja filas hasta llegar a `hasta` (o un lote más si no se indica) y deja una marca al final para seguir al bajar.
+function _salMas(hasta){
+  var t=document.getElementById('salidas-tbody'); if(!t) return;
+  var marca=document.getElementById('sal-mas'); if(marca) marca.remove();
+  var desde=_SAL.n, tope=Math.min(hasta||desde+_SAL.lote,_SAL.lista.length), h='', i;
+  for(i=desde;i<tope;i++) h+=_salFila(_SAL.lista[i]);
+  _SAL.n=tope; _SAL.hasta=tope;
+  if(tope<_SAL.lista.length) h+='<tr id="sal-mas"><td colspan="13" style="text-align:center;color:var(--text3);padding:14px;font-size:12px">Mostrando '+tope+' de '+_SAL.lista.length+'…</td></tr>';
+  t.insertAdjacentHTML('beforeend',h);
+  _salVigilar(document.getElementById('sal-mas'));
+}
+function _salVigilar(marca){
+  if(_SAL.obs){ _SAL.obs.disconnect(); _SAL.obs=null; }
+  if(!marca) return;
+  if(!('IntersectionObserver' in window)){ while(_SAL.n<_SAL.lista.length) _salMas(); return; }
+  _SAL.obs=new IntersectionObserver(function(es){ if(es[0].isIntersecting) _salMas(); },{rootMargin:'600px 0px'});
+  _SAL.obs.observe(marca);
 }
 
 function salSetEstado(k){ _SAL_EST=(_SAL_EST===k?'':k); _filterSalidas(); }
