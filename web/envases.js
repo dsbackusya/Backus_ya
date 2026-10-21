@@ -1,8 +1,8 @@
 /* ══════════════════════════════════════════════════════════════
    ENVASES — control semanal por tienda
-   · Conteo por sector (Palet, Cámara) y PFN, que se mantiene todos los días hasta que se edita.
+   · Conteo por sector (Palet, Cámara) más el PFN, que se mantiene todos los días hasta que se edita.
    · Movimientos del día: ENT y Venta en las botellas llenas, DEV en las vacías (Marcaje suma solo).
-   · Motorizados: lo que deben y lo que devuelven; cada devolución suma a las vacías esperadas.
+   · Motorizados: lo que deben y lo que devuelven; lo que deben cuenta como parte del conteo de vacías.
    El conteo de un día se hace al empezar el día y se compara con los movimientos de los días anteriores;
    el primer conteo de la semana (el lunes) es el inicial.
    ══════════════════════════════════════════════════════════════ */
@@ -100,7 +100,14 @@ function _evCalc(){
   });
   var sd=Object.keys(snaps).sort();
   var pfn=days.map(function(dia){ var f=null; sd.forEach(function(x){ if(x<=dia) f=x; }); return f?snaps[f].slice():_evCeros(); });
-  var tot=days.map(function(dia,di){ return C[di].has ? ENV_FILAS.map(function(r,j){ return C[di].pal[j]+C[di].cam[j]; }) : null; });  // el PFN se muestra aparte: ya está dentro del total contado
+  // lo que los motorizados deben al cierre de cada día (botellas vacías y cajas): cuenta como parte del conteo
+  var PEND=days.map(function(dia){
+    var bal={}, o=ENV_FILAS.map(function(){ return 0; });
+    d.moto.forEach(function(x){ if(x.fecha>dia) return; var k=x.motorizado.toLowerCase()+'|'+x.tamano+'|'+(x.caja?1:0); bal[k]=(bal[k]||0)+(x.tipo==='debe'?x.cantidad:-x.cantidad); });
+    d.moto.forEach(function(x){ var k=x.motorizado.toLowerCase()+'|'+x.tamano+'|'+(x.caja?1:0); if(bal[k]===undefined) return; var j=_evFilaIdx(x.tamano,x.caja?'caja':'vac'); if(j>=0&&bal[k]>0) o[j]+=bal[k]; delete bal[k]; });
+    return o;
+  });
+  var tot=days.map(function(dia,di){ return C[di].has ? ENV_FILAS.map(function(r,j){ return C[di].pal[j]+C[di].cam[j]+pfn[di][j]+PEND[di][j]; }) : null; });  // total = Palet + Cámara + PFN + lo que deben los motorizados (igual que el Excel)
   var M=days.map(function(){ return ENV_FILAS.map(function(){ return { ent:0,entD:0,dev:0,devD:0,ven:0,venD:0 }; }); });
   d.mov.forEach(function(m){
     var di=days.indexOf(m.fecha); if(di<0||!ENV_MULT[m.tamano]) return;
@@ -112,14 +119,11 @@ function _evCalc(){
     // las cajas que vienen en un Marcaje (packs) entran o salen junto con las botellas
     if(m.packs&&(m.tipo==='entrada'||m.tipo==='devolucion')){ j=_evFilaIdx(m.tamano,'caja'); if(j>=0) M[di][j][(m.tipo==='entrada'?'ent':'dev')+f]+=m.packs; }
   });
-  var MR=days.map(function(){ return {630:0,310:0,1000:0}; });
-  var MRc=days.map(function(){ return {630:0,310:0,1000:0}; });
-  d.moto.forEach(function(x){ var di=days.indexOf(x.fecha); if(di>=0&&x.tipo==='dev') (x.caja?MRc:MR)[di][x.tamano]+=x.cantidad; });
   var b=-1, last=-1;
   C.forEach(function(c,di){ if(c.has){ if(b<0) b=di; last=di; } });
-  ENV.m={ days:days, C:C, pfn:pfn, tot:tot, M:M, MR:MR, MRc:MRc, b:b, last:last };
+  ENV.m={ days:days, C:C, pfn:pfn, tot:tot, M:M, PEND:PEND, b:b, last:last };
 }
-function _evMovDia(di,j){ var m=ENV.m.M[di][j]; return m.ent+m.entD-m.dev-m.devD-m.ven-m.venD+(ENV_FILAS[j].k==='vac'?ENV.m.MR[di][ENV_FILAS[j].tam]:ENV_FILAS[j].k==='caja'?ENV.m.MRc[di][ENV_FILAS[j].tam]:0); }
+function _evMovDia(di,j){ var m=ENV.m.M[di][j]; return m.ent+m.entD-m.dev-m.devD-m.ven-m.venD; }
 function _evEsp(di,j){
   var m=ENV.m; if(m.b<0||di<=m.b) return null;
   var s=m.tot[m.b][j]; for(var k=m.b;k<di;k++) s+=_evMovDia(k,j); return s;
@@ -149,7 +153,7 @@ function _evRender(){
           '<div class="ev-card"><div class="ev-k" style="margin-bottom:10px" id="ev-dk"></div><table class="ev-df"><thead><tr><th>Cierre</th><th class="r">Und.</th><th>Estado</th><th class="r">Precio</th></tr></thead><tbody id="ev-df"></tbody><tfoot><tr><td colspan="3">Total</td><td class="r" id="ev-dt"></td></tr></tfoot></table></div>'+
           '<div class="ev-card"><div class="ev-h"><span class="t">Movimientos y conteo</span><span class="s" id="ev-hd"></span><span class="ev-sp"></span><button class="btn btn-primary" id="ev-bc" onclick="envContar()"></button></div>'+
             '<div class="ev-t" id="ev-t"></div>'+
-            '<div class="ev-ft">Esperado = conteo inicial + entradas − devoluciones − ventas + botellas que devolvieron los motorizados, de los días anteriores. Diferencia = conteo del día − esperado. Dentro de una familia, las diferencias de llenas y vacías se compensan. Las cajas plásticas solo se cuentan. ENT y DEV de Marcaje se suman solos (aparecen como + debajo del número).</div></div>'
+            '<div class="ev-ft">Conteo = Palet + Cámara + PFN + lo que deben los motorizados (columnas PFN y Moto). Esperado = conteo inicial + entradas − devoluciones − ventas, de los días anteriores. Diferencia = conteo del día − esperado. Dentro de una familia, las diferencias de llenas y vacías se compensan. ENT y DEV de Marcaje se suman solos (aparecen como + debajo del número).</div></div>'
         : ENV.vista==='pfn' ? '<div id="ev-pfn"></div>' : '<div id="ev-mot"></div>')+
     '</div>';
   if(ENV.vista==='ctl'){ _evDias(); _evTabla(); _evResumen(); }
@@ -173,7 +177,7 @@ function _evTabla(){
   var m=ENV.m, s=ENV.sel, h='<div class="ev-th"><span>Envase</span><span>Inicial</span><span>ENT</span><span>DEV</span><span>Venta</span><span>Moto</span><span>PFN</span><span>Esperado</span><span>Conteo</span><span>Diferencia</span></div>';
   ENV_FILAS.forEach(function(r,j){
     if(r.g) h+='<div class="ev-gp">'+r.g+'</div>';
-    var ini=m.b>=0&&m.tot[m.b]?m.tot[m.b][j]:null, esp=_evEsp(s,j), c=m.tot[s]?m.tot[s][j]:null, d=_evDif(s,j), mm=m.M[s][j], mr=r.k==='vac'?m.MR[s][r.tam]:r.k==='caja'?m.MRc[s][r.tam]:0, pf=m.pfn[s]?m.pfn[s][j]:0;
+    var ini=m.b>=0&&m.tot[m.b]?m.tot[m.b][j]:null, esp=_evEsp(s,j), c=m.tot[s]?m.tot[s][j]:null, d=_evDif(s,j), mm=m.M[s][j], mr=m.PEND[s][j], pf=m.pfn[s]?m.pfn[s][j]:0;
     var tipo=r.k==='caja'?'<em class="c">solo se cuenta</em>':r.k==='lle'?'<em class="l">llena</em>':'<em class="v">vacía</em>';
     var inp=function(k,ok,doc){
       return ok?'<input class="inp ev-in" inputmode="numeric" value="'+(mm[k]||'')+'" placeholder="0" oninput="envMovIn('+j+',\''+k+'\',this)" onchange="envMovGuardar('+j+',\''+k+'\',this)">'+(doc?'<small class="ev-doc" title="Viene de un Marcaje">+'+doc+'</small>':''):'<div class="ev-na"></div>';
@@ -184,7 +188,7 @@ function _evTabla(){
       '<div class="q'+(r.k==='vac'?' na':(mm.ent+mm.entD?'':' na'))+'" data-l="ENT">'+(r.k!=='vac'&&mm.ent+mm.entD?'<div class="ev-c">+'+(mm.ent+mm.entD)+'</div>':'<div class="ev-na"></div>')+'</div>'+
       '<div class="q'+(r.k==='lle'?' na':(mm.dev+mm.devD?'':' na'))+'" data-l="DEV">'+(r.k!=='lle'&&mm.dev+mm.devD?'<div class="ev-c">+'+(mm.dev+mm.devD)+'</div>':'<div class="ev-na"></div>')+'</div>'+
       '<div class="q'+(r.k==='vac'?' na':'')+'" data-l="Venta">'+inp('ven',r.k!=='vac',mm.venD)+'</div>'+
-      '<div class="ev-c q'+(r.k==='lle'?' na':'')+'" data-l="Moto" title="Botellas y cajas que devolvieron los motorizados">'+(r.k!=='lle'?(mr?'+'+mr:'—'):'')+'</div>'+
+      '<div class="ev-c q'+(r.k==='lle'?' na':'')+'" data-l="Moto" title="Botellas y cajas que los motorizados deben: ya están sumadas al conteo">'+(r.k!=='lle'?(mr?mr:'—'):'')+'</div>'+
       '<div class="ev-c mut q" data-l="PFN" title="PFN del último conteo (se mantiene hasta que se edite)">'+(pf?pf:'—')+'</div>'+
       '<div class="ev-c q" data-l="Esperado">'+(esp==null?'—':esp)+'</div>'+
       '<div class="ev-c q" data-l="Conteo"><b>'+(c==null?'—':c)+'</b></div>'+
@@ -348,7 +352,7 @@ function _evcPinta(){
     '<label class="evcf-l">Envase</label>'+_evcSeg([[630,'Botella 630'],[310,'Botella 305'],[1000,'Botella 1000']],f.tam,'envFT')+
     '<div class="evcf-h">Multiplica ×'+n+' · caja plástica asociada: '+ENV_CAJA[f.tam]+'</div>'+
     '<label class="evcf-l">Ubicación</label>'+_evcSeg(ENV_UBIS.map(function(u){ return [u,u]; }),f.ubi,'envFU')+
-    (f.ubi==='PFN'?'<div class="evcf-h">El PFN se mantiene todos los días siguientes hasta que lo cambies. No se suma al conteo: ya está dentro del total.</div>':'')+
+    (f.ubi==='PFN'?'<div class="evcf-h">El PFN se mantiene todos los días siguientes hasta que lo cambies. Se suma al conteo del día (Palet + Cámara + PFN).</div>':'')+
     '<div class="evcf-box"><div class="evcf-bt"><b>Cajas plásticas</b><span>'+ENV_CAJA[f.tam].split(' ')[0]+'</span></div><div class="evcf-g">'+
       '<div><label>Con botellas</label><div class="evcf-auto"><em>AUTO</em><b id="evcf-auto">'+(_evNum(f.packs)||0)+'</b></div></div>'+
       '<div><label>Solas (sin botellas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.solas)+'" oninput="envFIn(\'solas\',this)"></div></div>'+
@@ -421,8 +425,8 @@ function _evMotPinta(){
   el.innerHTML=
     '<div class="evm-kp"><div class="ev-card"><div class="ev-k">Botellas que deben</div><div class="ev-v" style="font-size:28px">'+deben+'</div><div class="ev-n">entre todos los motorizados</div></div>'+
       '<div class="ev-card"><div class="ev-k">Motorizados con saldo</div><div class="ev-v" style="font-size:28px">'+conSaldo+'</div><div class="ev-n">de '+lista.length+' registrados</div></div>'+
-      '<div class="ev-card"><div class="ev-k">Devuelto esta semana</div><div class="ev-v ev-pos" style="font-size:28px">'+devSem+'</div><div class="ev-n">suma a las vacías esperadas</div></div></div>'+
-    '<p class="evm-note">Cuando se vende producto retornable, el motorizado queda debiendo las botellas vacías. Aquí anotas cuántas debe y, cuando las trae, registras la devolución (puede ser parcial). Cada devolución <b>suma a las vacías esperadas</b> del día que registres, y por eso el faltante baja.</p>'+
+      '<div class="ev-card"><div class="ev-k">Devuelto esta semana</div><div class="ev-v ev-pos" style="font-size:28px">'+devSem+'</div><div class="ev-n">ya pasaron al almacén</div></div></div>'+
+    '<p class="evm-note">Cuando se vende producto retornable, el motorizado queda debiendo las botellas vacías. Aquí anotas cuántas debe y, cuando las trae, registras la devolución (puede ser parcial). Lo que deben <b>cuenta como parte del conteo de vacías</b> mientras no lo traigan; cuando lo devuelven pasa a estar físicamente en el almacén y el total no cambia.</p>'+
     '<div class="evm-bar"><button class="btn btn-primary" onclick="ENV.mForm={fecha:\''+_evHoy()+'\'};_evMotPinta();var n=document.getElementById(\'evm-n\');if(n)n.focus()">+ Nuevo pendiente</button><span class="ev-sp"></span>'+
       '<div class="ev-seg"><button class="'+(ENV.mf==='pen'?'on':'')+'" onclick="envMF(\'pen\')">Con saldo</button><button class="'+(ENV.mf==='todos'?'on':'')+'" onclick="envMF(\'todos\')">Todos</button></div></div>'+
     f+
@@ -518,7 +522,7 @@ function exportEnvases(){
     var r=ENV_FILAS[j], out=[r.sku,r.t+' ('+r.n+')', m.b>=0&&m.tot[m.b]?m.tot[m.b][j]:''];
     m.days.forEach(function(d,i){
       var mm=m.M[i][j], c=m.tot[i]?m.tot[i][j]:null, x=_evDif(i,j);
-      out.push(r.k==='vac'?'':mm.ent+mm.entD||'', r.k==='lle'?'':mm.dev+mm.devD||'', r.k==='vac'?'':mm.ven+mm.venD||'', r.k==='vac'?m.MR[i][r.tam]||'':r.k==='caja'?m.MRc[i][r.tam]||'':'', c==null?'':c, x==null?'':x);
+      out.push(r.k==='vac'?'':mm.ent+mm.entD||'', r.k==='lle'?'':mm.dev+mm.devD||'', r.k==='vac'?'':mm.ven+mm.venD||'', r.k==='lle'?'':m.PEND[i][j]||'', c==null?'':c, x==null?'':x);
     });
     return out;
   },'Envases semana','control_envases_'+m.days[0]);
@@ -538,7 +542,7 @@ function _evPfnPinta(){
   });
   el.innerHTML=
     '<div class="ev-card"><div class="ev-h"><span class="t">PFN</span><span class="s">'+(desde?'Vigente desde el '+_evF(desde):'Aún no hay PFN registrado')+' · total '+tot+'</span></div>'+
-    '<p class="evm-note">El PFN que guardes vale desde la fecha que elijas y se mantiene todos los días siguientes hasta que lo vuelvas a editar. No se suma al conteo: el total se ve en la columna PFN de Movimientos y conteo. En las cajas va la cantidad de cajas; en las botellas, la cantidad de botellas.</p>'+
+    '<p class="evm-note">El PFN que guardes vale desde la fecha que elijas y se mantiene todos los días siguientes hasta que lo vuelvas a editar. Se suma al conteo de cada día (Palet + Cámara + PFN + lo que deben los motorizados); lo ves en la columna PFN de Movimientos y conteo. En las cajas va la cantidad de cajas; en las botellas, la cantidad de botellas.</p>'+
     '<div style="display:grid;grid-template-columns:minmax(150px,1.5fr) 80px 110px;gap:6px 12px;align-items:center;max-width:520px">'+
       '<span class="ev-k">Envase</span><span class="ev-k" style="text-align:center">Vigente</span><span class="ev-k" style="text-align:center">Nuevo PFN</span>'+h+'</div>'+
     '<div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px;flex-wrap:wrap"><label class="ev-k">Aplica desde</label>'+
