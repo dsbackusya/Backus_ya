@@ -3431,3 +3431,5 @@ body.evc-abierto{overflow:hidden}
 .evm2-lg{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text3)}
 .evm2-lg i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 @media (max-width:860px){.evm2{grid-template-columns:1fr}.evm2-l{border-right:0;border-bottom:1px solid var(--border)}.evm2-pl,.evm2-no{height:120px}.evm2-cols{gap:2px}.evm2-dv{font-size:10px}}
+
+#modal-confirm-msg{white-space:pre-line}
