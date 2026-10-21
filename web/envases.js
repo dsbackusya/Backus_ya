@@ -345,7 +345,7 @@ function _evcPinta(){
     '<label class="evcf-l">Envase</label>'+_evcSeg([[630,'Botella 630'],[310,'Botella 305'],[1000,'Botella 1000']],f.tam,'envFT')+
     '<div class="evcf-h">Multiplica ×'+n+' · caja plástica asociada: '+ENV_CAJA[f.tam]+'</div>'+
     '<label class="evcf-l">Ubicación</label>'+_evcSeg(ENV_UBIS.map(function(u){ return [u,u]; }),f.ubi,'envFU')+
-    (f.ubi==='PFN'?'<div class="evcf-h">El PFN se mantiene: se suma al conteo de todos los días siguientes hasta que lo cambies.</div>':'')+
+    (f.ubi==='PFN'?'<div class="evcf-h">El PFN se mantiene todos los días siguientes hasta que lo cambies. No se suma al conteo: ya está dentro del total.</div>':'')+
     '<div class="evcf-box"><div class="evcf-bt"><b>Cajas plásticas</b><span>'+ENV_CAJA[f.tam].split(' ')[0]+'</span></div><div class="evcf-g">'+
       '<div><label>Con botellas</label><div class="evcf-auto"><em>AUTO</em><b id="evcf-auto">'+(_evNum(f.packs)||0)+'</b></div></div>'+
       '<div><label>Solas (sin botellas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.solas)+'" oninput="envFIn(\'solas\',this)"></div></div>'+
