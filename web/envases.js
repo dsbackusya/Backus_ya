@@ -175,8 +175,8 @@ function _evTabla(){
     h+='<div class="ev-r" data-j="'+j+'">'+
       '<div class="ev-n1"><b>'+r.t+' '+tipo+'</b><small>'+r.sku+' · '+r.n+'</small></div>'+
       '<div class="ev-c mut q" data-l="Inicial">'+(ini==null?'—':ini)+'</div>'+
-      '<div class="q'+(r.k==='lle'||mm.entD&&r.k==='caja'?'':' na')+'" data-l="ENT">'+(r.k==='caja'?(mm.entD?'<div class="ev-c">+'+mm.entD+'</div>':'<div class="ev-na"></div>'):inp('ent',r.k==='lle',mm.entD))+'</div>'+
-      '<div class="q'+(r.k==='vac'||mm.devD&&r.k==='caja'?'':' na')+'" data-l="DEV">'+(r.k==='caja'?(mm.devD?'<div class="ev-c">+'+mm.devD+'</div>':'<div class="ev-na"></div>'):inp('dev',r.k==='vac',mm.devD))+'</div>'+
+      '<div class="q'+(r.k==='vac'?' na':(mm.ent+mm.entD?'':' na'))+'" data-l="ENT">'+(r.k!=='vac'&&mm.ent+mm.entD?'<div class="ev-c">+'+(mm.ent+mm.entD)+'</div>':'<div class="ev-na"></div>')+'</div>'+
+      '<div class="q'+(r.k==='lle'?' na':(mm.dev+mm.devD?'':' na'))+'" data-l="DEV">'+(r.k!=='lle'&&mm.dev+mm.devD?'<div class="ev-c">+'+(mm.dev+mm.devD)+'</div>':'<div class="ev-na"></div>')+'</div>'+
       '<div class="q'+(r.k==='lle'?'':' na')+'" data-l="Venta">'+inp('ven',r.k==='lle',mm.venD)+'</div>'+
       '<div class="ev-c q'+(r.k==='vac'?'':' na')+'" data-l="Moto" title="Botellas que devolvieron los motorizados">'+(r.k==='vac'?(mr?'+'+mr:'—'):'')+'</div>'+
       '<div class="ev-c q" data-l="Esperado">'+(esp==null?'—':esp)+'</div>'+
