@@ -130,31 +130,56 @@ function _filterMT(){
   var cnt=document.getElementById('mt-count'); if(cnt) cnt.textContent=rows.length+' registros';
 
   window._MT_ROWS={};
-  var html='', grupo=null, gAcum=[];
-  var cierra=function(){ if(grupo!==null) html=html.replace('<!--g'+grupo+'-->','<em>'+gAcum.length+' mov. · '+fmt(_mtSum(gAcum,'cant'))+' und.</em>'); };
+  // Rendimiento: se arma la lista de días y movimientos y se dibuja de a 60 elementos; al bajar se agregan los siguientes.
+  var items=[], gAct=null, gKey=null;
   rows.forEach(function(r){
     window._MT_ROWS[r._row]=r;
-    var t=_mtTipo(r), k=r.fecha||'';
-    if(k!==grupo){ cierra(); grupo=k; gAcum=[]; html+='<div class="mt2-grp">'+esc(_mtDiaLabel(k))+'<!--g'+k+'--></div>'; }
-    gAcum.push(r);
-    var sc=t==='MERMA'?'var(--danger)':t==='NC'?'#5CC8E0':t==='TRASLADO'?'var(--accent)':'var(--text4)';
-    html+='<div class="mt2-tr mt2-row" style="--sc:'+sc+'">'+
-      '<div class="mt2-p"><b title="'+esc(r.desc)+'">'+esc(r.desc)+'</b><span>'+esc(r.sku)+'</span></div>'+
-      '<div class="mt2-t">'+_mtBadgeTipo(t,r.tipo)+'</div>'+
-      '<div class="mt2-q">'+fmt(r.cant)+'<small> und.</small></div>'+
-      '<div class="mt2-c">'+(r.costo?_mtMoney(r.costo):'—')+'</div>'+
-      '<div class="mt2-m"><b>'+esc(r.motivo||'—')+'</b>'+(r.obs?'<span>'+esc(r.obs)+'</span>':'')+'</div>'+
-      '<div class="mt2-e">'+_mtBadgeEstado(r,t)+'</div>'+
-      '<div class="mt2-f'+((r.nroFactura||r.fechaRetiro)?'':' mt2-vacio')+'"><b>'+esc(r.nroFactura||'—')+'</b>'+(r.fechaRetiro?'<span>Retiro '+esc(r.fechaRetiro)+'</span>':'')+'</div>'+
-      '<div class="mt2-a"><button class="mt2-ib" title="Editar" onclick="editarMTRow('+r._row+')">'+ICO('edit',14,'s')+'</button>'+
-        '<button class="mt2-ib d" title="Eliminar" onclick="eliminarMTRow('+r._row+')">'+ICO('trash',14,'s')+'</button></div>'+
-    '</div>';
+    var k=r.fecha||'';
+    if(k!==gKey){ gKey=k; gAct={ g:true, k:k, n:0, und:0 }; items.push(gAct); }
+    gAct.n++; gAct.und+=(Number(r.cant)||0);
+    items.push({ g:false, r:r });
   });
-  cierra();
+  _MT.items=items; _MT.n=0;
   var lst=document.getElementById('mt-list');
-  if(lst) lst.innerHTML=rows.length?
-    '<div class="mt2-tr mt2-h"><div>Producto</div><div class="c">Tipo</div><div class="r">Cant.</div><div class="r">Costo</div><div>Motivo</div><div class="c">Estado</div><div>Factura / NC</div><div></div></div>'+html
-    :'<div class="mt2-vacio-t">Sin registros</div>';
+  if(!lst) return;
+  if(!rows.length){ lst.innerHTML='<div class="mt2-vacio-t">Sin registros</div>'; _mtVigilar(null); return; }
+  lst.innerHTML='<div class="mt2-tr mt2-h"><div>Producto</div><div class="c">Tipo</div><div class="r">Cant.</div><div class="r">Costo</div><div>Motivo</div><div class="c">Estado</div><div>Factura / NC</div><div></div></div>';
+  _mtMas();
+}
+
+var _MT={ items:[], n:0, lote:60, obs:null };
+function _mtItem(it){
+  if(it.g) return '<div class="mt2-grp">'+esc(_mtDiaLabel(it.k))+'<em>'+it.n+' mov. · '+fmt(it.und)+' und.</em></div>';
+  var r=it.r, t=_mtTipo(r);
+  var sc=t==='MERMA'?'var(--danger)':t==='NC'?'#5CC8E0':t==='TRASLADO'?'var(--accent)':'var(--text4)';
+  return '<div class="mt2-tr mt2-row" style="--sc:'+sc+'">'+
+    '<div class="mt2-p"><b title="'+esc(r.desc)+'">'+esc(r.desc)+'</b><span>'+esc(r.sku)+'</span></div>'+
+    '<div class="mt2-t">'+_mtBadgeTipo(t,r.tipo)+'</div>'+
+    '<div class="mt2-q">'+fmt(r.cant)+'<small> und.</small></div>'+
+    '<div class="mt2-c">'+(r.costo?_mtMoney(r.costo):'—')+'</div>'+
+    '<div class="mt2-m"><b>'+esc(r.motivo||'—')+'</b>'+(r.obs?'<span>'+esc(r.obs)+'</span>':'')+'</div>'+
+    '<div class="mt2-e">'+_mtBadgeEstado(r,t)+'</div>'+
+    '<div class="mt2-f'+((r.nroFactura||r.fechaRetiro)?'':' mt2-vacio')+'"><b>'+esc(r.nroFactura||'—')+'</b>'+(r.fechaRetiro?'<span>Retiro '+esc(r.fechaRetiro)+'</span>':'')+'</div>'+
+    '<div class="mt2-a"><button class="mt2-ib" title="Editar" onclick="editarMTRow('+r._row+')">'+ICO('edit',14,'s')+'</button>'+
+      '<button class="mt2-ib d" title="Eliminar" onclick="eliminarMTRow('+r._row+')">'+ICO('trash',14,'s')+'</button></div>'+
+  '</div>';
+}
+function _mtMas(){
+  var host=document.getElementById('mt-list'); if(!host) return;
+  var marca=document.getElementById('mt-mas'); if(marca) marca.remove();
+  var desde=_MT.n, hasta=Math.min(desde+_MT.lote,_MT.items.length), h='', i;
+  for(i=desde;i<hasta;i++) h+=_mtItem(_MT.items[i]);
+  _MT.n=hasta;
+  if(hasta<_MT.items.length) h+='<div id="mt-mas" style="text-align:center;color:var(--text3);padding:14px;font-size:12px">Mostrando más…</div>';
+  host.insertAdjacentHTML('beforeend',h);
+  _mtVigilar(document.getElementById('mt-mas'));
+}
+function _mtVigilar(marca){
+  if(_MT.obs){ _MT.obs.disconnect(); _MT.obs=null; }
+  if(!marca) return;
+  if(!('IntersectionObserver' in window)){ while(_MT.n<_MT.items.length) _mtMas(); return; }
+  _MT.obs=new IntersectionObserver(function(es){ if(es[0].isIntersecting) _mtMas(); },{rootMargin:'600px 0px'});
+  _MT.obs.observe(marca);
 }
 
 function exportMT(){

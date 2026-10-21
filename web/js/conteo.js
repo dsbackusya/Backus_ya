@@ -72,13 +72,12 @@ function renderConteo(r){
   if(!r||!r.ok){errBox('conteo-root',r?r.error:'Respuesta inválida del servidor');return;}
   DATA.conteo=r.data;
   var totalUnd=r.data.reduce(function(a,x){return a+x.total;},0);
-  var skusU=[];
-  r.data.forEach(function(x){if(skusU.indexOf(x.sku)<0)skusU.push(x.sku);});
+  var skusU=new Set(r.data.map(function(x){ return x.sku; }));
 
   document.getElementById('conteo-root').innerHTML=
     '<div class="stats">'+
       '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg></div><div class="stat-label">Registros</div><div class="stat-val-row"><div class="stat-val" id="cnt-stat-total">'+r.data.length+'</div><span class="stat-unit-pill">filas</span></div></div>'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="stat-label">SKUs únicos</div><div class="stat-val-row"><div class="stat-val" id="cnt-stat-skus" style="color:var(--blue)">'+skusU.length+'</div><span class="stat-unit-pill">SKUs</span></div></div>'+
+      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="stat-label">SKUs únicos</div><div class="stat-val-row"><div class="stat-val" id="cnt-stat-skus" style="color:var(--blue)">'+skusU.size+'</div><span class="stat-unit-pill">SKUs</span></div></div>'+
       '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="stat-label">Unidades contadas</div><div class="stat-val-row"><div class="stat-val" id="cnt-stat-und" style="color:var(--ok)">'+fmt(totalUnd)+'</div><span class="stat-unit-pill">und.</span></div></div>'+
     '</div>'+
     '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
@@ -113,10 +112,10 @@ function _filterConteo(){
 
   // Actualizar stat cards con los datos filtrados
   var totalUnd=filtered.reduce(function(a,x){return a+x.total;},0);
-  var skusU=[];
-  filtered.forEach(function(x){if(skusU.indexOf(x.sku)<0)skusU.push(x.sku);});
+  var skusU=new Set();
+  filtered.forEach(function(x){ skusU.add(x.sku); });
   var st=document.getElementById('cnt-stat-total'); if(st)st.textContent=filtered.length;
-  var ss=document.getElementById('cnt-stat-skus');  if(ss)ss.textContent=skusU.length;
+  var ss=document.getElementById('cnt-stat-skus');  if(ss)ss.textContent=skusU.size;
   var su=document.getElementById('cnt-stat-und');   if(su)su.textContent=fmt(totalUnd);
 
   var el=document.getElementById('cnt-count');
@@ -152,52 +151,74 @@ function _filterConteo(){
     // Snapshot por fila para que editarConteoRowSafe lea desde aquí
     window._CNT_ROWS[r._row] = {r:r, packsReal:c.packsReal, mult:c.mult};
   });
-  var tbodyParts = [];
-  grupos.forEach(function(g, key){
-    var n=g.filas.length, html='';
-    var gid='cg-'+key.replace(/[^a-zA-Z0-9]/g,'_');
-    var badge=n>1?'<span style="background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">'+n+'×</span>':'';
-    var chevron=n>1?'<span id="chv-'+gid+'" style="margin-left:auto;font-size:11px;color:var(--text3);transition:transform .2s">'+ICO('right',12,'s')+'</span>':'';
-    var cursor=n>1?'cursor:pointer;user-select:none;':''; 
-    html+='<tr style="background:var(--surface2);border-top:2px solid var(--border2);'+cursor+'" '+(n>1?'onclick="_toggleGrupoConteo(\''+gid+'\')"':'')+'>' +
-      '<td colspan="4" style="padding:8px 12px">'+
-        '<div style="display:flex;align-items:center;gap:6px">'+badge+
-          '<span class="mono" style="font-weight:700;font-size:13px;margin-left:'+(n>1?'6':'0')+'px">'+esc(g.sku)+'</span>'+
-          '<span style="color:var(--text3);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.producto)+'</span>'+
-          chevron+
-        '</div>'+
-      '</td>'+
-      '<td class="r col-hide-mobile" style="font-weight:700;color:var(--accent)">'+fmt(g.totalPacks)+'</td>'+
-      '<td class="r col-hide-mobile" style="color:var(--text3);font-size:11px">x'+g.mult+'</td>'+
-      '<td class="r col-hide-mobile" style="font-weight:700">'+fmt(g.totalUnd)+'</td>'+
-      '<td class="r col-hide-mobile" style="font-weight:700;color:var(--text2)">'+fmt(g.totalUnds||0)+'</td>'+
-      '<td class="r" style="font-weight:700;font-size:15px;color:var(--ok)">'+fmt(g.totalUnd+(g.totalUnds||0))+'</td>'+
-      '<td class="c" colspan="2"></td>'+
-    '</tr>';
-    // Filas individuales — ocultas por defecto si hay más de 1
-    var display=n>1?'display:none':'display:table-row';
-    g.filas.forEach(function(item){
-      var r=item.r;
-      html+='<tr class="cg-rows-'+gid+'" style="'+display+'">'+
-        '<td class="mono" style="font-size:11px;color:var(--text3);padding-left:28px">'+esc(r.fecha)+'</td>'+
-        '<td class="mono col-hide-mobile" style="font-size:11px;color:var(--text3)">'+esc(r.hora||'')+'</td>'+
-        '<td class="mono col-hide-mobile" style="font-size:10px;color:var(--text3)">'+esc(r.ean)+'</td>'+
-        '<td class="mono" style="color:var(--text3);font-size:12px">'+esc(r.sku)+'</td>'+
-        '<td class="td-desc" style="color:var(--text3);font-size:12px">'+esc(r.producto)+'</td>'+
-        '<td class="r col-hide-mobile" style="font-size:15px;font-weight:600">'+fmt(item.packsReal)+'</td>'+
-        '<td class="r col-hide-mobile" style="color:var(--text3)">x'+item.mult+'</td>'+
-        '<td class="r col-hide-mobile">'+fmt(item.undReal)+'</td>'+
-        '<td class="r col-hide-mobile" style="color:var(--text2)">'+fmt(r.unds||0)+'</td>'+
-        '<td class="r" style="color:var(--ok)">'+fmt(r.total)+'</td>'+
-        '<td class="c"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editarConteoRowSafe('+r._row+')">Editar</button></td>'+
-        '<td class="c"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();eliminarConteoRow('+r._row+')">'+ICO('x',14,'s')+'</button></td>'+
-      '</tr>';
-    });
-    tbodyParts.push(html);
-  });
-  var tbody = tbodyParts.join('');
+  // Rendimiento: solo se dibujan de a 40 productos (se agregan más al bajar) y las filas de cada producto se crean al abrirlo.
+  _CNT.grupos=[]; _CNT.mapa={}; _CNT.n=0;
+  grupos.forEach(function(g, key){ g.gid='cg-'+key.replace(/[^a-zA-Z0-9]/g,'_'); _CNT.grupos.push(g); _CNT.mapa[g.gid]=g; });
   var t=document.getElementById('conteo-tbody');
-  if(t)t.innerHTML=tbody||'<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:40px">Sin registros</td></tr>';
+  if(!t) return;
+  t.innerHTML='';
+  if(!_CNT.grupos.length){ t.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:40px">Sin registros</td></tr>'; _cntVigilar(null); return; }
+  _cntMas();
+}
+
+var _CNT={ grupos:[], mapa:{}, n:0, lote:40, obs:null };
+function _cntFila(item, gid, display){
+  var r=item.r;
+  return '<tr class="cg-rows-'+gid+'" style="display:'+display+'">'+
+    '<td class="mono" style="font-size:11px;color:var(--text3);padding-left:28px">'+esc(r.fecha)+'</td>'+
+    '<td class="mono col-hide-mobile" style="font-size:11px;color:var(--text3)">'+esc(r.hora||'')+'</td>'+
+    '<td class="mono col-hide-mobile" style="font-size:10px;color:var(--text3)">'+esc(r.ean)+'</td>'+
+    '<td class="mono" style="color:var(--text3);font-size:12px">'+esc(r.sku)+'</td>'+
+    '<td class="td-desc" style="color:var(--text3);font-size:12px">'+esc(r.producto)+'</td>'+
+    '<td class="r col-hide-mobile" style="font-size:15px;font-weight:600">'+fmt(item.packsReal)+'</td>'+
+    '<td class="r col-hide-mobile" style="color:var(--text3)">x'+item.mult+'</td>'+
+    '<td class="r col-hide-mobile">'+fmt(item.undReal)+'</td>'+
+    '<td class="r col-hide-mobile" style="color:var(--text2)">'+fmt(r.unds||0)+'</td>'+
+    '<td class="r" style="color:var(--ok)">'+fmt(r.total)+'</td>'+
+    '<td class="c"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editarConteoRowSafe('+r._row+')">Editar</button></td>'+
+    '<td class="c"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();eliminarConteoRow('+r._row+')">'+ICO('x',14,'s')+'</button></td>'+
+  '</tr>';
+}
+function _cntGrupo(g){
+  var n=g.filas.length, gid=g.gid;
+  var badge=n>1?'<span style="background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">'+n+'×</span>':'';
+  var chevron=n>1?'<span id="chv-'+gid+'" style="margin-left:auto;font-size:11px;color:var(--text3);transition:transform .2s">'+ICO('right',12,'s')+'</span>':'';
+  var cursor=n>1?'cursor:pointer;user-select:none;':'';
+  var html='<tr id="cgh-'+gid+'" style="background:var(--surface2);border-top:2px solid var(--border2);'+cursor+'" '+(n>1?'onclick="_toggleGrupoConteo(\''+gid+'\')"':'')+'>' +
+    '<td colspan="4" style="padding:8px 12px">'+
+      '<div style="display:flex;align-items:center;gap:6px">'+badge+
+        '<span class="mono" style="font-weight:700;font-size:13px;margin-left:'+(n>1?'6':'0')+'px">'+esc(g.sku)+'</span>'+
+        '<span style="color:var(--text3);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.producto)+'</span>'+
+        chevron+
+      '</div>'+
+    '</td>'+
+    '<td class="r col-hide-mobile" style="font-weight:700;color:var(--accent)">'+fmt(g.totalPacks)+'</td>'+
+    '<td class="r col-hide-mobile" style="color:var(--text3);font-size:11px">x'+g.mult+'</td>'+
+    '<td class="r col-hide-mobile" style="font-weight:700">'+fmt(g.totalUnd)+'</td>'+
+    '<td class="r col-hide-mobile" style="font-weight:700;color:var(--text2)">'+fmt(g.totalUnds||0)+'</td>'+
+    '<td class="r" style="font-weight:700;font-size:15px;color:var(--ok)">'+fmt(g.totalUnd+(g.totalUnds||0))+'</td>'+
+    '<td class="c" colspan="2"></td>'+
+  '</tr>';
+  // Un solo registro: se muestra de una vez. Varios: se crean al abrir el producto.
+  if(n===1) html+=_cntFila(g.filas[0],gid,'table-row');
+  return html;
+}
+function _cntMas(){
+  var t=document.getElementById('conteo-tbody'); if(!t) return;
+  var marca=document.getElementById('cnt-mas'); if(marca) marca.remove();
+  var desde=_CNT.n, hasta=Math.min(desde+_CNT.lote,_CNT.grupos.length), h='', i;
+  for(i=desde;i<hasta;i++) h+=_cntGrupo(_CNT.grupos[i]);
+  _CNT.n=hasta;
+  if(hasta<_CNT.grupos.length) h+='<tr id="cnt-mas"><td colspan="12" style="text-align:center;color:var(--text3);padding:14px;font-size:12px">Mostrando '+hasta+' de '+_CNT.grupos.length+' productos…</td></tr>';
+  t.insertAdjacentHTML('beforeend',h);
+  _cntVigilar(document.getElementById('cnt-mas'));
+}
+function _cntVigilar(marca){
+  if(_CNT.obs){ _CNT.obs.disconnect(); _CNT.obs=null; }
+  if(!marca) return;
+  if(!('IntersectionObserver' in window)){ while(_CNT.n<_CNT.grupos.length) _cntMas(); return; }
+  _CNT.obs=new IntersectionObserver(function(es){ if(es[0].isIntersecting) _cntMas(); },{rootMargin:'600px 0px'});
+  _CNT.obs.observe(marca);
 }
 
 // Wrapper seguro — evita interpolar strings dentro del onclick (los SKUs con comillas rompían el handler)
@@ -209,12 +230,11 @@ function editarConteoRowSafe(rowNum){
 }
 
 function _toggleGrupoConteo(gid){
-  var rows=document.querySelectorAll('.cg-rows-'+gid);
-  var chv=document.getElementById('chv-'+gid);
-  if(!rows.length) return;
-  var abierto=rows[0].style.display!=='none';
-  rows.forEach(function(tr){ tr.style.display=abierto?'none':'table-row'; });
-  if(chv) chv.style.transform=abierto?'':'rotate(90deg)';
+  var rows=document.querySelectorAll('.cg-rows-'+gid), chv=document.getElementById('chv-'+gid);
+  if(rows.length){ rows.forEach(function(tr){ tr.remove(); }); if(chv) chv.style.transform=''; return; }   // cerrar
+  var g=_CNT.mapa[gid], cab=document.getElementById('cgh-'+gid); if(!g||!cab) return;                       // abrir: se crean ahora
+  cab.insertAdjacentHTML('afterend',g.filas.map(function(item){ return _cntFila(item,gid,'table-row'); }).join(''));
+  if(chv) chv.style.transform='rotate(90deg)';
 }
 
 function eliminarConteoRow(rowNum){
