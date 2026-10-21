@@ -116,7 +116,33 @@ function _salMenuContextual(row){
     'onclick="abrirEditarSkuFila('+row._row+')">'+ICO('edit',12)+'SKU</button> '+
     '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 10px;color:var(--danger);border-color:var(--danger);white-space:nowrap" '+
     'data-row="'+row._row+'" data-nro="'+esc(row.nroPedido)+'" '+
-    'onclick="abrirModalCancelarBtn(this)">'+ICO('x',12)+'Cancelar</button>';
+    'onclick="abrirModalCancelarBtn(this)">'+ICO('x',12)+'Cancelar</button> '+
+    '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--text3);white-space:nowrap" title="Elimina el pedido sin enviarlo a Cancelados" '+
+    'onclick="eliminarPedidoSalida('+row._row+')">'+ICO('trash',12,'s')+'Eliminar</button>';
+}
+
+// Elimina el pedido (todas sus filas) sin registrarlo en Cancelados
+function eliminarPedidoSalida(rowNum){
+  var fila=DATA.salidas.find(function(r){return r._row===rowNum;});
+  if(!fila){ showToast('Recarga la página — los datos están desactualizados.','err'); return; }
+  var nro=fila.nroPedido||'';
+  var filas=nro?DATA.salidas.filter(function(x){return x.nroPedido===nro;}):[fila];
+  var und=filas.reduce(function(s,x){return s+(Number(x.unidad)||0);},0);
+  _confirmDialog('Eliminar pedido',
+    (nro?'Se eliminará el pedido '+nro+' ('+filas.length+' fila'+(filas.length>1?'s':'')+', '+fmt(und)+' und.)':'Se eliminará esta fila ('+fmt(und)+' und.)')+
+    ' de Salidas. NO pasa a Cancelados y el stock se devuelve. No se puede deshacer.',function(){
+    google.script.run
+      .withSuccessHandler(function(r){
+        if(!r.ok){ showToast(r.error,'err'); if(r.stale) setTimeout(function(){reloadPage('salidas');},1200); return; }
+        DATA.salidas=nro?DATA.salidas.filter(function(x){return x.nroPedido!==nro;}):DATA.salidas.filter(function(x){return x._row!==rowNum;});
+        _SAL.mantener=true;
+        filterSalidas();
+        PAGE_LOADED['stock']=false;
+        showToast('Pedido eliminado ('+r.eliminados+' fila'+(r.eliminados>1?'s':'')+')','ok');
+      })
+      .withFailureHandler(function(e){ showToast(e.message,'err'); })
+      .eliminarSalida(S.token,rowNum,nro);
+  },'Eliminar');
 }
 
 function _salEstadoBadge(r){
@@ -280,7 +306,7 @@ function _salFila(r){
     '<td class="r col-hide-mobile" style="font-size:12px">'+esc(r.envases||'—')+'</td>'+
     '<td class="c col-hide-mobile">'+_salEstadoBadge(r)+'</td>'+
     '<td class="c col-hide-mobile" style="white-space:nowrap">'+_salRevisionCell(r)+'</td>'+
-    '<td class="c col-hide-mobile" style="white-space:nowrap;width:110px;padding-right:16px">'+_salMenuContextual(r)+'</td>'+
+    '<td class="c col-hide-mobile" style="white-space:nowrap;width:210px;padding-right:16px">'+_salMenuContextual(r)+'</td>'+
   '</tr>';
 }
 // Dibuja filas hasta llegar a `hasta` (o un lote más si no se indica) y deja una marca al final para seguir al bajar.

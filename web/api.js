@@ -436,6 +436,20 @@
     return r.data;
   });
 
+  // Elimina un pedido de Salidas (todas sus filas) sin pasarlo a Cancelados. Sin numero de pedido, solo esa fila.
+  API.eliminarSalida = guard(async function (p, rowNum, nroPedido) {
+    var nro = str(nroPedido);
+    var ref = await sb.from('salidas').select('id,sede_id,nro_pedido').eq('id', Number(rowNum)).maybeSingle();
+    if (ref.error) throw ref.error;
+    if (!ref.data) return { ok: false, stale: true, error: 'Esta fila ya no existe en Salidas.' };
+    var q = sb.from('salidas').delete().eq('sede_id', ref.data.sede_id);
+    q = str(ref.data.nro_pedido) ? q.eq('nro_pedido', str(ref.data.nro_pedido)) : q.eq('id', Number(rowNum));
+    var r = await q.select('id');
+    if (r.error) throw r.error;
+    if (!r.data.length) return { ok: false, error: 'No se eliminó nada (sin permiso o ya no existe).' };
+    return { ok: true, eliminados: r.data.length, nroPedido: str(ref.data.nro_pedido) };
+  });
+
   // Edición manual de una fila: SKU (p. ej. SKU espejo) y/o cantidades. Queda marcada para que la revalidación no la pise.
   API.editarSKUFila = guard(async function (p, rowNum, nuevoSKU, nuevaDesc, pack, unidad) {
     var cambios = { ajuste_manual: true };
