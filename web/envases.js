@@ -105,6 +105,7 @@ function _evCalc(){
     var bot=m.packs*ENV_MULT[m.tamano]+m.unidades, j, f=m.doc?'D':'';
     if(m.tipo==='entrada'&&m.estado==='llena'){ j=_evFilaIdx(m.tamano,'lle'); if(j>=0) M[di][j]['ent'+f]+=bot; }
     else if(m.tipo==='devolucion'&&m.estado==='vacia'){ j=_evFilaIdx(m.tamano,'vac'); if(j>=0) M[di][j]['dev'+f]+=bot; }
+    else if(m.tipo==='venta'&&m.estado==='vacia'){ j=_evFilaIdx(m.tamano,'caja'); if(j>=0) M[di][j]['ven'+f]+=m.packs; }
     else if(m.tipo==='venta'){ j=_evFilaIdx(m.tamano,'lle'); if(j>=0) M[di][j]['ven'+f]+=bot; }
     // las cajas que vienen en un Marcaje (packs) entran o salen junto con las botellas
     if(m.packs&&(m.tipo==='entrada'||m.tipo==='devolucion')){ j=_evFilaIdx(m.tamano,'caja'); if(j>=0) M[di][j][(m.tipo==='entrada'?'ent':'dev')+f]+=m.packs; }
@@ -177,7 +178,7 @@ function _evTabla(){
       '<div class="ev-c mut q" data-l="Inicial">'+(ini==null?'—':ini)+'</div>'+
       '<div class="q'+(r.k==='vac'?' na':(mm.ent+mm.entD?'':' na'))+'" data-l="ENT">'+(r.k!=='vac'&&mm.ent+mm.entD?'<div class="ev-c">+'+(mm.ent+mm.entD)+'</div>':'<div class="ev-na"></div>')+'</div>'+
       '<div class="q'+(r.k==='lle'?' na':(mm.dev+mm.devD?'':' na'))+'" data-l="DEV">'+(r.k!=='lle'&&mm.dev+mm.devD?'<div class="ev-c">+'+(mm.dev+mm.devD)+'</div>':'<div class="ev-na"></div>')+'</div>'+
-      '<div class="q'+(r.k==='lle'?'':' na')+'" data-l="Venta">'+inp('ven',r.k==='lle',mm.venD)+'</div>'+
+      '<div class="q'+(r.k==='vac'?' na':'')+'" data-l="Venta">'+inp('ven',r.k!=='vac',mm.venD)+'</div>'+
       '<div class="ev-c q'+(r.k==='vac'?'':' na')+'" data-l="Moto" title="Botellas que devolvieron los motorizados">'+(r.k==='vac'?(mr?'+'+mr:'—'):'')+'</div>'+
       '<div class="ev-c q" data-l="Esperado">'+(esp==null?'—':esp)+'</div>'+
       '<div class="ev-c q" data-l="Conteo"><b>'+(c==null?'—':c)+'</b></div>'+
@@ -191,12 +192,12 @@ function envMovIn(j,k,el){ /* vista previa al escribir; se guarda al terminar (c
 }
 function envMovGuardar(j,k,el){
   var v=_evNum(el.value)||0, r=ENV_FILAS[j], di=ENV.sel, fecha=ENV.m.days[di];
-  var tipo=k==='ent'?'entrada':k==='dev'?'devolucion':'venta', estado=k==='dev'?'vacia':'llena';
+  var tipo=k==='ent'?'entrada':k==='dev'?'devolucion':'venta', estado=(k==='dev'||(k==='ven'&&r.k==='caja'))?'vacia':'llena';
   ENV.m.M[di][j][k]=v;
   google.script.run.withSuccessHandler(function(res){
     if(!res||!res.ok){ showToast((res&&res.error)||'No se pudo guardar','err'); _evRecargar(); return; }
     ENV.d.mov=ENV.d.mov.filter(function(x){ return !(x.fecha===fecha&&x.tipo===tipo&&x.tamano===r.tam&&x.estado===estado&&!x.doc); });
-    if(v>0) ENV.d.mov.push({ fecha:fecha, tipo:tipo, tamano:r.tam, estado:estado, packs:0, unidades:v, doc:0 });
+    if(v>0) ENV.d.mov.push({ fecha:fecha, tipo:tipo, tamano:r.tam, estado:estado, packs:r.k==='caja'?v:0, unidades:r.k==='caja'?0:v, doc:0 });
     _evCalc(); _evRefrescar();
   }).withFailureHandler(function(e){ showToast(e.message,'err'); _evRecargar(); }).setEnvMov(S.token,{ fecha:fecha, tipo:tipo, tamano:r.tam, estado:estado, unidades:v });
 }
@@ -499,7 +500,7 @@ function exportEnvases(){
     var r=ENV_FILAS[j], out=[r.sku,r.t+' ('+r.n+')', m.b>=0&&m.tot[m.b]?m.tot[m.b][j]:''];
     m.days.forEach(function(d,i){
       var mm=m.M[i][j], c=m.tot[i]?m.tot[i][j]:null, x=_evDif(i,j);
-      out.push(r.k==='vac'?'':mm.ent+mm.entD||'', r.k==='lle'?'':mm.dev+mm.devD||'', r.k==='lle'?mm.ven+mm.venD:'', r.k==='vac'?m.MR[i][r.tam]||'':'', c==null?'':c, x==null?'':x);
+      out.push(r.k==='vac'?'':mm.ent+mm.entD||'', r.k==='lle'?'':mm.dev+mm.devD||'', r.k==='vac'?'':mm.ven+mm.venD||'', r.k==='vac'?m.MR[i][r.tam]||'':'', c==null?'':c, x==null?'':x);
     });
     return out;
   },'Envases semana','control_envases_'+m.days[0]);
