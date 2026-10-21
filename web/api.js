@@ -932,7 +932,7 @@
 
   /* ── ENVASES SEMANAL: conteo por sector (Palet, Cámara, PFN que se mantiene), movimientos del día y motorizados ── */
   function mapEnvMoto(r) {
-    return { id: r.id, fecha: r.fecha, motorizado: str(r.motorizado), tamano: r.tamano, tipo: r.tipo, cantidad: num(r.cantidad), nota: str(r.nota) };
+    return { id: r.id, fecha: r.fecha, motorizado: str(r.motorizado), tamano: r.tamano, caja: !!r.caja, tipo: r.tipo, cantidad: num(r.cantidad), nota: str(r.nota) };
   }
   // lunes = ISO del lunes de la semana a mostrar. Trae la semana (lunes a domingo), el último PFN anterior y todo el libro de motorizados.
   API.getEnvSemana = guard(async function (p, lunes) {
@@ -1013,7 +1013,7 @@
     if (ENV_TAMANOS.indexOf(Number(d.tamano)) < 0) return { ok: false, error: 'Envase inválido' };
     if (d.tipo !== 'debe' && d.tipo !== 'dev') return { ok: false, error: 'Tipo inválido' };
     var r = await sb.from('envases_moto').insert({ sede_id: sede, fecha: fecha, motorizado: nombre, tamano: Number(d.tamano), tipo: d.tipo,
-      cantidad: cant, nota: nulo(d.nota), created_by: p.usuario }).select('*').single();
+      cantidad: cant, caja: !!d.caja, nota: nulo(d.nota), created_by: p.usuario }).select('*').single();
     if (r.error) throw r.error;
     return { ok: true, fila: mapEnvMoto(r.data) };
   });

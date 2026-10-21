@@ -21,7 +21,9 @@ var ENV_MULT = { 630:12, 1000:12, 310:24 };
 var ENV_FAM = { C6:{ n:'Cajas 6xx / litro', g:'caja' }, B6:{ n:'Botellas 6xx / litro', g:'bot630_1000' }, C3:{ n:'Cajas 3xx', g:'caja' }, B3:{ n:'Botellas 3xx', g:'bot310' } };
 var ENV_PRECIO0 = { caja:3.8, bot630_1000:0.6, bot310:0.5 };
 var ENV_SECS = ['Palet','Cámara','PFN'];
-var ENV_TAMN = { 630:'Botella 630', 310:'Botella 305', 1000:'Botella litro' };
+var ENV_TAMN = { 630:'Botella 630', 310:'Botella 305', 1000:'Botella litro', '630c':'Caja 620/650', '310c':'Caja 330', '1000c':'Caja 1100' };
+function _evMk(x){ return x.tamano+(x.caja?'c':''); }
+function _evMkP(v){ return { tamano:parseInt(v,10), caja:/c$/.test(v) }; }
 var ENV_DN = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 var ENV_DL = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
 var ENV_MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];
@@ -111,12 +113,13 @@ function _evCalc(){
     if(m.packs&&(m.tipo==='entrada'||m.tipo==='devolucion')){ j=_evFilaIdx(m.tamano,'caja'); if(j>=0) M[di][j][(m.tipo==='entrada'?'ent':'dev')+f]+=m.packs; }
   });
   var MR=days.map(function(){ return {630:0,310:0,1000:0}; });
-  d.moto.forEach(function(x){ var di=days.indexOf(x.fecha); if(di>=0&&x.tipo==='dev') MR[di][x.tamano]+=x.cantidad; });
+  var MRc=days.map(function(){ return {630:0,310:0,1000:0}; });
+  d.moto.forEach(function(x){ var di=days.indexOf(x.fecha); if(di>=0&&x.tipo==='dev') (x.caja?MRc:MR)[di][x.tamano]+=x.cantidad; });
   var b=-1, last=-1;
   C.forEach(function(c,di){ if(c.has){ if(b<0) b=di; last=di; } });
-  ENV.m={ days:days, C:C, pfn:pfn, tot:tot, M:M, MR:MR, b:b, last:last };
+  ENV.m={ days:days, C:C, pfn:pfn, tot:tot, M:M, MR:MR, MRc:MRc, b:b, last:last };
 }
-function _evMovDia(di,j){ var m=ENV.m.M[di][j]; return m.ent+m.entD-m.dev-m.devD-m.ven-m.venD+(ENV_FILAS[j].k==='vac'?ENV.m.MR[di][ENV_FILAS[j].tam]:0); }
+function _evMovDia(di,j){ var m=ENV.m.M[di][j]; return m.ent+m.entD-m.dev-m.devD-m.ven-m.venD+(ENV_FILAS[j].k==='vac'?ENV.m.MR[di][ENV_FILAS[j].tam]:ENV_FILAS[j].k==='caja'?ENV.m.MRc[di][ENV_FILAS[j].tam]:0); }
 function _evEsp(di,j){
   var m=ENV.m; if(m.b<0||di<=m.b) return null;
   var s=m.tot[m.b][j]; for(var k=m.b;k<di;k++) s+=_evMovDia(k,j); return s;
@@ -170,7 +173,7 @@ function _evTabla(){
   var m=ENV.m, s=ENV.sel, h='<div class="ev-th"><span>Envase</span><span>Inicial</span><span>ENT</span><span>DEV</span><span>Venta</span><span>Moto</span><span>PFN</span><span>Esperado</span><span>Conteo</span><span>Diferencia</span></div>';
   ENV_FILAS.forEach(function(r,j){
     if(r.g) h+='<div class="ev-gp">'+r.g+'</div>';
-    var ini=m.b>=0&&m.tot[m.b]?m.tot[m.b][j]:null, esp=_evEsp(s,j), c=m.tot[s]?m.tot[s][j]:null, d=_evDif(s,j), mm=m.M[s][j], mr=r.k==='vac'?m.MR[s][r.tam]:0, pf=m.pfn[s]?m.pfn[s][j]:0;
+    var ini=m.b>=0&&m.tot[m.b]?m.tot[m.b][j]:null, esp=_evEsp(s,j), c=m.tot[s]?m.tot[s][j]:null, d=_evDif(s,j), mm=m.M[s][j], mr=r.k==='vac'?m.MR[s][r.tam]:r.k==='caja'?m.MRc[s][r.tam]:0, pf=m.pfn[s]?m.pfn[s][j]:0;
     var tipo=r.k==='caja'?'<em class="c">solo se cuenta</em>':r.k==='lle'?'<em class="l">llena</em>':'<em class="v">vacía</em>';
     var inp=function(k,ok,doc){
       return ok?'<input class="inp ev-in" inputmode="numeric" value="'+(mm[k]||'')+'" placeholder="0" oninput="envMovIn('+j+',\''+k+'\',this)" onchange="envMovGuardar('+j+',\''+k+'\',this)">'+(doc?'<small class="ev-doc" title="Viene de un Marcaje">+'+doc+'</small>':''):'<div class="ev-na"></div>';
@@ -181,7 +184,7 @@ function _evTabla(){
       '<div class="q'+(r.k==='vac'?' na':(mm.ent+mm.entD?'':' na'))+'" data-l="ENT">'+(r.k!=='vac'&&mm.ent+mm.entD?'<div class="ev-c">+'+(mm.ent+mm.entD)+'</div>':'<div class="ev-na"></div>')+'</div>'+
       '<div class="q'+(r.k==='lle'?' na':(mm.dev+mm.devD?'':' na'))+'" data-l="DEV">'+(r.k!=='lle'&&mm.dev+mm.devD?'<div class="ev-c">+'+(mm.dev+mm.devD)+'</div>':'<div class="ev-na"></div>')+'</div>'+
       '<div class="q'+(r.k==='vac'?' na':'')+'" data-l="Venta">'+inp('ven',r.k!=='vac',mm.venD)+'</div>'+
-      '<div class="ev-c q'+(r.k==='vac'?'':' na')+'" data-l="Moto" title="Botellas que devolvieron los motorizados">'+(r.k==='vac'?(mr?'+'+mr:'—'):'')+'</div>'+
+      '<div class="ev-c q'+(r.k==='lle'?' na':'')+'" data-l="Moto" title="Botellas y cajas que devolvieron los motorizados">'+(r.k!=='lle'?(mr?'+'+mr:'—'):'')+'</div>'+
       '<div class="ev-c mut q" data-l="PFN" title="PFN del último conteo (se mantiene hasta que se edite)">'+(pf?pf:'—')+'</div>'+
       '<div class="ev-c q" data-l="Esperado">'+(esp==null?'—':esp)+'</div>'+
       '<div class="ev-c q" data-l="Conteo"><b>'+(c==null?'—':c)+'</b></div>'+
@@ -394,7 +397,7 @@ function _evMotoLista(){
   var mapa={}, orden=[];
   ((ENV.d&&ENV.d.moto)||[]).forEach(function(x){
     var k=x.motorizado.toLowerCase(); if(!mapa[k]){ mapa[k]={ n:x.motorizado, led:[], bal:{}, debe:0 }; orden.push(k); }
-    mapa[k].led.push(x); mapa[k].bal[x.tamano]=(mapa[k].bal[x.tamano]||0)+(x.tipo==='debe'?x.cantidad:-x.cantidad);
+    mapa[k].led.push(x); mapa[k].bal[_evMk(x)]=(mapa[k].bal[_evMk(x)]||0)+(x.tipo==='debe'?x.cantidad:-x.cantidad);
   });
   return orden.map(function(k){ var o=mapa[k]; Object.keys(o.bal).forEach(function(t){ if(o.bal[t]>0) o.debe+=o.bal[t]; }); return o; });
 }
@@ -403,12 +406,12 @@ function envMF(f){ ENV.mf=f; _evMotPinta(); }
 function _evMotPinta(){
   var el=document.getElementById('ev-mot'); if(!el) return;
   var lista=_evMotoLista(), deben=0, conSaldo=0, devSem=0, dias=ENV.m.days;
-  lista.forEach(function(m){ deben+=m.debe; if(m.debe>0) conSaldo++; m.led.forEach(function(e){ if(e.tipo==='dev'&&dias.indexOf(e.fecha)>=0) devSem+=e.cantidad; }); });
+  lista.forEach(function(m){ Object.keys(m.bal).forEach(function(t){ if(m.bal[t]>0&&!/c$/.test(t)) deben+=m.bal[t]; }); if(m.debe>0) conSaldo++; m.led.forEach(function(e){ if(e.tipo==='dev'&&dias.indexOf(e.fecha)>=0) devSem+=e.cantidad; }); });
   var f='';
   if(ENV.mForm){
     f='<div class="evm-form"><span class="t">Nuevo pendiente: el motorizado queda debiendo botellas vacías</span><div class="evm-f">'+
       '<div><label>Motorizado</label><input class="inp" id="evm-n" list="evm-nl" placeholder="Escribe o elige un nombre" autocomplete="off"><datalist id="evm-nl">'+lista.map(function(m){ return '<option value="'+esc(m.n)+'">'; }).join('')+'</datalist></div>'+
-      '<div><label>Envase</label><select id="evm-t"><option value="630">Botella 630</option><option value="310">Botella 305</option><option value="1000">Botella litro</option></select></div>'+
+      '<div><label>Envase</label><select id="evm-t"><option value="630">Botella 630</option><option value="310">Botella 305</option><option value="1000">Botella litro</option><option value="630c">Caja 620/650</option><option value="310c">Caja 330</option><option value="1000c">Caja 1100</option></select></div>'+
       '<div><label>Cantidad</label><input class="inp" id="evm-q" inputmode="numeric" placeholder="0"></div>'+
       '<div><label>Fecha</label><input class="inp" id="evm-d" type="date" value="'+esc(ENV.mForm.fecha)+'"></div>'+
       '<div><label>Nota (opcional)</label><input class="inp" id="evm-o" placeholder="Ej: pedido 4821"></div></div>'+
@@ -427,7 +430,7 @@ function _evMotPinta(){
       var deb=Object.keys(m.bal).filter(function(t){ return m.bal[t]>0; }), ab=ENV.mAb[m.n], kk=_evK(m.n), panel='';
       var chips=deb.length?deb.map(function(t){ return '<span>'+ENV_TAMN[t]+' · '+m.bal[t]+'</span>'; }).join(''):'<span class="ok">Al día</span>';
       if(ab){
-        var opts=(ab==='dev'?deb:['630','310','1000']).map(function(t){ return '<option value="'+t+'">'+ENV_TAMN[t]+(ab==='dev'?' (debe '+m.bal[t]+')':'')+'</option>'; }).join('');
+        var opts=(ab==='dev'?deb:['630','310','1000','630c','310c','1000c']).map(function(t){ return '<option value="'+t+'">'+ENV_TAMN[t]+(ab==='dev'?' (debe '+m.bal[t]+')':'')+'</option>'; }).join('');
         panel='<div class="evm-pn"><div class="r"><div><label>Envase</label><select id="evp-t-'+kk+'" onchange="envMotoSel(\''+esc(m.n).replace(/'/g,"\\'")+'\',this.value)">'+opts+'</select></div>'+
           '<div><label>'+(ab==='dev'?'Cantidad que devolvió':'Cantidad que debe')+'</label><input class="inp" id="evp-q-'+kk+'" inputmode="numeric" value="'+(ab==='dev'&&deb.length?m.bal[deb[0]]:'')+'" placeholder="0"></div>'+
           '<div><label>Fecha</label><input class="inp" id="evp-d-'+kk+'" type="date" value="'+esc(_evHoy())+'"></div><div></div>'+
@@ -435,7 +438,7 @@ function _evMotPinta(){
           '<div class="hint">'+(ab==='dev'?'Por defecto aparece todo lo que debe; cámbialo si devolvió solo una parte (el resto queda pendiente).':'Suma a lo que ya debe.')+'</div></div></div>';
       }
       var hist=ENV.mHist[m.n]?'<div class="evm-hist">'+m.led.slice().reverse().map(function(e){
-        return '<div class="evm-l"><span class="d">'+_evF(e.fecha)+'</span><span>'+ENV_TAMN[e.tamano]+(e.nota?' · '+esc(e.nota):'')+'</span><span class="q '+(e.tipo==='debe'?'d1':'d2')+'">'+(e.tipo==='debe'?'debe +':'devolvió −')+e.cantidad+'</span><button title="Quitar" onclick="envMotoQuitar('+e.id+')">✕</button></div>'; }).join('')+'</div>':'';
+        return '<div class="evm-l"><span class="d">'+_evF(e.fecha)+'</span><span>'+ENV_TAMN[_evMk(e)]+(e.nota?' · '+esc(e.nota):'')+'</span><span class="q '+(e.tipo==='debe'?'d1':'d2')+'">'+(e.tipo==='debe'?'debe +':'devolvió −')+e.cantidad+'</span><button title="Quitar" onclick="envMotoQuitar('+e.id+')">✕</button></div>'; }).join('')+'</div>':'';
       var nq=esc(m.n).replace(/'/g,"\\'");
       return '<div class="evm-c"><div class="evm-h"><div class="evm-av">'+esc(m.n.split(' ').map(function(x){ return x[0]; }).slice(0,2).join('').toUpperCase())+'</div><div class="evm-n"><b>'+esc(m.n)+'</b><small>'+m.led.length+' movimientos</small></div><div class="evm-bal">'+chips+'</div></div>'+
         '<div class="evm-act"><button class="btn btn-primary" '+(deb.length?'':'disabled style="opacity:.4"')+' onclick="envMotoPanel(\''+nq+'\',\'dev\')">Devolvió botellas</button>'+
@@ -469,13 +472,13 @@ function envMotoNuevo(){
   var n=document.getElementById('evm-n').value.trim(), q=_evNum(document.getElementById('evm-q').value);
   if(!n){ document.getElementById('evm-n').focus(); return; } if(!q){ document.getElementById('evm-q').focus(); return; }
   var ex=_evMotoLista().filter(function(x){ return x.n.toLowerCase()===n.toLowerCase(); })[0]; if(ex) n=ex.n;
-  _evMotoGuardar({ fecha:document.getElementById('evm-d').value, motorizado:n, tamano:+document.getElementById('evm-t').value, tipo:'debe', cantidad:q, nota:document.getElementById('evm-o').value },
+  _evMotoGuardar({ fecha:document.getElementById('evm-d').value, motorizado:n, tamano:_evMkP(document.getElementById('evm-t').value).tamano, caja:_evMkP(document.getElementById('evm-t').value).caja, tipo:'debe', cantidad:q, nota:document.getElementById('evm-o').value },
     function(){ ENV.mForm=null; ENV.mAb[n]=''; _evRender(); });
 }
 function envMotoMov(n){
   var kk=_evK(n), q=_evNum(document.getElementById('evp-q-'+kk).value); if(!q){ document.getElementById('evp-q-'+kk).focus(); return; }
   var tp=ENV.mAb[n]==='dev'?'dev':'debe';
-  _evMotoGuardar({ fecha:document.getElementById('evp-d-'+kk).value, motorizado:n, tamano:+document.getElementById('evp-t-'+kk).value, tipo:tp, cantidad:q },
+  _evMotoGuardar({ fecha:document.getElementById('evp-d-'+kk).value, motorizado:n, tamano:_evMkP(document.getElementById('evp-t-'+kk).value).tamano, caja:_evMkP(document.getElementById('evp-t-'+kk).value).caja, tipo:tp, cantidad:q },
     function(){ ENV.mAb[n]=''; _evRender(); });
 }
 function envMotoQuitar(id){
@@ -515,7 +518,7 @@ function exportEnvases(){
     var r=ENV_FILAS[j], out=[r.sku,r.t+' ('+r.n+')', m.b>=0&&m.tot[m.b]?m.tot[m.b][j]:''];
     m.days.forEach(function(d,i){
       var mm=m.M[i][j], c=m.tot[i]?m.tot[i][j]:null, x=_evDif(i,j);
-      out.push(r.k==='vac'?'':mm.ent+mm.entD||'', r.k==='lle'?'':mm.dev+mm.devD||'', r.k==='vac'?'':mm.ven+mm.venD||'', r.k==='vac'?m.MR[i][r.tam]||'':'', c==null?'':c, x==null?'':x);
+      out.push(r.k==='vac'?'':mm.ent+mm.entD||'', r.k==='lle'?'':mm.dev+mm.devD||'', r.k==='vac'?'':mm.ven+mm.venD||'', r.k==='vac'?m.MR[i][r.tam]||'':r.k==='caja'?m.MRc[i][r.tam]||'':'', c==null?'':c, x==null?'':x);
     });
     return out;
   },'Envases semana','control_envases_'+m.days[0]);
