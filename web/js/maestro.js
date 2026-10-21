@@ -83,30 +83,55 @@ function filterMaestro(){
   var rows=MAESTRO.data.filter(function(m){
     return !q||m.descripcion.toLowerCase().indexOf(q)>-1||m.sku.toLowerCase().indexOf(q)>-1;
   });
-  var MAX=500, total=rows.length;
-  if(rows.length>MAX) rows=rows.slice(0,MAX);
   MAESTRO.vista=rows;
   var el=document.getElementById('mae-count');
-  if(el) el.textContent=total>MAX ? ('Mostrando '+MAX+' de '+total+' — usa el buscador') : (total+' registros');
-  var html=rows.map(function(m,i){
-    var nombre=MAESTRO.prod[m.sku];
-    var celdaProd=nombre
-      ? '<span title="'+esc(nombre)+'">'+esc(nombre)+'</span>'
-      : '<span style="color:var(--warn)" title="Este SKU no existe en el Stock de la sede">'+ICO('warn',12)+'SKU no está en Stock</span>';
-    return '<tr>'+
-      '<td class="td-desc" title="'+esc(m.descripcion)+'">'+esc(m.descripcion)+'</td>'+
-      '<td class="mono" style="font-weight:600">'+esc(m.sku||'—')+'</td>'+
-      '<td class="td-desc" style="font-size:12px;color:var(--text3)">'+celdaProd+'</td>'+
-      '<td class="r">'+fmt(m.factor)+'</td>'+
-      '<td class="c" style="white-space:nowrap">'+
-        '<button class="btn btn-ghost btn-sm" onclick="abrirMaestroForm('+i+')">Editar</button> '+
-        '<button class="btn btn-ghost btn-sm" title="Revisar las salidas de este producto contra el maestro" onclick="maestroRevalidar('+i+')">Revalidar</button> '+
-        '<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="eliminarMaestro('+i+')">Eliminar</button>'+
-      '</td>'+
-    '</tr>';
-  }).join('');
+  if(el) el.textContent=rows.length+' registros';
   var t=document.getElementById('maestro-tbody');
-  if(t) t.innerHTML=html||'<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:40px">Sin resultados</td></tr>';
+  if(t) t.innerHTML='';
+  _MAE_VER.n=0;
+  if(!rows.length){
+    if(t) t.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:40px">Sin resultados</td></tr>';
+    _maeVigilar(null);
+    return;
+  }
+  _maeMas();
+}
+
+/* Rendimiento: el maestro tiene miles de filas; se dibujan de a 60 y, al bajar, se agregan las siguientes. */
+var _MAE_VER={ n:0, lote:60, obs:null };
+function _maeFila(m,i){
+  var nombre=MAESTRO.prod[m.sku];
+  var celdaProd=nombre
+    ? '<span title="'+esc(nombre)+'">'+esc(nombre)+'</span>'
+    : '<span style="color:var(--warn)" title="Este SKU no existe en el Stock de la sede">'+ICO('warn',12)+'SKU no está en Stock</span>';
+  return '<tr>'+
+    '<td class="td-desc" title="'+esc(m.descripcion)+'">'+esc(m.descripcion)+'</td>'+
+    '<td class="mono" style="font-weight:600">'+esc(m.sku||'—')+'</td>'+
+    '<td class="td-desc" style="font-size:12px;color:var(--text3)">'+celdaProd+'</td>'+
+    '<td class="r">'+fmt(m.factor)+'</td>'+
+    '<td class="c" style="white-space:nowrap">'+
+      '<button class="btn btn-ghost btn-sm" onclick="abrirMaestroForm('+i+')">Editar</button> '+
+      '<button class="btn btn-ghost btn-sm" title="Revisar las salidas de este producto contra el maestro" onclick="maestroRevalidar('+i+')">Revalidar</button> '+
+      '<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="eliminarMaestro('+i+')">Eliminar</button>'+
+    '</td>'+
+  '</tr>';
+}
+function _maeMas(){
+  var t=document.getElementById('maestro-tbody'); if(!t) return;
+  var marca=document.getElementById('mae-mas'); if(marca) marca.remove();
+  var desde=_MAE_VER.n, hasta=Math.min(desde+_MAE_VER.lote,MAESTRO.vista.length), h='', i;
+  for(i=desde;i<hasta;i++) h+=_maeFila(MAESTRO.vista[i],i);
+  _MAE_VER.n=hasta;
+  if(hasta<MAESTRO.vista.length) h+='<tr id="mae-mas"><td colspan="5" style="text-align:center;color:var(--text3);padding:14px;font-size:12px">Mostrando '+hasta+' de '+MAESTRO.vista.length+'…</td></tr>';
+  t.insertAdjacentHTML('beforeend',h);
+  _maeVigilar(document.getElementById('mae-mas'));
+}
+function _maeVigilar(marca){
+  if(_MAE_VER.obs){ _MAE_VER.obs.disconnect(); _MAE_VER.obs=null; }
+  if(!marca) return;
+  if(!('IntersectionObserver' in window)){ while(_MAE_VER.n<MAESTRO.vista.length) _maeMas(); return; }
+  _MAE_VER.obs=new IntersectionObserver(function(es){ if(es[0].isIntersecting) _maeMas(); },{rootMargin:'600px 0px'});
+  _MAE_VER.obs.observe(marca);
 }
 
 /* idx = posición en la vista filtrada; null = nuevo; prefill = descripción sugerida para un nuevo */
