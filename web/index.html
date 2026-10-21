@@ -452,68 +452,97 @@ window.addEventListener('load', function(){
     <button class="btn btn-ghost btn-sm" onclick="closeFS('fs-mt')"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Volver</button>
     <div class="fs-title" id="fs-mt-title">Registrar M-T</div>
   </div>
-  <div class="fs-body">
+  <div class="fs-body mt3-body">
     <input type="hidden" id="mt-row"/>
-    <div class="fs-section">Tipo de movimiento</div>
-    <div class="form-grid">
-      <div class="form-field">
-        <div class="form-label">Tipo <span class="req">*</span></div>
-        <select class="inp filter-select" id="mt-tipo">
-          <option value="">Selecciona...</option>
-          <option value="MERMA">Merma</option>
-          <option value="TRASLADO">Traslado</option>
-          <option value="Nota de credito">Nota de credito</option>
-        </select>
-      </div>
-      <div class="form-field">
-        <div class="form-label">Motivo</div>
-        <input class="inp" id="mt-motivo" placeholder="Ej: Producto vencido, Traslado a Ate..."/>
-      </div>
-    </div>
-    <div class="fs-section">Producto</div>
-    <div class="form-grid">
-      <div class="form-field">
-        <div class="form-label">SKU / Lovis <span class="req">*</span></div>
-        <div style="display:flex;gap:6px;align-items:flex-start">
-          <div class="autocomplete-wrap" style="flex:1">
-            <input class="inp" id="mt-sku" placeholder="Escribe SKU o nombre..." oninput="acSearch('mt-sku','mt-desc','','ac-mt')"/>
-            <div class="ac-list" id="ac-mt"></div>
+    <div class="mt3-wrap">
+      <div class="mt3-main">
+        <div class="mt3-card">
+          <div class="mt3-lbl">1 · Tipo de movimiento <span class="req">*</span></div>
+          <div class="mt3-tipos">
+            <button type="button" class="mt3-tp merma" data-t="MERMA" onclick="mtTipo('MERMA')"><b><i></i>Merma</b><span>Producto roto, vencido o perdido. Baja el stock.</span></button>
+            <button type="button" class="mt3-tp tras" data-t="TRASLADO" onclick="mtTipo('TRASLADO')"><b><i></i>Traslado</b><span>Sale hacia otra sede. Baja el stock aquí.</span></button>
+            <button type="button" class="mt3-tp nc" data-t="Nota de credito" onclick="mtTipo('Nota de credito')"><b><i></i>Nota de crédito</b><span>Devolución o ajuste facturado al cliente.</span></button>
           </div>
-          <button class="cam-btn" title="Escanear" onclick="openScanner('mt-sku','mt-desc','')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="11"/></svg></button>
+          <div id="mt-b-motivo" class="mt3-oculto" style="margin-top:18px">
+            <div class="mt3-lbl">Motivo</div>
+            <div class="mt3-chips" id="mt-chips"></div>
+            <input class="inp" id="mt-motivo" style="margin-top:10px;width:100%;box-sizing:border-box" placeholder="O escribe otro motivo..." oninput="mtMotivoInput()"/>
+          </div>
+          <div id="mt-b-destino" class="mt3-oculto" style="margin-top:18px">
+            <div class="mt3-lbl">Sede destino <span class="req">*</span></div>
+            <div class="mt3-chips" id="mt-destinos"></div>
+          </div>
+        </div>
+
+        <div class="mt3-card" id="mt-c-prod">
+          <div class="mt3-lbl">2 · Productos <span class="req">*</span></div>
+          <div class="mt3-add" id="mt-add">
+            <div style="display:flex;gap:6px;align-items:flex-start">
+              <div class="autocomplete-wrap" style="flex:1">
+                <input class="inp" id="mt-q" style="width:100%;box-sizing:border-box" placeholder="Escribe SKU o nombre, o escanea..." autocomplete="off" oninput="mtBuscar()" onkeydown="mtQKey(event)"/>
+                <div class="ac-list" id="ac-mt"></div>
+              </div>
+              <button type="button" class="cam-btn" title="Escanear" onclick="openScanner('mt-q',null,'')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="11"/></svg></button>
+            </div>
+            <input class="inp" id="mt-cant" type="number" min="1" placeholder="Unidades" oninput="mtInfo()" onkeydown="if(event.key==='Enter'){event.preventDefault();mtAgregar()}"/>
+            <button type="button" class="btn btn-primary" id="mt-btn-add" onclick="mtAgregar()" disabled>Agregar</button>
+          </div>
+          <div class="mt3-info" id="mt-info"></div>
+          <div style="margin-top:18px">
+            <div id="mt-ln-vacio" class="mt3-vacio">Aún no agregaste productos.<br>Busca un SKU, pon la cantidad y pulsa <b>Agregar</b>. Puedes cargar varios en el mismo movimiento.</div>
+            <div id="mt-ln-wrap" class="mt3-oculto">
+              <div class="mt3-lnh"><span>Producto</span><span>Stock</span><span>Unidades</span><span></span></div>
+              <div id="mt-ln-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt3-card">
+          <div class="mt3-lbl">3 · Detalles</div>
+          <div class="mt3-g2">
+            <div>
+              <div class="mt3-lbl s">Fecha del movimiento</div>
+              <input class="inp" id="mt-fecha" type="date" style="width:100%;box-sizing:border-box" onchange="mtPintar(true)"/>
+            </div>
+            <div>
+              <div class="mt3-lbl s">Observaciones</div>
+              <input class="inp" id="mt-obs" placeholder="Detalles adicionales..." style="width:100%;box-sizing:border-box"/>
+            </div>
+          </div>
+          <details class="mt3-ext" id="mt-ext">
+            <summary>Datos del retiro <small>(factura y fecha de retiro, opcional)</small></summary>
+            <div class="mt3-g2">
+              <div>
+                <div class="mt3-lbl s">Nro de factura</div>
+                <input class="inp" id="mt-nro-factura" placeholder="Ej: F001-00123" style="width:100%;box-sizing:border-box;font-family:var(--font-mono)"/>
+              </div>
+              <div>
+                <div class="mt3-lbl s">Fecha del retiro</div>
+                <input class="inp" id="mt-fecha-retiro" type="date" style="width:100%;box-sizing:border-box"/>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
-      <div class="form-field">
-        <div class="form-label">Cantidad (unidades) <span class="req">*</span></div>
-        <input class="inp" id="mt-cant" type="number" min="0" placeholder="0"/>
-      </div>
-      <div class="form-field span2">
-        <div class="form-label">Descripción</div>
-        <input class="inp" id="mt-desc" placeholder="Se completa automáticamente" readonly/>
-      </div>
+
+      <aside class="mt3-card mt3-res">
+        <h3>Resumen</h3>
+        <dl>
+          <dt>Tipo</dt><dd id="mt-r-tipo"></dd>
+          <dt>Motivo</dt><dd id="mt-r-mot"></dd>
+          <dt id="mt-r-dest-l" class="mt3-oculto">Destino</dt><dd id="mt-r-dest" class="mt3-oculto"></dd>
+          <dt>Fecha</dt><dd id="mt-r-fecha"></dd>
+          <dt>Productos</dt><dd id="mt-r-n">0</dd>
+        </dl>
+        <div class="mt3-tot"><span>Total unidades</span><b id="mt-r-tot">0</b></div>
+        <div class="mt3-nota">El stock se descuenta al guardar. Si te equivocas, puedes editar o eliminar el movimiento desde la lista de M-T.</div>
+      </aside>
     </div>
-    <div class="fs-section">Observaciones</div>
-    <div class="form-grid cols1">
-      <div class="form-field">
-        <div class="form-label">Observaciones</div>
-        <textarea class="inp" id="mt-obs" placeholder="Detalles adicionales..."></textarea>
-      </div>
-    </div>
-    <div class="fs-section">Retiro</div>
-    <div class="form-grid">
-      <div class="form-field">
-        <div class="form-label">Nro de factura</div>
-        <input class="inp" id="mt-nro-factura" placeholder="Ej: F001-00123" style="font-family:var(--font-mono)"/>
-      </div>
-      <div class="form-field">
-        <div class="form-label">Fecha del retiro</div>
-        <input class="inp" id="mt-fecha-retiro" type="date"/>
-      </div>
-    </div>
-    <div id="mt-err" class="err-msg" style="margin-top:12px"></div>
   </div>
   <div class="fs-footer">
-    <button class="btn btn-ghost" onclick="closeFS('fs-mt')">Cancelar</button>
-    <button class="btn btn-primary" id="btn-mt-save" onclick="guardarMT()">Guardar movimiento</button>
+    <span class="en2-msg" id="mt-msg">Elige el tipo y agrega al menos un producto</span>
+    <button class="btn btn-ghost" id="mt-btn-limpiar" onclick="mtLimpiar()">Limpiar</button>
+    <button class="btn btn-primary" id="btn-mt-save" onclick="guardarMT()" disabled>Guardar movimiento</button>
   </div>
 </div>
 <!-- ══ FORM: IMPORTAR OC ══ -->

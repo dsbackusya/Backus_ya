@@ -483,7 +483,7 @@ function _resolverCodigoLocal(code){
 // Rellena los campos SKU/desc/marca después de resolver
 function _llenarCamposSKU(skuId, descId, marcaId, resolved){
   var skuEl = document.getElementById(skuId);
-  if(skuEl){ skuEl.value = resolved.sku; }
+  if(skuEl){ skuEl.value = resolved.sku; skuEl.dispatchEvent(new CustomEvent('acpick')); }
 
   if(descId){
     var descEl = document.getElementById(descId);

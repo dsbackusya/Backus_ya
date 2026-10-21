@@ -196,75 +196,246 @@ function exportMT(){
     rows,function(r){return[r.fecha,r.sku,r.desc,r.cant,r.costo||0,r.tipo,r.motivo||'',r.obs||'',r.estado||'',r.nroFactura||'',r.fechaRetiro||''];},'M-T','mermas_traslados');
 }
 
+/* ── REGISTRAR / EDITAR M-T ── */
+var _MT_MOTIVOS={
+  'MERMA':['Producto vencido','Roto en almacén','Roto en transporte','Faltante de inventario','Producto dañado'],
+  'TRASLADO':['Reposición de stock','Pedido urgente','Devolución a sede'],
+  'Nota de credito':['Devolución de cliente','Error de facturación','Producto en mal estado']
+};
+var _MT_NOMBRE={'MERMA':'Merma','TRASLADO':'Traslado','Nota de credito':'Nota de crédito'};
+var _MTF={tipo:'',motivo:'',dest:'',sel:null,lineas:[],edit:false,destinos:null,res:[],seq:0,timer:0};
+
+function _mtFechaHoy(){
+  var d=new Date(), p=function(n){return (n<10?'0':'')+n;};
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+function _mtEl(id){return document.getElementById(id);}
+
+function mtTipo(t,conservar){
+  _MTF.tipo=t;
+  if(!conservar){ _MTF.motivo=''; _MTF.dest=''; _mtEl('mt-motivo').value=''; }
+  document.querySelectorAll('.mt3-tp').forEach(function(b){ b.classList.toggle('on',b.dataset.t===t); });
+  _mtEl('mt-b-motivo').classList.remove('mt3-oculto');
+  _mtEl('mt-b-destino').classList.toggle('mt3-oculto',t!=='TRASLADO'||_MTF.edit);
+  _mtEl('mt-chips').innerHTML=(_MT_MOTIVOS[t]||[]).map(function(m,i){
+    return '<button type="button" class="mt3-chip" onclick="mtElegirMotivo('+i+')">'+esc(m)+'</button>';
+  }).join('');
+  _mtMarcarMotivo(); _mtDestinos(); mtPintar();
+}
+function _mtMarcarMotivo(){
+  var lista=_MT_MOTIVOS[_MTF.tipo]||[];
+  document.querySelectorAll('#mt-chips .mt3-chip').forEach(function(c,i){ c.classList.toggle('on',lista[i]===_MTF.motivo); });
+}
+function mtElegirMotivo(i){
+  _MTF.motivo=(_MT_MOTIVOS[_MTF.tipo]||[])[i]||'';
+  _mtEl('mt-motivo').value=_MTF.motivo; _mtMarcarMotivo(); mtPintar();
+}
+function mtMotivoInput(){
+  _MTF.motivo=_mtEl('mt-motivo').value.trim(); _mtMarcarMotivo(); mtPintar();
+}
+function _mtDestinos(){
+  var host=_mtEl('mt-destinos'), lista=_MTF.destinos||[];
+  host.innerHTML=lista.map(function(n,i){
+    return '<button type="button" class="mt3-chip'+(n===_MTF.dest?' on':'')+'" onclick="mtElegirDestino('+i+')">'+esc(n)+'</button>';
+  }).join('');
+}
+function mtElegirDestino(i){ _MTF.dest=(_MTF.destinos||[])[i]||''; _mtDestinos(); mtPintar(); }
+
+/* Buscador con stock */
+function mtBuscar(){
+  var q=_mtEl('mt-q').value.trim();
+  if(_MTF.sel&&q!==_mtEtiqueta(_MTF.sel)){ _MTF.sel=null; mtInfo(); }
+  clearTimeout(_MTF.timer);
+  var list=_mtEl('ac-mt');
+  if(q.length<2){ list.classList.remove('open'); return; }
+  var n=++_MTF.seq;
+  _MTF.timer=setTimeout(function(){
+    google.script.run
+      .withSuccessHandler(function(r){
+        if(n!==_MTF.seq||!r.ok) return;
+        _MTF.res=r.results;
+        if(!r.results.length){ list.classList.remove('open'); return; }
+        if(r.results.length===1&&r.results[0].sku===q){ mtElegir(0); return; }   // código escaneado exacto
+        list.innerHTML=r.results.map(function(x,i){
+          return '<div class="ac-item" onclick="mtElegir('+i+')"><div class="ac-sku">'+esc(x.sku)+
+            '<span class="ac-st'+(x.stock<=0?' c':'')+'">'+fmt(x.stock)+' und.</span></div><div class="ac-desc">'+esc(x.desc)+'</div></div>';
+        }).join('');
+        list.classList.add('open');
+      })
+      .withFailureHandler(function(){ list.classList.remove('open'); })
+      .buscarSKUStock(S.token,q);
+  },250);
+}
+function _mtEtiqueta(p){ return p.sku+' · '+p.desc; }
+function mtQKey(e){
+  if(e.key!=='Enter') return;
+  e.preventDefault();
+  var q=_mtEl('mt-q').value.trim(), i=-1;
+  _MTF.res.forEach(function(x,k){ if(x.sku===q) i=k; });
+  if(i<0&&_MTF.res.length===1) i=0;
+  if(i>=0) mtElegir(i);
+}
+function mtElegir(i){
+  var p=_MTF.res[i]; if(!p) return;
+  _MTF.sel=p;
+  _mtEl('mt-q').value=_mtEtiqueta(p);
+  _mtEl('ac-mt').classList.remove('open');
+  _mtEl('mt-cant').focus(); mtInfo();
+}
+// El escáner puso un SKU ya resuelto en el campo: se busca para traer su stock
+var _mtEnganchado=false;
+function _mtEnganchar(){
+  if(_mtEnganchado) return; _mtEnganchado=true;
+  _mtEl('mt-q').addEventListener('acpick',function(){
+  var sku=_mtEl('mt-q').value.trim(); if(!sku) return;
+  google.script.run.withSuccessHandler(function(r){
+    if(!r.ok||!r.results.length) return;
+    var i=0; r.results.forEach(function(x,k){ if(x.sku===sku) i=k; });
+    _MTF.res=r.results; mtElegir(i);
+  }).buscarSKUStock(S.token,sku);
+  });
+}
+
+function _mtYaEsta(sku){ return _MTF.lineas.some(function(l){ return l.sku===sku; }); }
+function mtInfo(){
+  var b=_mtEl('mt-info'), p=_MTF.sel, btn=_mtEl('mt-btn-add');
+  if(!p){ b.classList.remove('on'); btn.disabled=true; return; }
+  var c=Number(_mtEl('mt-cant').value)||0, ya=_mtYaEsta(p.sku);
+  var h='<span>Stock disponible: <b>'+fmt(p.stock)+' und.</b></span>';
+  if(ya) h+='<span class="w">Ya está en la lista</span>';
+  else if(p.stock<=0) h+='<span class="w">Sin stock</span>';
+  else if(c>p.stock) h+='<span class="w">Pide '+fmt(c)+', solo hay '+fmt(p.stock)+'</span>';
+  else if(c>0) h+='<span>Quedaría en <b>'+fmt(p.stock-c)+'</b></span>';
+  b.innerHTML=h; b.classList.add('on');
+  btn.disabled=!(c>0)||ya;
+}
+function mtAgregar(){
+  var p=_MTF.sel, c=Number(_mtEl('mt-cant').value)||0;
+  if(!p||c<=0||_mtYaEsta(p.sku)) return;
+  _MTF.lineas.push({sku:p.sku,d:p.desc,s:p.stock,c:Math.floor(c)});
+  _MTF.sel=null; _mtEl('mt-q').value=''; _mtEl('mt-cant').value='';
+  mtInfo(); mtPintar(); _mtEl('mt-q').focus();
+}
+function mtQuitar(i){ _MTF.lineas.splice(i,1); mtInfo(); mtPintar(); }
+function mtCantLinea(i,v){ _MTF.lineas[i].c=Math.floor(Number(v))||0; mtPintar(true); }
+
+function _mtPintarLineas(){
+  _mtEl('mt-ln-vacio').classList.toggle('mt3-oculto',_MTF.lineas.length>0);
+  _mtEl('mt-ln-wrap').classList.toggle('mt3-oculto',_MTF.lineas.length===0);
+  _mtEl('mt-ln-list').innerHTML=_MTF.lineas.map(function(l,i){
+    var inf=l.s===Infinity, mal=!inf&&l.c>l.s;
+    return '<div class="mt3-ln"><div class="n"><b title="'+esc(l.d)+'">'+esc(l.d)+'</b><span>'+esc(l.sku)+'</span></div>'+
+      '<div class="st'+(mal?' mal':'')+'">'+(inf?'—':fmt(l.s))+'</div>'+
+      '<input class="inp" type="number" min="1" value="'+l.c+'" oninput="mtCantLinea('+i+',this.value)"/>'+
+      (_MTF.edit?'<span></span>':'<button type="button" class="x" title="Quitar" onclick="mtQuitar('+i+')">×</button>')+'</div>';
+  }).join('');
+}
+function _mtExceso(){ return _MTF.lineas.filter(function(l){ return l.s!==Infinity&&l.c>l.s; }); }
+
+function mtPintar(sinLineas){
+  if(!sinLineas) _mtPintarLineas();
+  var t=_MTF.tipo, tot=_MTF.lineas.reduce(function(a,l){ return a+l.c; },0), td=t==='TRASLADO'&&!_MTF.edit;
+  var vacio='<span style="color:var(--text4)">—</span>';
+  _mtEl('mt-r-tipo').innerHTML=t?'<span class="mt3-bd '+(t==='MERMA'?'merma':t==='TRASLADO'?'':'nc')+'">'+esc(_MT_NOMBRE[t])+'</span>':vacio;
+  _mtEl('mt-r-mot').innerHTML=_MTF.motivo?esc(_MTF.motivo):vacio;
+  _mtEl('mt-r-dest-l').classList.toggle('mt3-oculto',!td);
+  _mtEl('mt-r-dest').classList.toggle('mt3-oculto',!td);
+  _mtEl('mt-r-dest').textContent=_MTF.dest||'—';
+  var f=_mtEl('mt-fecha').value; _mtEl('mt-r-fecha').textContent=f?f.split('-').reverse().join('/'):'—';
+  _mtEl('mt-r-n').textContent=_MTF.lineas.length; _mtEl('mt-r-tot').textContent=fmt(tot);
+  var exceso=_mtExceso().length, m, ok=false;
+  if(!t) m='Elige el tipo de movimiento';
+  else if(td&&!_MTF.dest) m='Elige la sede destino';
+  else if(!_MTF.lineas.length) m='Agrega al menos un producto';
+  else if(_MTF.lineas.some(function(l){ return l.c<=0; })) m='Hay productos sin cantidad';
+  else{ ok=true; m=_MTF.lineas.length+' producto(s) · '+fmt(tot)+' und.'+(exceso?' · '+exceso+' superan el stock':''); }
+  var msg=_mtEl('mt-msg'); msg.textContent=m; msg.className='en2-msg'+(exceso?' err':'');
+  var btn=_mtEl('btn-mt-save'); if(!btn.dataset.ocupado) btn.disabled=!ok;
+}
+
+function _mtReset(){
+  _MTF.tipo=''; _MTF.motivo=''; _MTF.dest=''; _MTF.sel=null; _MTF.lineas=[]; _MTF.edit=false; _MTF.res=[];
+  document.querySelectorAll('.mt3-tp').forEach(function(b){ b.classList.remove('on'); });
+  _mtEl('mt-b-motivo').classList.add('mt3-oculto'); _mtEl('mt-b-destino').classList.add('mt3-oculto');
+  ['mt-motivo','mt-q','mt-cant','mt-obs','mt-nro-factura','mt-fecha-retiro'].forEach(function(id){ _mtEl(id).value=''; });
+  var f=_mtEl('mt-fecha'); f.value=_mtFechaHoy(); f.max=f.value; f.disabled=false;
+  _mtEl('mt-ext').open=false;
+  _mtEl('mt-add').classList.remove('mt3-oculto'); _mtEl('mt-info').classList.remove('on');
+  _mtEl('mt-row').value='';
+  _mtEl('mt-btn-limpiar').style.display='';
+  var btn=_mtEl('btn-mt-save'); delete btn.dataset.ocupado; btn.textContent='Guardar movimiento';
+  _mtEl('fs-mt-title').textContent='Registrar M-T';
+  mtInfo(); mtPintar();
+}
+function mtLimpiar(){ _mtReset(); }
+
+function _mtCargarDestinos(){
+  if(_MTF.destinos) return;
+  google.script.run.withSuccessHandler(function(r){
+    if(!r.ok) return;
+    _MTF.destinos=r.data; _mtDestinos();
+  }).getSedesDestino(S.token);
+}
+
 function abrirNuevoMT(){
-  document.getElementById('mt-row').value='';
-  document.getElementById('mt-tipo').value='';
-  document.getElementById('mt-sku').value='';
-  document.getElementById('mt-desc').value='';
-  document.getElementById('mt-cant').value='';
-  document.getElementById('mt-motivo').value='';
-  document.getElementById('mt-obs').value='';
-  document.getElementById('mt-nro-factura').value='';
-  document.getElementById('mt-fecha-retiro').value='';
-  document.getElementById('mt-err').textContent='';
-  document.getElementById('fs-mt-title').textContent='Registrar M-T';
-  var btn=document.getElementById('btn-mt-save');
-  if(btn) btn.textContent='Guardar movimiento';
+  _mtEnganchar(); _mtReset(); _mtCargarDestinos();
   openFS('fs-mt');
 }
 
 function guardarMT(){
-  var rowNum = document.getElementById('mt-row').value;
-  var tipo   = document.getElementById('mt-tipo').value;
-  var sku    = document.getElementById('mt-sku').value.trim();
-  var cant   = document.getElementById('mt-cant').value;
-  var err    = document.getElementById('mt-err');
-  if(!tipo||!sku||!cant){err.textContent='Tipo, SKU y Cantidad son obligatorios';return;}
-  var fila   = {tipo:tipo,sku:sku,desc:document.getElementById('mt-desc').value,
-    cant:Number(cant),motivo:document.getElementById('mt-motivo').value,
-    obs:document.getElementById('mt-obs').value,
-    nroFactura:document.getElementById('mt-nro-factura').value.trim(),
-    fechaRetiro:document.getElementById('mt-fecha-retiro').value};
-  err.textContent='';
-  var btn = document.getElementById('btn-mt-save');
-  if(btn){ btn.disabled=true; btn.textContent='Guardando...'; }
-  var onOk = function(r){
-    if(btn){ btn.disabled=false; btn.textContent=rowNum?'Guardar cambios':'Guardar movimiento'; }
-    onSaved(r,'fs-mt','mt',null,'');
-    // reset form a modo nuevo
-    document.getElementById('mt-row').value='';
-    document.getElementById('fs-mt-title').textContent='Registrar M-T';
-    if(btn) btn.textContent='Guardar movimiento';
+  var rowNum=_mtEl('mt-row').value, btn=_mtEl('btn-mt-save');
+  if(!_MTF.tipo||!_MTF.lineas.length){ showToast('Completa el tipo y al menos un producto','err'); return; }
+  var obs=_mtEl('mt-obs').value.trim();
+  if(_MTF.dest) obs='Destino: '+_MTF.dest+(obs?' · '+obs:'');
+  var comun={tipo:_MTF.tipo,motivo:_MTF.motivo,obs:obs,fecha:_mtEl('mt-fecha').value,
+    nroFactura:_mtEl('mt-nro-factura').value.trim(),fechaRetiro:_mtEl('mt-fecha-retiro').value};
+  var restaurar=function(){ delete btn.dataset.ocupado; btn.textContent=rowNum?'Guardar cambios':'Guardar movimiento'; mtPintar(true); };
+  var enviar=function(){
+    btn.dataset.ocupado='1'; btn.disabled=true; btn.textContent='Guardando...';
+    var onErr=function(e){ restaurar(); showToast(e.message,'err'); };
+    var onOk=function(r){
+      restaurar();
+      if(!r.ok){ showToast(r.error,'err'); return; }
+      onSaved(r,'fs-mt','mt',null,'');
+      _mtReset();
+    };
+    if(rowNum){
+      var l=_MTF.lineas[0];
+      google.script.run.withSuccessHandler(onOk).withFailureHandler(onErr).editarMT(S.token,Number(rowNum),
+        {tipo:comun.tipo,sku:l.sku,desc:l.d,cant:l.c,motivo:comun.motivo,obs:comun.obs,nroFactura:comun.nroFactura,fechaRetiro:comun.fechaRetiro});
+    } else {
+      google.script.run.withSuccessHandler(onOk).withFailureHandler(onErr).registrarMTMultiple(S.token,comun,
+        _MTF.lineas.map(function(l){ return {sku:l.sku,desc:l.d,cant:l.c}; }));
+    }
   };
-  var onErr = function(e){
-    if(btn){ btn.disabled=false; btn.textContent=rowNum?'Guardar cambios':'Guardar movimiento'; }
-    err.textContent=e.message;
-  };
-  if(rowNum){
-    google.script.run.withSuccessHandler(onOk).withFailureHandler(onErr).editarMT(S.token,Number(rowNum),fila);
-  } else {
-    google.script.run.withSuccessHandler(onOk).withFailureHandler(onErr).registrarMT(S.token,fila);
-  }
+  var ex=_mtExceso();
+  if(ex.length){
+    _confirmDialog('Superas el stock','Estos productos tienen menos stock que lo que registras y quedarían en negativo:\n\n'+
+      ex.map(function(l){ return l.sku+' · pide '+fmt(l.c)+', hay '+fmt(l.s); }).join('\n')+'\n\n¿Guardar de todos modos?',enviar,'Guardar');
+  } else enviar();
 }
 
 function editarMTRow(rowNum){
   var r=(window._MT_ROWS||{})[rowNum];
   if(!r){showToast('Error: no se encontró el registro','err');return;}
-  document.getElementById('mt-row').value   = rowNum;
-  document.getElementById('mt-tipo').value  = r.tipo||'';
-  document.getElementById('mt-sku').value   = r.sku||'';
-  document.getElementById('mt-desc').value  = r.desc||'';
-  document.getElementById('mt-cant').value  = r.cant||0;
-  document.getElementById('mt-motivo').value= r.motivo||'';
-  document.getElementById('mt-obs').value   = r.obs||'';
-  document.getElementById('mt-nro-factura').value = r.nroFactura||'';
+  _mtEnganchar(); _mtReset();
+  _MTF.edit=true;
+  _mtEl('mt-row').value=rowNum;
+  _MTF.lineas=[{sku:r.sku||'',d:r.desc||'',s:Infinity,c:Number(r.cant)||0}];
+  _MTF.motivo=r.motivo||''; _mtEl('mt-motivo').value=_MTF.motivo;
+  _mtEl('mt-obs').value=r.obs||'';
+  _mtEl('mt-nro-factura').value=r.nroFactura||'';
   var frVal='';
   if(r.fechaRetiro){var parts=r.fechaRetiro.split('/');if(parts.length===3) frVal=parts[2]+'-'+parts[1]+'-'+parts[0];}
-  document.getElementById('mt-fecha-retiro').value=frVal;
-  document.getElementById('mt-err').textContent='';
-  document.getElementById('fs-mt-title').textContent='Editar M-T';
-  var btn=document.getElementById('btn-mt-save');
-  if(btn) btn.textContent='Guardar cambios';
+  _mtEl('mt-fecha-retiro').value=frVal;
+  _mtEl('mt-ext').open=!!(r.nroFactura||frVal);
+  var fp=(r.fecha||'').split('/'), fe=_mtEl('mt-fecha');
+  fe.value=fp.length===3?fp[2]+'-'+fp[1]+'-'+fp[0]:''; fe.disabled=true;   // la fecha del movimiento no se edita aquí
+  _mtEl('mt-add').classList.add('mt3-oculto');
+  _mtEl('mt-btn-limpiar').style.display='none';
+  _mtEl('fs-mt-title').textContent='Editar M-T';
+  _mtEl('btn-mt-save').textContent='Guardar cambios';
+  mtTipo(r.tipo||'',true);
   openFS('fs-mt');
 }
 

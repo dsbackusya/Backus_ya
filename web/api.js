@@ -614,6 +614,46 @@
     if (r.error) throw r.error;
     return { ok: true };
   });
+  // Buscador de Registrar M-T: SKU/descripcion con el stock actual de cada producto
+  API.buscarSKUStock = guard(async function (p, query) {
+    var q = String(query || '').replace(/[,()*%\\]/g, ' ').trim();
+    if (!q) return { ok: true, results: [] };
+    var r = await filtroSede(sb.from('v_stock').select('sku,descripcion,marca,stock_actual'), p)
+      .or('sku.ilike.%' + q + '%,descripcion.ilike.%' + q + '%').order('sku').limit(10);
+    if (r.error) throw r.error;
+    return {
+      ok: true,
+      results: r.data.map(function (x) { return { sku: str(x.sku), desc: str(x.descripcion), marca: str(x.marca), stock: num(x.stock_actual) }; })
+    };
+  });
+  // Nombres de las otras sedes (destino de un traslado)
+  API.getSedesDestino = guard(async function (p) {
+    var propia = p.rol === 'store' ? p.sede_id : null;
+    return { ok: true, data: (await cargarSedes()).filter(function (s) { return s.id !== propia; }).map(function (s) { return s.nombre; }) };
+  });
+  // Varios productos con el mismo tipo, motivo y fecha (todo o nada)
+  API.registrarMTMultiple = guard(async function (p, comun, lineas) {
+    var sede = exigirSede(p, comun);
+    var hoy = hoyISO(), fecha = str(comun.fecha) || hoy, tipo = str(comun.tipo);
+    if (!tipo) return { ok: false, error: 'Tipo es obligatorio' };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { ok: false, error: 'Fecha inválida' };
+    if (fecha > hoy) return { ok: false, error: 'La fecha no puede ser futura' };
+    if (!lineas || !lineas.length) return { ok: false, error: 'Agrega al menos un producto' };
+    var rows = [];
+    for (var i = 0; i < lineas.length; i++) {
+      var f = lineas[i], sku = str(f.sku), cant = entero(f.cant);
+      if (!sku) return { ok: false, error: 'SKU vacío en la línea ' + (i + 1) };
+      if (cant === null || cant <= 0) return { ok: false, error: 'Cantidad inválida en la línea ' + (i + 1) };
+      rows.push({
+        sede_id: sede, fecha: fecha, sku: sku, descripcion: str(f.desc), cantidad: cant, tipo: tipo,
+        motivo: nulo(comun.motivo), observaciones: nulo(comun.obs), nro_factura: nulo(comun.nroFactura),
+        fecha_retiro: parseFecha(comun.fechaRetiro)
+      });
+    }
+    var r = await sb.from('mt').insert(rows);
+    if (r.error) throw r.error;
+    return { ok: true, registrados: rows.length };
+  });
   API.editarMT = guard(async function (p, rowNum, fila) {
     var e = validarMT(fila);
     if (e) return { ok: false, error: e };
