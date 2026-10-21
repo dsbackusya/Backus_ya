@@ -134,7 +134,8 @@ function _evRender(){
   root.innerHTML=
     '<div class="ev-wrap">'+
       '<div class="ev-top"><div class="ev-vtabs"><button class="ev-vtab'+(ENV.vista==='ctl'?' on':'')+'" onclick="envVista(\'ctl\')">Control semanal</button>'+
-        '<button class="ev-vtab'+(ENV.vista==='mot'?' on':'')+'" onclick="envVista(\'mot\')">Motorizados'+(deudores?' <b>'+deudores+'</b>':'')+'</button></div>'+
+        '<button class="ev-vtab'+(ENV.vista==='mot'?' on':'')+'" onclick="envVista(\'mot\')">Motorizados'+(deudores?' <b>'+deudores+'</b>':'')+'</button>'+
+        '<button class="ev-vtab'+(ENV.vista==='pfn'?' on':'')+'" onclick="envVista(\'pfn\')">PFN</button></div>'+
         '<span class="ev-sp"></span><button class="btn btn-ghost btn-sm" onclick="envPrecios()">Precios</button></div>'+
       (ENV.vista==='ctl'
         ? '<div class="ev-wk"><button class="ev-nav" title="Semana anterior" onclick="envSemana(-1)">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>'+'</button><b>'+sem+'</b>'+
@@ -146,9 +147,10 @@ function _evRender(){
           '<div class="ev-card"><div class="ev-h"><span class="t">Movimientos y conteo</span><span class="s" id="ev-hd"></span><span class="ev-sp"></span><button class="btn btn-primary" id="ev-bc" onclick="envContar()"></button></div>'+
             '<div class="ev-t" id="ev-t"></div>'+
             '<div class="ev-ft">Esperado = conteo inicial + entradas − devoluciones − ventas + botellas que devolvieron los motorizados, de los días anteriores. Diferencia = conteo del día − esperado. Dentro de una familia, las diferencias de llenas y vacías se compensan. Las cajas plásticas solo se cuentan. ENT y DEV de Marcaje se suman solos (aparecen como + debajo del número).</div></div>'
-        : '<div id="ev-mot"></div>')+
+        : ENV.vista==='pfn' ? '<div id="ev-pfn"></div>' : '<div id="ev-mot"></div>')+
     '</div>';
   if(ENV.vista==='ctl'){ _evDias(); _evTabla(); _evResumen(); }
+  else if(ENV.vista==='pfn') _evPfnPinta();
   else _evMotPinta();
 }
 function envVista(v){ ENV.vista=v; _evRender(); }
@@ -505,4 +507,39 @@ function exportEnvases(){
     });
     return out;
   },'Envases semana','control_envases_'+m.days[0]);
+}
+
+/* ── PFN: pestaña aparte. Lo que se guarda vale desde esa fecha y se mantiene hasta el próximo cambio; el total se ve en la columna PFN de Movimientos y conteo ── */
+function _evPfnPinta(){
+  var el=document.getElementById('ev-pfn'); if(!el) return;
+  var m=ENV.m, s=ENV.sel, dia=m.days[s], todas=ENV.d.conteo.concat(ENV.d.pfnPrev), desde=_evFechaPfn(todas,dia), fecha=ENV.pfnFecha||dia;
+  var cur=m.pfn[s]||_evCeros(), tot=0, h='';
+  ENV_FILAS.forEach(function(r,j){
+    tot+=cur[j]||0;
+    if(r.g) h+='<div class="ev-gp" style="grid-column:1/-1">'+r.g+'</div>';
+    h+='<div class="ev-n1"><b>'+r.t+'</b><small>'+r.sku+' · '+r.n+'</small></div>'+
+       '<div class="ev-c mut" style="text-align:center">'+(cur[j]||'—')+'</div>'+
+       '<input class="inp ev-in" id="evp-'+j+'" inputmode="numeric" placeholder="0" value="'+(cur[j]||'')+'">';
+  });
+  el.innerHTML=
+    '<div class="ev-card"><div class="ev-h"><span class="t">PFN</span><span class="s">'+(desde?'Vigente desde el '+_evF(desde):'Aún no hay PFN registrado')+' · total '+tot+'</span></div>'+
+    '<p class="evm-note">El PFN que guardes vale desde la fecha que elijas y se mantiene todos los días siguientes hasta que lo vuelvas a editar. No se suma al conteo: el total se ve en la columna PFN de Movimientos y conteo. En las cajas va la cantidad de cajas; en las botellas, la cantidad de botellas.</p>'+
+    '<div style="display:grid;grid-template-columns:minmax(150px,1.5fr) 80px 110px;gap:6px 12px;align-items:center;max-width:520px">'+
+      '<span class="ev-k">Envase</span><span class="ev-k" style="text-align:center">Vigente</span><span class="ev-k" style="text-align:center">Nuevo PFN</span>'+h+'</div>'+
+    '<div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px;flex-wrap:wrap"><label class="ev-k">Aplica desde</label>'+
+      '<input class="inp" id="evp-f" type="date" value="'+esc(fecha)+'" style="width:auto"><button class="btn btn-primary" onclick="envPfnGuardar()">Guardar PFN</button></div></div>';
+}
+function envPfnGuardar(){
+  var f=document.getElementById('evp-f').value; if(!f){ showToast('Elige la fecha desde la que aplica','err'); return; }
+  var por={};
+  ENV_FILAS.forEach(function(r,j){
+    var v=_evNum(document.getElementById('evp-'+j).value)||0, est=r.k==='vac'?'vacia':'llena', k=r.tam+'|'+est;
+    var o=por[k]||(por[k]={ estado:est, tamano:r.tam, solas:0, unidades:0 });
+    if(r.k==='caja') o.solas+=v; else o.unidades+=v;
+  });
+  var lineas=Object.keys(por).map(function(k){ return por[k]; });
+  google.script.run.withSuccessHandler(function(res){
+    if(!res||!res.ok){ showToast((res&&res.error)||'No se pudo guardar el PFN','err'); return; }
+    ENV.pfnFecha=f; showToast('PFN guardado desde el '+_evF(f)); _evRecargar();
+  }).withFailureHandler(function(e){ showToast(e.message,'err'); }).guardarEnvPfn(S.token,{ fecha:f, lineas:lineas });
 }

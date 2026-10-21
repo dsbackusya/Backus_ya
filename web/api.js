@@ -974,6 +974,24 @@
     return { ok: true, lineas: r.data };
   });
 
+  // d: { fecha, lineas: [{ estado, tamano, solas, unidades }] } fija el PFN de esa fecha; vale para los días siguientes hasta el próximo cambio
+  API.guardarEnvPfn = guard(async function (p, d) {
+    var sede = exigirSede(p, null), fecha = parseFecha(d.fecha);
+    if (!fecha) return { ok: false, error: 'Fecha inválida' };
+    var lineas = [];
+    for (var i = 0; i < (d.lineas || []).length; i++) {
+      var l = d.lineas[i], solas = enteroNoNeg(l.solas), und = enteroNoNeg(l.unidades);
+      if (l.estado !== 'llena' && l.estado !== 'vacia') return { ok: false, error: 'Estado inválido' };
+      if (ENV_TAMANOS.indexOf(Number(l.tamano)) < 0) return { ok: false, error: 'Envase inválido' };
+      if (solas === null || und === null) return { ok: false, error: 'Cantidades inválidas' };
+      if (solas + und === 0) continue;
+      lineas.push({ estado: l.estado, tamano: Number(l.tamano), packs: 0, solas: solas, unidades: und });
+    }
+    var r = await sb.rpc('guardar_envases_pfn', { p_sede: sede, p_fecha: fecha, p_lineas: lineas, p_usuario: p.usuario });
+    if (r.error) return { ok: false, error: mensaje(r.error) };
+    return { ok: true, lineas: r.data };
+  });
+
   // d: { fecha, tipo: entrada | devolucion | venta, tamano, estado, unidades } fija la cantidad manual del día (0 la quita)
   API.setEnvMov = guard(async function (p, d) {
     var sede = exigirSede(p, null), fecha = parseFecha(d.fecha), und = enteroNoNeg(d.unidades);
