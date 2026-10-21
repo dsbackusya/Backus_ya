@@ -236,6 +236,20 @@
     return { ok: true, data: data, usuario: p.usuario, rol: p.rol };
   });
 
+  // Stock de cada producto al cierre de una fecha (y el actual): base para ajustar un inventario hecho en un dia pasado.
+  API.getStockAFecha = guard(async function (p, fecha) {
+    var f = str(fecha);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f)) return { ok: false, error: 'Fecha inválida' };
+    var sede = exigirSede(p, null);
+    var filas = await todas(function () { return sb.rpc('stock_a_fecha', { p_sede: sede, p_fecha: f }); });
+    return {
+      ok: true,
+      data: filas.map(function (r) {
+        return { sku: str(r.sku), desc: str(r.descripcion), stockFecha: num(r.stock_fecha), stock: num(r.stock_actual) };
+      })
+    };
+  });
+
   // Stock en packs de todas las sedes (para la descarga del Dashboard); una tienda solo ve su sede en el resto de la app.
   API.getStockPackTodasSedes = guard(async function () {
     var filas = await todas(function () { return sb.rpc('stock_pack_todas_sedes'); });
@@ -626,7 +640,7 @@
     return { ok: true };
   });
   // Deja el Stock igual a las cantidades dadas: por cada SKU registra un M-T tipo AJUSTE por (stock actual - cantidad nueva).
-  // El stock actual se lee aqui, en el momento de aplicar, no el que vio la pantalla.
+  // El stock a la fecha se lee aqui, en el momento de aplicar, no el que vio la pantalla.
   API.aplicarAjusteInventario = guard(async function (p, d) {
     var sede = exigirSede(p, d);
     var hoy = hoyISO(), fecha = str(d.fecha) || hoy;
@@ -640,17 +654,17 @@
       nuevo[sku] = q;
     }
     if (!skus.length) return { ok: false, error: 'No hay nada que ajustar' };
+    // Stock al cierre de la fecha elegida (no el de hoy): lo que se movio despues se respeta
+    var corte = str(d.corte) || fecha;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(corte) || corte > fecha) return { ok: false, error: 'Fecha de corte inválida' };
+    var rr = await todas(function () { return sb.rpc('stock_a_fecha', { p_sede: sede, p_fecha: corte }); });
     var actual = {};
-    for (var a = 0; a < skus.length; a += 150) {
-      var r = await sb.from('v_stock').select('sku,descripcion,stock_actual').eq('sede_id', sede).in('sku', skus.slice(a, a + 150));
-      if (r.error) throw r.error;
-      r.data.forEach(function (x) { actual[x.sku] = x; });
-    }
+    rr.forEach(function (x) { actual[x.sku] = x; });
     var obs = nulo(d.obs), filas = [], sinCambio = 0;
     skus.forEach(function (sku) {
       var s = actual[sku];
       if (!s) return;
-      var dif = num(s.stock_actual) - nuevo[sku];
+      var dif = num(s.stock_fecha) - nuevo[sku];
       if (dif === 0) { sinCambio++; return; }
       filas.push({ sede_id: sede, fecha: fecha, sku: sku, descripcion: str(s.descripcion), cantidad: dif, tipo: 'AJUSTE', motivo: 'INVENTARIO', observaciones: obs });
     });

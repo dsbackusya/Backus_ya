@@ -666,9 +666,10 @@ function guardarSKU(otro){
 }
 
 /* ── AJUSTE DE INVENTARIO POR ARCHIVO ──
-   Se sube un Excel con el stock final (SKU y cantidad física). El sistema compara con el Stock actual de la sede y,
-   por cada diferencia, registra un movimiento M-T tipo AJUSTE (motivo INVENTARIO) para que el Stock quede igual al archivo. */
-var _AJ={ lineas:[], faltan:[], sinArchivo:0 };
+   Se sube un Excel con el stock final (SKU y cantidad física) de un inventario hecho en una FECHA.
+   El archivo se compara con el stock que había al cierre de esa fecha (no con el de hoy) y solo se ajustan los códigos que
+   difieren. Lo que se movió después de esa fecha se respeta: el ajuste (stock a la fecha − archivo) se registra como M-T. */
+var _AJ={ arch:null, lineas:[], faltan:[], fueraStock:[], cero:false, fecha:'', corte:'' };
 function _ajNum(v){
   if(typeof v==='number') return v;
   var t=String(v==null?'':v).trim().replace(/\s/g,'');
@@ -686,6 +687,14 @@ function _ajCol(head, claves, excluir){
   }
   return -1;
 }
+// Fecha hasta la que se cuentan los movimientos: la del inventario o, si se desmarca "incluir ese día", el día anterior
+function _ajCorte(fecha){
+  var c=document.getElementById('aj-dia');
+  if(!fecha||!c||c.checked) return fecha;
+  var d=new Date(fecha+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()-1);
+  return d.toISOString().slice(0,10);
+}
+function _ajDMY(iso){ return String(iso||'').split('-').reverse().join('/'); }
 function abrirAjusteArchivo(){
   var m=document.getElementById('modal-ajuste');
   if(!m){
@@ -693,13 +702,21 @@ function abrirAjusteArchivo(){
     m.style.cssText='display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px);padding:12px';
     document.body.appendChild(m);
   }
-  _AJ={ lineas:[], faltan:[], sinArchivo:0 };
-  m.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--r2);padding:22px 26px;width:760px;max-width:100%;max-height:92vh;overflow:auto;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:14px">'+
+  _AJ={ arch:null, lineas:[], faltan:[], fueraStock:[], cero:false, fecha:'' };
+  m.innerHTML='<div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--r2);padding:22px 26px;width:820px;max-width:100%;max-height:92vh;overflow:auto;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:14px">'+
     '<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-family:var(--font-display);font-size:17px;font-weight:700;color:var(--text)">Ajuste de inventario por archivo</div>'+
     '<button class="btn btn-ghost btn-sm" onclick="document.getElementById(\'modal-ajuste\').style.display=\'none\'">Cerrar</button></div>'+
-    '<div style="font-size:13px;color:var(--text2);line-height:1.5">Sube el Excel con el stock final: una columna con el <b>SKU</b> (Cod_Lovis) y otra con la <b>cantidad física</b>. El sistema compara con el Stock actual y registra un M-T de ajuste por cada diferencia, para que el Stock quede igual al archivo.</div>'+
-    '<div id="aj-cuerpo"><input type="file" id="aj-file" accept=".xlsx,.xls" onchange="_ajLeer(this.files[0])"/><div id="aj-err" style="color:var(--danger);font-size:12px;margin-top:8px;min-height:14px"></div></div></div>';
+    '<div style="font-size:13px;color:var(--text2);line-height:1.5">Elige la <b>fecha en que se hizo el inventario</b> y sube el Excel con el stock final (columna de <b>SKU</b> y columna de <b>cantidad física</b>). El archivo se compara con el stock que había <b>al cierre de esa fecha</b> y solo se ajustan los códigos que difieren; lo que se movió después no se toca.</div>'+
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">'+
+      '<div style="flex:1;min-width:150px"><div class="ent-lbl">Fecha del inventario</div><input class="inp" id="aj-fecha" type="date" style="width:100%" onchange="_ajCalcular()"/></div>'+
+      '<div style="flex:2;min-width:220px"><div class="ent-lbl">Observación</div><input class="inp" id="aj-obs" style="width:100%"/></div>'+
+      '<div style="flex:2;min-width:220px"><div class="ent-lbl">Archivo (.xlsx)</div><input type="file" id="aj-file" accept=".xlsx,.xls" onchange="_ajLeer(this.files[0])" style="width:100%"/></div></div>'+
+    '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text2)"><input type="checkbox" id="aj-dia" checked style="margin-top:2px" onchange="_ajCalcular()"/><span><b>Incluir las entradas, salidas y M-T de ese mismo día</b> en el stock con el que se compara. Desmárcalo si el conteo se hizo al <b>inicio</b> del día (se compara con el stock al cierre del día anterior).</span></label>'+
+    '<div id="aj-err" style="color:var(--danger);font-size:12px;min-height:14px"></div>'+
+    '<div id="aj-prev"></div></div>';
   m.style.display='flex';
+  var f=document.getElementById('aj-fecha'); f.value=_hoyISO(); f.max=_hoyISO();
+  document.getElementById('aj-obs').value='AJUSTE INVENTARIO '+_hoyDMY();
 }
 function _ajLeer(file){
   if(!file) return;
@@ -727,68 +744,79 @@ function _ajLeer(file){
       mapa[sku]={ sku:sku, desc:cDes>=0?String(r[cDes]||'').trim():'', q:q }; orden.push(sku);
     });
     if(!orden.length){ err.textContent='No hay filas con SKU y cantidad'; return; }
-    document.getElementById('aj-cuerpo').innerHTML='<div style="color:var(--text3);font-size:13px">Comparando con el Stock actual…</div>';
-    google.script.run
-      .withSuccessHandler(function(r){
-        if(!r||!r.ok){ document.getElementById('aj-cuerpo').innerHTML='<div style="color:var(--danger)">'+esc((r&&r.error)||'No se pudo leer el Stock')+'</div>'; return; }
-        var st={}; r.data.forEach(function(x){ st[x.sku]=x; });
-        var lineas=[], faltan=[], enArchivo={};
-        orden.forEach(function(k){
-          var a=mapa[k]; enArchivo[k]=1;
-          var s=st[k];
-          if(!s){ faltan.push(a); return; }
-          lineas.push({ sku:k, desc:s.desc||a.desc, actual:s.stock, nuevo:a.q, dif:a.q-s.stock });
-        });
-        var fuera=r.data.filter(function(x){ return !enArchivo[x.sku]; });
-        var sinArchivo=fuera.length;
-        var fueraStock=fuera.filter(function(x){ return x.stock!==0; });
-        _AJ={ lineas:lineas, faltan:faltan, sinArchivo:sinArchivo, fueraStock:fueraStock, malos:malos, rep:rep, nombre:file.name };
-        _ajPinta();
-      })
-      .withFailureHandler(function(x){ document.getElementById('aj-cuerpo').innerHTML='<div style="color:var(--danger)">'+esc(x.message)+'</div>'; })
-      .getStock(S.token);
+    _AJ.arch={ mapa:mapa, orden:orden, malos:malos, rep:rep, nombre:file.name };
+    _ajCalcular();
   };
   rd.readAsArrayBuffer(file);
 }
+// Compara el archivo con el stock al cierre de la fecha elegida
+function _ajCalcular(){
+  var A=_AJ.arch; if(!A) return;
+  var fecha=document.getElementById('aj-fecha').value, err=document.getElementById('aj-err');
+  err.textContent='';
+  if(!fecha){ err.textContent='Elige la fecha del inventario'; return; }
+  if(fecha>_hoyISO()){ err.textContent='La fecha no puede ser futura'; return; }
+  _AJ.fecha=fecha; _AJ.corte=_ajCorte(fecha);
+  var corte=_AJ.corte, clave=fecha+'|'+corte;
+  var prev=document.getElementById('aj-prev');
+  prev.innerHTML='<div style="color:var(--text3);font-size:13px">Calculando el stock al cierre del '+_ajDMY(corte)+'…</div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(clave!==document.getElementById('aj-fecha').value+'|'+_ajCorte(document.getElementById('aj-fecha').value)) return;   // se cambió la fecha mientras tanto
+      if(!r||!r.ok){ prev.innerHTML='<div style="color:var(--danger)">'+esc((r&&r.error)||'No se pudo leer el Stock')+'</div>'; return; }
+      var st={}; r.data.forEach(function(x){ st[x.sku]=x; });
+      var lineas=[], faltan=[], enArchivo={};
+      A.orden.forEach(function(k){
+        var a=A.mapa[k]; enArchivo[k]=1;
+        var s=st[k];
+        if(!s){ faltan.push(a); return; }
+        lineas.push({ sku:k, desc:s.desc||a.desc, enFecha:s.stockFecha, hoy:s.stock, nuevo:a.q, dif:a.q-s.stockFecha });
+      });
+      var fuera=r.data.filter(function(x){ return !enArchivo[x.sku]; });
+      _AJ.lineas=lineas; _AJ.faltan=faltan; _AJ.sinArchivo=fuera.length;
+      _AJ.fueraStock=fuera.filter(function(x){ return x.stockFecha!==0; }).map(function(x){ return { sku:x.sku, desc:x.desc, enFecha:x.stockFecha, hoy:x.stock }; });
+      _ajPinta();
+    })
+    .withFailureHandler(function(x){ prev.innerHTML='<div style="color:var(--danger)">'+esc(x.message)+'</div>'; })
+    .getStockAFecha(S.token,corte);
+}
 function _ajEfectivas(){
   var A=_AJ, l=A.lineas.slice();
-  if(A.cero&&A.fueraStock) A.fueraStock.forEach(function(x){ l.push({ sku:x.sku, desc:x.desc, actual:x.stock, nuevo:0, dif:-x.stock }); });
+  if(A.cero) A.fueraStock.forEach(function(x){ l.push({ sku:x.sku, desc:x.desc, enFecha:x.enFecha, hoy:x.hoy, nuevo:0, dif:-x.enFecha }); });
   return l;
 }
 function _ajPinta(){
   var c0=document.getElementById('aj-cero'); if(c0) _AJ.cero=c0.checked;
-  var A=_AJ, con=_ajEfectivas().filter(function(l){return l.dif!==0;}).sort(function(a,b){return Math.abs(b.dif)-Math.abs(a.dif);});
-  var iguales=_ajEfectivas().length-con.length, sube=con.filter(function(l){return l.dif>0;}), baja=con.filter(function(l){return l.dif<0;});
+  var A=_AJ, todas=_ajEfectivas(), con=todas.filter(function(l){return l.dif!==0;}).sort(function(a,b){return Math.abs(b.dif)-Math.abs(a.dif);});
+  var iguales=todas.length-con.length, sube=con.filter(function(l){return l.dif>0;}), baja=con.filter(function(l){return l.dif<0;});
   var tot=function(a){return a.reduce(function(s,l){return s+Math.abs(l.dif);},0);};
+  var d=_ajDMY(A.corte||A.fecha);
   var card=function(k,v,c){return '<div style="flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 12px"><div style="font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">'+k+'</div><div style="font:700 20px var(--font-display);color:'+(c||'var(--text)')+'">'+v+'</div></div>';};
   var h='<div style="display:flex;gap:8px;flex-wrap:wrap">'+
-    card('En el archivo',fmt(A.lineas.length+A.faltan.length))+card('Con diferencia',fmt(con.length),con.length?'var(--warn)':'var(--ok)')+
-    card('Ya iguales',fmt(iguales),'var(--ok)')+card('Suben / bajan','+'+fmt(tot(sube))+' / −'+fmt(tot(baja)))+'</div>';
-  if(A.faltan.length) h+='<div style="font-size:12px;color:var(--warn)"><b>'+A.faltan.length+'</b> SKU del archivo no existen en el Stock de esta sede y se ignoran: '+esc(A.faltan.slice(0,8).map(function(a){return a.sku;}).join(', '))+(A.faltan.length>8?'…':'')+'</div>';
-  if(A.malos&&A.malos.length) h+='<div style="font-size:12px;color:var(--warn)">Filas ignoradas por cantidad inválida: '+esc(A.malos.slice(0,6).join(', '))+(A.malos.length>6?'…':'')+'</div>';
-  if(A.rep) h+='<div style="font-size:12px;color:var(--warn)">'+A.rep+' SKU aparecían repetidos en el archivo y se sumaron.</div>';
-  h+='<div style="font-size:12px;color:var(--text3)">Los '+fmt(A.sinArchivo)+' productos del Stock que no están en el archivo <b>no se tocan</b>.</div>';
-  if(A.fueraStock&&A.fueraStock.length) h+='<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 10px"><input type="checkbox" id="aj-cero" style="margin-top:2px" onchange="_ajPinta()"'+(A.cero?' checked':'')+'/><span><b>Poner en 0</b> los '+A.fueraStock.length+' productos que no están en el archivo pero tienen stock en el sistema ('+esc(A.fueraStock.slice(0,3).map(function(x){return x.sku+' = '+x.stock;}).join(', '))+(A.fueraStock.length>3?'…':'')+'). Si no lo marcas, quedan como están.</span></label>';
+    card('Códigos en el archivo',fmt(A.lineas.length+A.faltan.length))+card('Se van a ajustar',fmt(con.length),con.length?'var(--warn)':'var(--ok)')+
+    card('Ya coinciden al '+d,fmt(iguales),'var(--ok)')+card('Suben / bajan','+'+fmt(tot(sube))+' / −'+fmt(tot(baja)))+'</div>';
+  if(A.faltan.length) h+='<div style="font-size:12px;color:var(--warn)"><b>'+A.faltan.length+'</b> código(s) del archivo no existen en el Stock de esta sede y se ignoran: '+esc(A.faltan.slice(0,8).map(function(a){return a.sku;}).join(', '))+(A.faltan.length>8?'…':'')+'</div>';
+  if(A.arch.malos&&A.arch.malos.length) h+='<div style="font-size:12px;color:var(--warn)">Filas ignoradas por cantidad inválida: '+esc(A.arch.malos.slice(0,6).join(', '))+(A.arch.malos.length>6?'…':'')+'</div>';
+  if(A.arch.rep) h+='<div style="font-size:12px;color:var(--warn)">'+A.arch.rep+' código(s) aparecían repetidos en el archivo y se sumaron.</div>';
+  h+='<div style="font-size:12px;color:var(--text3)">Los '+fmt(A.sinArchivo)+' productos que no están en el archivo <b>no se tocan</b>.</div>';
+  if(A.fueraStock.length) h+='<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 10px"><input type="checkbox" id="aj-cero" style="margin-top:2px" onchange="_ajPinta()"'+(A.cero?' checked':'')+'/><span><b>Poner en 0</b> los '+A.fueraStock.length+' productos que no están en el archivo pero tenían stock al '+d+' ('+esc(A.fueraStock.slice(0,3).map(function(x){return x.sku+' = '+x.enFecha;}).join(', '))+(A.fueraStock.length>3?'…':'')+'). Si no lo marcas, quedan como están.</span></label>';
   if(!con.length){
-    h+='<div style="padding:14px;text-align:center;color:var(--ok);font-weight:600">El Stock ya coincide con el archivo. No hay nada que ajustar.</div>';
+    h+='<div style="padding:14px;text-align:center;color:var(--ok);font-weight:600">Al '+d+' el Stock ya coincide con el archivo. No hay nada que ajustar.</div>';
   }else{
-    h+='<div style="max-height:36vh;overflow:auto;border:1px solid var(--border);border-radius:12px"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:var(--surface2);position:sticky;top:0"><th style="text-align:left;padding:8px 10px">SKU</th><th style="text-align:left;padding:8px 10px">Producto</th><th style="text-align:right;padding:8px 10px">Stock actual</th><th style="text-align:right;padding:8px 10px">Archivo</th><th style="text-align:right;padding:8px 10px">Ajuste</th></tr></thead><tbody>'+
-      con.map(function(l){ return '<tr style="border-top:1px solid var(--border)"><td class="mono" style="padding:6px 10px">'+esc(l.sku)+'</td><td style="padding:6px 10px">'+esc(l.desc)+'</td><td style="padding:6px 10px;text-align:right">'+fmt(l.actual)+'</td><td style="padding:6px 10px;text-align:right">'+fmt(l.nuevo)+'</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:'+(l.dif>0?'var(--ok)':'var(--danger)')+'">'+(l.dif>0?'+':'−')+fmt(Math.abs(l.dif))+'</td></tr>'; }).join('')+'</tbody></table></div>'+
-    '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">'+
-      '<div style="flex:1;min-width:140px"><div class="ent-lbl">Fecha del ajuste</div><input class="inp" id="aj-fecha" type="date" style="width:100%"/></div>'+
-      '<div style="flex:2;min-width:200px"><div class="ent-lbl">Observación</div><input class="inp" id="aj-obs" style="width:100%"/></div></div>'+
+    h+='<div style="font-size:12.5px;color:var(--text2)">Códigos que se van a ajustar ('+fmt(con.length)+'):</div>'+
+    '<div style="max-height:34vh;overflow:auto;border:1px solid var(--border);border-radius:12px"><table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="background:var(--surface2);position:sticky;top:0"><th style="text-align:left;padding:8px 10px">Código</th><th style="text-align:left;padding:8px 10px">Producto</th><th style="text-align:right;padding:8px 10px">Stock al '+d+'</th><th style="text-align:right;padding:8px 10px">Archivo</th><th style="text-align:right;padding:8px 10px">Ajuste</th><th style="text-align:right;padding:8px 10px" title="Lo que hay hoy y lo que quedará después del ajuste">Hoy → quedará</th></tr></thead><tbody>'+
+      con.map(function(l){ var queda=l.hoy+l.dif; return '<tr style="border-top:1px solid var(--border)"><td class="mono" style="padding:6px 10px">'+esc(l.sku)+'</td><td style="padding:6px 10px">'+esc(l.desc)+'</td><td style="padding:6px 10px;text-align:right">'+fmt(l.enFecha)+'</td><td style="padding:6px 10px;text-align:right">'+fmt(l.nuevo)+'</td><td style="padding:6px 10px;text-align:right;font-weight:700;color:'+(l.dif>0?'var(--ok)':'var(--danger)')+'">'+(l.dif>0?'+':'−')+fmt(Math.abs(l.dif))+'</td><td style="padding:6px 10px;text-align:right;color:'+(queda<0?'var(--danger)':'var(--text2)')+'">'+fmt(l.hoy)+' → <b>'+fmt(queda)+'</b></td></tr>'; }).join('')+'</tbody></table></div>'+
+    '<div style="font-size:11.5px;color:var(--text3)">«Hoy → quedará» incluye lo que se movió después del '+d+'. En rojo: quedaría en negativo.</div>'+
     '<div id="aj-err2" style="color:var(--danger);font-size:12px;min-height:14px"></div>'+
-    '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-ghost btn-sm" onclick="abrirAjusteArchivo()">Elegir otro archivo</button><button class="btn btn-primary btn-sm" id="aj-ok" onclick="_ajConfirmar()">Aplicar ajuste ('+fmt(con.length)+' productos)</button></div>';
+    '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-primary btn-sm" id="aj-ok" onclick="_ajConfirmar()">Aplicar ajuste ('+fmt(con.length)+' códigos)</button></div>';
   }
-  document.getElementById('aj-cuerpo').innerHTML=h;
-  var f=document.getElementById('aj-fecha');
-  if(f){ f.value=_hoyISO(); f.max=_hoyISO(); document.getElementById('aj-obs').value='AJUSTE INVENTARIO '+_hoyDMY(); }
+  document.getElementById('aj-prev').innerHTML=h;
 }
 function _ajConfirmar(){
   var fecha=document.getElementById('aj-fecha').value, obs=document.getElementById('aj-obs').value.trim(), err=document.getElementById('aj-err2');
-  if(!fecha){ err.textContent='Elige la fecha del ajuste'; return; }
+  if(!fecha){ err.textContent='Elige la fecha del inventario'; return; }
   var con=_ajEfectivas().filter(function(l){return l.dif!==0;});
-  _confirmDialog('Aplicar ajuste de inventario','Se registrarán '+con.length+' movimientos M-T de ajuste con fecha '+fecha.split('-').reverse().join('/')+' para dejar el Stock igual al archivo. Si algo se movió desde que abriste esta pantalla, el ajuste se calcula con el Stock de este momento. Puedes borrarlos después desde M-T.',function(){
+  _confirmDialog('Aplicar ajuste de inventario','Se registrarán '+con.length+' movimientos M-T de ajuste con fecha '+_ajDMY(fecha)+' para que el Stock al cierre del '+_ajDMY(_ajCorte(fecha))+' quede igual al archivo. Lo que se movió después se respeta. Puedes borrarlos después desde M-T.',function(){
     var b=document.getElementById('aj-ok'); b.disabled=true; b.textContent='Aplicando…';
     google.script.run
       .withSuccessHandler(function(r){
@@ -798,6 +826,6 @@ function _ajConfirmar(){
         reloadPage('stock');
       })
       .withFailureHandler(function(e){ b.disabled=false; b.textContent='Aplicar ajuste'; err.textContent=e.message; })
-      .aplicarAjusteInventario(S.token,{ fecha:fecha, obs:obs, lineas:con.map(function(l){return {sku:l.sku,nuevo:l.nuevo};}) });
+      .aplicarAjusteInventario(S.token,{ fecha:fecha, corte:_ajCorte(fecha), obs:obs, lineas:con.map(function(l){return {sku:l.sku,nuevo:l.nuevo};}) });
   },'Aplicar');
 }
