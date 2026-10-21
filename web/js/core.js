@@ -369,8 +369,7 @@ function renderTopbarActions(name){
       '<button class="btn btn-ghost btn-sm" id="btn-oc-validar" onclick="validarRecepcionOC()" style="border-color:var(--accent);color:var(--accent)">'+icoRefresh+'<span class="tb-btn-label"> Validar OC</span></button>':'')+
       '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Exportar órdenes de compra" onclick="exportOC()">'+icoExport+'<span class="tb-btn-label"> Exportar OC</span></button>'+btnRefresh;
   } else if(name==='stock'){
-    var btnAj=(S&&S.rol==='store')?'<button class="btn btn-ghost btn-sm tb-btn-icon" title="Ajuste de inventario por archivo" onclick="abrirAjusteArchivo()">'+icoExport.replace('<polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>','<polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>')+'<span class="tb-btn-label"> Ajuste</span></button>':'';
-    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirSKUForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Nuevo SKU</span></button>'+btnAj+btnExport+btnRefresh;
+    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirSKUForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Nuevo SKU</span></button>'+btnExport+btnRefresh;
   } else if(name==='salidas'){
     var btnPedido=(S&&S.rol==='store')?'<button class="btn btn-primary btn-sm" onclick="abrirPedidoManual()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar pedido</span></button>':'';
     el.innerHTML=btnPedido+btnExport+btnRefresh;
