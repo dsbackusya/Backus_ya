@@ -484,6 +484,7 @@ function abrirEntrada(){
   ['ent-factura','ent-proveedor','ent-oc','ent-fvenc'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.value='';
   });
+  var fe=document.getElementById('ent-fecha'); fe.value=_hoyISO(); fe.max=_hoyISO();
   document.getElementById('ent-responsable').value=(S&&S.usuario)||'';
   document.getElementById('ent-dynamics').value='Pendiente';
   document.querySelectorAll('#ent-dy button').forEach(function(x){x.classList.toggle('on',x.dataset.v==='Pendiente');});
@@ -924,6 +925,7 @@ function guardarEntradaManual(){
     factura:fac,
     proveedor:document.getElementById('ent-proveedor').value,
     oc:document.getElementById('ent-oc').value,
+    fecha:document.getElementById('ent-fecha').value,
     fVenc:document.getElementById('ent-fvenc').value,
     dynamics:document.getElementById('ent-dynamics').value,
     responsable:document.getElementById('ent-responsable').value
@@ -957,6 +959,7 @@ function guardarEntradaArchivo(){
     factura:fac,
     proveedor:document.getElementById('ent-proveedor').value,
     oc:document.getElementById('ent-oc').value,
+    fecha:document.getElementById('ent-fecha').value,
     fVenc:document.getElementById('ent-fvenc').value,
     dynamics:document.getElementById('ent-dynamics').value,
     responsable:document.getElementById('ent-responsable').value

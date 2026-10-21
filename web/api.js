@@ -508,13 +508,16 @@
 
   API.registrarEntradasMultiple = guard(async function (p, filas, comun) {
     var sede = exigirSede(p, comun);
+    var hoy = hoyISO(), fecha = str(comun.fecha) || hoy;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { ok: false, error: 'Fecha de ingreso inválida' };
+    if (fecha > hoy) return { ok: false, error: 'La fecha de ingreso no puede ser futura' };
     var rows = [];
     for (var i = 0; i < filas.length; i++) {
       var f = filas[i], sku = str(f.sku), und = entero(f.unidades);
       if (!sku) return { ok: false, error: 'SKU vacío en fila ' + (i + 1) };
       if (und === null || und < 0) return { ok: false, error: 'Unidades inválidas en fila ' + (i + 1) };
       rows.push({
-        sede_id: sede, factura: nulo(comun.factura), fecha: hoyISO(), sku: sku, descripcion: str(f.desc),
+        sede_id: sede, factura: nulo(comun.factura), fecha: fecha, sku: sku, descripcion: str(f.desc),
         unidades: und, f_vencimiento: nulo(comun.fVenc), proveedor: nulo(comun.proveedor), oc: nulo(comun.oc),
         dynamics: nulo(comun.dynamics), responsable: nulo(comun.responsable)
       });

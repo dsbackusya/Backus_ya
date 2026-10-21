@@ -3,7 +3,7 @@
    - Archivos propios: red primero, con copia de respaldo si no hay internet.
    - Supabase (datos, login, tiempo real) nunca se guarda: siempre va a la red.
    Al cambiar la lista de archivos, sube el número de CACHE. */
-const CACHE = 'tada-v8';
+const CACHE = 'tada-v9';
 const BASE = ['./', 'index.html', 'app.css', 'js/core.js', 'js/stock.js', 'js/salidas.js', 'js/entradas.js', 'js/mt.js', 'js/comun.js', 'js/cancelados.js', 'js/maestro.js', 'js/mconteo.js', 'js/scanner.js', 'js/conteo.js', 'js/shell.js', 'js/validacion.js', 'js/oc.js', 'js/editar-sku.js', 'js/arranque.js', 'envases.js', 'documentos.js', 'api.js', 'config.js', 'manifest.webmanifest',
   'vendor/supabase.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
