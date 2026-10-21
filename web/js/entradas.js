@@ -295,6 +295,7 @@ function _filterEntradas(){
 
   var chev='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
   var lapiz=function(row,tit){return '<button class="ent-edb" title="'+tit+'" onclick="event.stopPropagation();editarDynamicsRowSafe('+row+')">'+ICO('edit',13,'s')+'</button>';};
+  var delFac=function(i){return '<button class="ent-edb d" title="Eliminar la factura completa" onclick="event.stopPropagation();entEliminarFactura('+i+')">'+ICO('trash',13,'s')+'</button>';};
   var lineas=function(g,i){
     if(!_ENT_ABIERTOS[g.key]) return '';
     return '<div class="ent-its on">'+g.items.map(function(x){
@@ -312,12 +313,12 @@ function _filterEntradas(){
       '<span>'+(g.oc?'<span class="ent-oc">'+esc(g.oc)+'</span>':'<span class="ent-sin">Sin OC</span>')+'</span>'+
       '<span class="r">'+g.items.length+'</span><span class="r"><b>'+fmt(g.und)+'</b></span>'+
       '<span>'+_entPillGrupo(g)+'</span><span class="ent-resp">'+esc(g.responsable||'')+'</span>'+
-      '<span class="r">'+(g.oc?lapiz(g.items[0]._row,'Cambiar el estado de Dynamics de toda la OC'):'')+'</span></div>'+lineas(g,i)+'</div>';
+      '<span class="r ent-acc">'+(g.oc?lapiz(g.items[0]._row,'Cambiar el estado de Dynamics de toda la OC'):'')+delFac(i)+'</span></div>'+lineas(g,i)+'</div>';
   }).join('')||'<div class="ent-vacio">Sin registros</div>';
   document.getElementById('ent-lst').innerHTML=vis.map(function(g,i){
     return '<div class="ent-cd"><div class="ent-h" onclick="entTg('+i+')"><div style="min-width:0"><div class="ent-fa mono">'+esc(g.factura||'—')+'</div>'+
       '<div class="ent-sb">'+esc(g.proveedor||'')+' · '+esc(g.fecha)+'</div>'+
-      '<div class="ent-tags">'+_entPillGrupo(g)+(g.oc?'<span class="ent-oc">'+esc(g.oc)+'</span>':'')+(g.oc?lapiz(g.items[0]._row,'Cambiar el estado de Dynamics de toda la OC'):'')+'</div></div>'+
+      '<div class="ent-tags">'+_entPillGrupo(g)+(g.oc?'<span class="ent-oc">'+esc(g.oc)+'</span>':'')+(g.oc?lapiz(g.items[0]._row,'Cambiar el estado de Dynamics de toda la OC'):'')+delFac(i)+'</div></div>'+
       '<div class="ent-u"><b>'+fmt(g.und)+'</b><span>'+g.items.length+' prod.</span></div></div>'+lineas(g,i)+'</div>';
   }).join('')||'<div class="ent-vacio">Sin registros</div>';
 }

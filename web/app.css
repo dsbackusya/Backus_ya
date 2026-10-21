@@ -2674,7 +2674,7 @@ input.filter-inp:focus{
 .ent-seg button span{font:500 10px var(--font-mono);opacity:.8}
 .ent-cnt{margin-left:auto;font:500 11px var(--font-mono);color:var(--text3)}
 .ent-tw{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
-.ent-hd,.ent-rc{display:grid;grid-template-columns:34px 92px minmax(170px,1.5fr) minmax(150px,1fr) 78px 90px 120px minmax(90px,.8fr) 40px;gap:0 14px;align-items:center;padding:0 18px}
+.ent-hd,.ent-rc{display:grid;grid-template-columns:34px 92px minmax(170px,1.5fr) minmax(150px,1fr) 78px 90px 120px minmax(90px,.8fr) 84px;gap:0 14px;align-items:center;padding:0 18px}
 .ent-hd{padding-top:12px;padding-bottom:12px;background:var(--surface2);border-bottom:1px solid var(--border);font:500 10px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text3)}
 .ent-hd .r,.ent-rc .r,.ent-it .r{text-align:right}
 .ent-rc{padding-top:15px;padding-bottom:15px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;color:var(--text)}
