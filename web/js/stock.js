@@ -354,32 +354,66 @@ function _filterStock(){
   });
   var el=document.getElementById('stock-count');
   if(el)el.textContent=filtered.length+' productos';
-  var mx=DATA._stockMax||1;
-  var lab={ok:'Con stock',no:'Sin stock',ng:'Negativo'}, col={ok:'var(--ok)',no:'var(--text4)',ng:'var(--danger)'};
-  var tbody=filtered.map(function(r){
-    var e=r.stock>0?'ok':(r.stock<0?'ng':'no');
-    return '<tr onclick="stkAbrir('+r._row+')">'+
-      '<td><div class="stk-pn">'+esc(r.desc)+'</div><div class="stk-ps"><span class="sk">'+esc(r.sku)+'</span>'+
-        (r.marca?'<i class="dot"></i><span>'+esc(r.marca)+'</span>':'')+(r.categoria?'<i class="dot"></i><span>'+esc(r.categoria)+'</span>':'')+'</div></td>'+
-      '<td class="r"><div class="stk-mv"><span class="e" title="Entradas">+'+fmt(r.entradas)+'</span><span class="s" title="Salidas">−'+fmt(r.salidas)+'</span>'+(r.mt?'<span class="m" title="Mermas y traslados">M-T '+fmt(r.mt)+'</span>':'')+'</div></td>'+
-      '<td class="r"><div class="stk-stk"><div class="stk-bar"><i style="width:'+Math.min(100,Math.abs(r.stock)/mx*100)+'%;background:'+col[e]+'"></i></div><b'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'</b></div></td>'+
-      '<td class="r">'+Math.round(r.stockPack)+'</td>'+
-      '<td class="r">'+(r.costo?'S/ '+fmt(r.costo):'—')+'</td>'+
-      '<td><span class="stk-pill '+e+'">'+lab[e]+'</span></td>'+
-      '<td class="r"><button class="stk-ed" onclick="event.stopPropagation();abrirSKUForm('+r._row+')">Editar</button></td>'+
-    '</tr>';
-  }).join('');
-  var t=document.getElementById('stock-tbody');
-  if(t)t.innerHTML=tbody||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:40px">Sin resultados</td></tr>';
-  var cards=filtered.map(function(r){
-    var e=r.stock>0?'ok':(r.stock<0?'ng':'no');
-    return '<div class="stk-cd" onclick="stkAbrir('+r._row+')"><div style="min-width:0"><div class="stk-pn">'+esc(r.desc)+'</div>'+
-      '<div class="stk-ps"><span class="sk">'+esc(r.sku)+'</span>'+(r.marca?'<i class="dot"></i><span>'+esc(r.marca)+'</span>':'')+'</div>'+
-      '<div style="margin-top:8px"><span class="stk-pill '+e+'">'+lab[e]+'</span></div></div>'+
-      '<div class="stk-rt"><b'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'</b><span>und.</span></div></div>';
-  }).join('');
-  var c=document.getElementById('stock-cards');
-  if(c)c.innerHTML=cards||'<div style="text-align:center;color:var(--text3);padding:40px">Sin resultados</div>';
+  _STK.lista=filtered; _STK.n=0; _STK.tabla=!_STK.mq.matches;
+  var t=document.getElementById('stock-tbody'), c=document.getElementById('stock-cards');
+  if(t) t.innerHTML='';
+  if(c) c.innerHTML='';
+  if(!filtered.length){
+    if(t&&_STK.tabla) t.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:40px">Sin resultados</td></tr>';
+    if(c&&!_STK.tabla) c.innerHTML='<div style="text-align:center;color:var(--text3);padding:40px">Sin resultados</div>';
+    _stkVigilar(null);
+    return;
+  }
+  _stkMas();
+}
+
+/* Rendimiento: solo se dibuja la vista que se ve (tabla o tarjetas) y de a 60 productos; al bajar se agregan más. */
+var _STK={ lista:[], n:0, tabla:true, mq:window.matchMedia('(max-width:820px)'), obs:null, lote:60 };
+_STK.mq.addEventListener('change',function(){ if(DATA.stock&&document.getElementById('stock-tbody')) _filterStock(); });
+var _STK_LAB={ok:'Con stock',no:'Sin stock',ng:'Negativo'}, _STK_COL={ok:'var(--ok)',no:'var(--text4)',ng:'var(--danger)'};
+
+function _stkFila(r,mx){
+  var e=r.stock>0?'ok':(r.stock<0?'ng':'no');
+  return '<tr onclick="stkAbrir('+r._row+')">'+
+    '<td><div class="stk-pn">'+esc(r.desc)+'</div><div class="stk-ps"><span class="sk">'+esc(r.sku)+'</span>'+
+      (r.marca?'<i class="dot"></i><span>'+esc(r.marca)+'</span>':'')+(r.categoria?'<i class="dot"></i><span>'+esc(r.categoria)+'</span>':'')+'</div></td>'+
+    '<td class="r"><div class="stk-mv"><span class="e" title="Entradas">+'+fmt(r.entradas)+'</span><span class="s" title="Salidas">−'+fmt(r.salidas)+'</span>'+(r.mt?'<span class="m" title="Mermas y traslados">M-T '+fmt(r.mt)+'</span>':'')+'</div></td>'+
+    '<td class="r"><div class="stk-stk"><div class="stk-bar"><i style="width:'+Math.min(100,Math.abs(r.stock)/mx*100)+'%;background:'+_STK_COL[e]+'"></i></div><b'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'</b></div></td>'+
+    '<td class="r">'+Math.round(r.stockPack)+'</td>'+
+    '<td class="r">'+(r.costo?'S/ '+fmt(r.costo):'—')+'</td>'+
+    '<td><span class="stk-pill '+e+'">'+_STK_LAB[e]+'</span></td>'+
+    '<td class="r"><button class="stk-ed" onclick="event.stopPropagation();abrirSKUForm('+r._row+')">Editar</button></td>'+
+  '</tr>';
+}
+function _stkCard(r){
+  var e=r.stock>0?'ok':(r.stock<0?'ng':'no');
+  return '<div class="stk-cd" onclick="stkAbrir('+r._row+')"><div style="min-width:0"><div class="stk-pn">'+esc(r.desc)+'</div>'+
+    '<div class="stk-ps"><span class="sk">'+esc(r.sku)+'</span>'+(r.marca?'<i class="dot"></i><span>'+esc(r.marca)+'</span>':'')+'</div>'+
+    '<div style="margin-top:8px"><span class="stk-pill '+e+'">'+_STK_LAB[e]+'</span></div></div>'+
+    '<div class="stk-rt"><b'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'</b><span>und.</span></div></div>';
+}
+// Dibuja el siguiente lote y deja una marca al final: cuando se acerca a la pantalla, se dibuja el que sigue.
+function _stkMas(){
+  var t=document.getElementById('stock-tbody'), c=document.getElementById('stock-cards');
+  var host=_STK.tabla?t:c; if(!host) return;
+  var marca=document.getElementById('stk-mas'); if(marca) marca.remove();
+  var mx=DATA._stockMax||1, desde=_STK.n, hasta=Math.min(desde+_STK.lote,_STK.lista.length), h='', i;
+  for(i=desde;i<hasta;i++) h+=_STK.tabla?_stkFila(_STK.lista[i],mx):_stkCard(_STK.lista[i]);
+  _STK.n=hasta;
+  if(hasta<_STK.lista.length){
+    h+=_STK.tabla
+      ? '<tr id="stk-mas"><td colspan="7" style="text-align:center;color:var(--text3);padding:14px;font-size:12px">Mostrando '+hasta+' de '+_STK.lista.length+'…</td></tr>'
+      : '<div id="stk-mas" style="text-align:center;color:var(--text3);padding:14px;font-size:12px">Mostrando '+hasta+' de '+_STK.lista.length+'…</div>';
+  }
+  host.insertAdjacentHTML('beforeend',h);
+  _stkVigilar(document.getElementById('stk-mas'));
+}
+function _stkVigilar(marca){
+  if(_STK.obs){ _STK.obs.disconnect(); _STK.obs=null; }
+  if(!marca) return;
+  if(!('IntersectionObserver' in window)){ while(_STK.n<_STK.lista.length) _stkMas(); return; }
+  _STK.obs=new IntersectionObserver(function(es){ if(es[0].isIntersecting) _stkMas(); },{rootMargin:'600px 0px'});
+  _STK.obs.observe(marca);
 }
 
 // Panel lateral con el detalle de un producto
