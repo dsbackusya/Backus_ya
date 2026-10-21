@@ -247,9 +247,14 @@ function _evMerge(){
     if(m.b<0||i<=m.b||!m.C[i].has) return null;
     var o=_evDifs(i), v={}; Object.keys(ENV_FAM).forEach(function(k){ v[k]=val?o[k]*_evPrecio(ENV_FAM[k].g):o[k]; });
     var up=0, dn=0; Object.keys(v).forEach(function(k){ if(v[k]>0) up+=v[k]; else dn+=-v[k]; });
-    f+=dn; sob+=up; mx=Math.max(mx,up,dn); return { o:o, v:v, tot:up-dn };
+    mx=Math.max(mx,up,dn); return { o:o, v:v, tot:up-dn, up:up, dn:dn };
   });
+  // Cada día se compara con el conteo inicial de la semana, así que la diferencia de un día ya incluye la de los anteriores:
+  // el acumulado de la semana es el del último día contado (no la suma de los días).
+  var ultimo=-1; dias.forEach(function(x,i){ if(x) ultimo=i; });
+  if(ultimo>=0){ f=dias[ultimo].dn; sob=dias[ultimo].up; }
   var fm=function(n){ return val?_evMoney(n):(n>0?'+':'')+n; }, net=sob-f;
+  var acum=ultimo>=0?'Acumulado al conteo del '+ENV_DL[ultimo]+' '+parseInt(m.days[ultimo].slice(8),10):'';
   // panel izquierdo: resultado del día
   var d=dias[s], c, v, st, seg, sub=['',''], ct='';
   if(s===m.b){ c='#80799A'; v='Inicial'; st='Punto de partida'; seg=['','','','']; sub=['Es el conteo base de la semana',''];
@@ -286,7 +291,7 @@ function _evMerge(){
   var R='<div class="evm2-r"><div class="evm2-rh"><h3>Faltantes y sobrantes de la semana</h3><span class="ev-sp"></span>'+
     '<div class="ev-seg"><button class="'+(val?'on':'')+'" onclick="envMet(\'val\')">S/</button><button class="'+(!val?'on':'')+'" onclick="envMet(\'und\')">Unidades</button></div></div>'+
     '<div class="evm2-wk"><span>Faltante<b class="ev-neg">'+(val?_evMoney(-f):(f?'−'+f:'0'))+'</b></span><span>Sobrante<b class="ev-pos">'+(val?_evMoney(sob):'+'+sob)+'</b></span><span>Neto<b class="'+_evCls(net)+'">'+fm(net)+'</b></span></div>'+
-    '<div class="evm2-cols">'+cols+'</div>'+
+    (acum?'<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px">'+acum+': cada día se compara con el conteo inicial, por eso no se suman los días.</div>':'')+'<div class="evm2-cols">'+cols+'</div>'+
     '<div class="evm2-lg">'+Object.keys(ENV_FAM).map(function(k){ return '<span><i style="background:'+ENV_FCOL[k]+'"></i>'+ENV_FAM[k].n+'</span>'; }).join('')+'<span><i style="background:#7ADBB3"></i>Cuadra</span></div></div>';
   el.innerHTML=L+R;
 }
