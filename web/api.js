@@ -600,30 +600,27 @@
     var cant = entero(fila.cant), sku = str(fila.sku), tipo = str(fila.tipo);
     if (!sku) return 'SKU es obligatorio';
     if (!tipo) return 'Tipo es obligatorio';
-    if (cant === null || cant < 0) return 'Cantidad inválida';
+    if (cant === null) return 'Cantidad inválida';   // los ajustes de inventario guardan cantidades negativas
     return null;
   }
-  API.registrarMT = guard(async function (p, fila) {
-    var e = validarMT(fila);
-    if (e) return { ok: false, error: e };
-    var sede = exigirSede(p, fila);
-    var r = await sb.from('mt').insert({
-      sede_id: sede, fecha: hoyISO(), sku: str(fila.sku), descripcion: str(fila.desc), cantidad: entero(fila.cant),
-      tipo: str(fila.tipo), motivo: nulo(fila.motivo), observaciones: nulo(fila.obs)
-    });
-    if (r.error) throw r.error;
-    return { ok: true };
-  });
   // Buscador de Registrar M-T: SKU/descripcion con el stock actual de cada producto
   API.buscarSKUStock = guard(async function (p, query) {
     var q = String(query || '').replace(/[,()*%\\]/g, ' ').trim();
     if (!q) return { ok: true, results: [] };
-    var r = await filtroSede(sb.from('v_stock').select('sku,descripcion,marca,stock_actual'), p)
+    var r = await filtroSede(sb.from('sede_productos').select('sku,descripcion,marca'), p)
       .or('sku.ilike.%' + q + '%,descripcion.ilike.%' + q + '%').order('sku').limit(10);
     if (r.error) throw r.error;
+    var skus = r.data.map(function (x) { return x.sku; }), stock = {};
+    if (skus.length) {
+      var s = await filtroSede(sb.from('v_stock').select('sku,stock_actual'), p).in('sku', skus);
+      if (s.error) throw s.error;
+      s.data.forEach(function (x) { if (!(x.sku in stock)) stock[x.sku] = num(x.stock_actual); });
+    }
+    var vistos = {};
     return {
       ok: true,
-      results: r.data.map(function (x) { return { sku: str(x.sku), desc: str(x.descripcion), marca: str(x.marca), stock: num(x.stock_actual) }; })
+      results: r.data.filter(function (x) { if (vistos[x.sku]) return false; vistos[x.sku] = true; return true; })
+        .map(function (x) { return { sku: str(x.sku), desc: str(x.descripcion), marca: str(x.marca), stock: stock[x.sku] || 0 }; })
     };
   });
   // Nombres de las otras sedes (destino de un traslado)

@@ -4,6 +4,8 @@
    Inspired by Olith Banking dark dashboard
    ══════════════════════════════════════ */
 :root{
+  /* capas: pantallas completas (50) < avisos y vistas a pantalla completa < ventanas modales < confirmaciones */
+  --z-pantalla:300; --z-pantalla-2:310; --z-modal:350; --z-confirm:400;
   /* Superficies — Light premium con lavanda muy suave */
   --bg:        #F5F3FA;         /* fondo app, lavanda casi blanco */
   --surface:   #FFFFFF;         /* cards blancos */
@@ -2841,7 +2843,7 @@ input.filter-inp:focus{
 .dc-bd{display:inline-block;padding:3px 10px;border-radius:999px;font:600 11px 'DM Sans',sans-serif}
 .dc-bd.m{background:rgba(148,128,232,.16);color:#C0B3F5}.dc-bd.n{background:rgba(92,200,224,.14);color:#8FDCEB}.dc-bd.t{background:rgba(122,219,179,.13);color:#7ADBB3}
 /* vista de impresión */
-.dv{position:fixed;inset:0;z-index:300;background:rgba(8,6,12,.82);display:none;flex-direction:column}
+.dv{position:fixed;inset:0;z-index:var(--z-pantalla);background:rgba(8,6,12,.82);display:none;flex-direction:column}
 .dv.on{display:flex}
 .dv-top{display:flex;align-items:center;gap:10px;padding:12px 18px;background:var(--surface);border-bottom:1px solid var(--border)}
 .dv-top b{font:600 14px 'DM Sans',sans-serif;color:var(--text)}.dv-top .sp{flex:1}
@@ -3061,10 +3063,10 @@ input.filter-inp:focus{
 .ev-vtab.on{background:var(--accent-ghost);border-color:var(--accent-line);color:var(--accent2)}
 
 body.evc-abierto{overflow:hidden}
-.evc{z-index:300}
+.evc{z-index:var(--z-pantalla)}
 
 /* precios */
-.evp{position:fixed;inset:0;z-index:310;background:rgba(8,6,12,.78);display:none;align-items:center;justify-content:center;padding:16px}
+.evp{position:fixed;inset:0;z-index:var(--z-pantalla-2);background:rgba(8,6,12,.78);display:none;align-items:center;justify-content:center;padding:16px}
 .evp.on{display:flex}
 .evp-box{width:480px;max-width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:18px;padding:20px 22px}
 .evp-h{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}

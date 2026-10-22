@@ -205,10 +205,7 @@ var _MT_MOTIVOS={
 var _MT_NOMBRE={'MERMA':'Merma','TRASLADO':'Traslado','Nota de credito':'Nota de crédito'};
 var _MTF={tipo:'',tipoOrig:'',cambiado:false,motivo:'',dest:'',otro:false,sel:null,lineas:[],edit:false,destinos:null,res:[],seq:0,timer:0};
 
-function _mtFechaHoy(){
-  var d=new Date(), p=function(n){return (n<10?'0':'')+n;};
-  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
-}
+function _mtFechaHoy(){ return new Date().toLocaleDateString('en-CA',{timeZone:'America/Lima'}); }
 function _mtEl(id){return document.getElementById(id);}
 
 function mtTipo(t,conservar){
@@ -334,11 +331,12 @@ function mtAgregar(){
   var p=_MTF.sel, c=Number(_mtEl('mt-cant').value)||0;
   if(!p||c<=0||_mtYaEsta(p.sku)) return;
   _MTF.lineas.push({sku:p.sku,d:p.desc,s:p.stock,c:Math.floor(c)});
+  clearTimeout(_MTF.timer); _MTF.seq++; _mtEl('ac-mt').classList.remove('open');
   _MTF.sel=null; _mtEl('mt-q').value=''; _mtEl('mt-cant').value='';
   mtInfo(); mtPintar(); _mtEl('mt-q').focus();
 }
 function mtQuitar(i){ _MTF.lineas.splice(i,1); mtInfo(); mtPintar(); }
-function mtCantLinea(i,v){ _MTF.lineas[i].c=Math.floor(Number(v))||0; mtPintar(true); }
+function mtCantLinea(i,v){ _MTF.lineas[i].c=v===''?NaN:Math.floor(Number(v)); if(!_MTF.edit&&isNaN(_MTF.lineas[i].c)) _MTF.lineas[i].c=0; mtPintar(true); }
 
 function _mtPintarLineas(){
   _mtEl('mt-ln-vacio').classList.toggle('mt3-oculto',_MTF.lineas.length>0);
@@ -347,7 +345,7 @@ function _mtPintarLineas(){
     var inf=l.s===Infinity, mal=!inf&&l.c>l.s;
     return '<div class="mt3-ln"><div class="n"><b title="'+esc(l.d)+'">'+esc(l.d)+'</b><span>'+esc(l.sku)+'</span></div>'+
       '<div class="st'+(mal?' mal':'')+'">'+(inf?'—':fmt(l.s))+'</div>'+
-      '<input class="inp" type="number" min="1" value="'+l.c+'" oninput="mtCantLinea('+i+',this.value)"/>'+
+      '<input class="inp" type="number" '+(_MTF.edit?'':'min="1" ')+'value="'+l.c+'" oninput="mtCantLinea('+i+',this.value)"/>'+
       (_MTF.edit?'<span></span>':'<button type="button" class="x" title="Quitar" onclick="mtQuitar('+i+')">×</button>')+'</div>';
   }).join('');
 }
@@ -355,7 +353,7 @@ function _mtExceso(){ return _MTF.lineas.filter(function(l){ return l.s!==Infini
 
 function mtPintar(sinLineas){
   if(!sinLineas) _mtPintarLineas();
-  var t=_MTF.tipo||(_MTF.edit&&!_MTF.cambiado?_MTF.tipoOrig:''), tot=_MTF.lineas.reduce(function(a,l){ return a+l.c; },0), td=_MTF.tipo==='TRASLADO'&&!_MTF.edit;
+  var t=_MTF.tipo||(_MTF.edit&&!_MTF.cambiado?_MTF.tipoOrig:''), tot=_MTF.lineas.reduce(function(a,l){ return a+(l.c||0); },0), td=_MTF.tipo==='TRASLADO'&&!_MTF.edit;
   var vacio='<span style="color:var(--text4)">—</span>';
   _mtEl('mt-r-tipo').innerHTML=t?'<span class="mt3-bd '+(t==='MERMA'?'merma':t==='TRASLADO'?'':'nc')+'">'+esc(_MT_NOMBRE[t]||t)+'</span>':vacio;
   _mtEl('mt-r-mot').innerHTML=_MTF.motivo?esc(_MTF.motivo):vacio;
@@ -368,7 +366,7 @@ function mtPintar(sinLineas){
   if(!t) m='Elige el tipo de movimiento';
   else if(td&&!_MTF.dest) m='Elige la sede destino';
   else if(!_MTF.lineas.length) m='Agrega al menos un producto';
-  else if(_MTF.lineas.some(function(l){ return l.c<=0; })) m='Hay productos sin cantidad';
+  else if(_MTF.lineas.some(function(l){ return _MTF.edit?!isFinite(l.c):l.c<=0; })) m=_MTF.edit?'Escribe una cantidad válida':'Hay productos sin cantidad';
   else{ ok=true; m=_MTF.lineas.length+' producto(s) · '+fmt(tot)+' und.'+(exceso?' · '+exceso+' superan el stock':''); }
   var msg=_mtEl('mt-msg'); msg.textContent=m; msg.className='en2-msg'+(exceso?' err':'');
   var btn=_mtEl('btn-mt-save'); if(!btn.dataset.ocupado) btn.disabled=!ok;

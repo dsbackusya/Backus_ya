@@ -587,7 +587,7 @@ window.addEventListener('load', function(){
 </div>
 
 <!-- ══ MODAL: DETALLE DE OC (ítems de ENTRADAS por tienda) ══ -->
-<div id="modal-detalle-oc" style="display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(16,13,22,.72);backdrop-filter:blur(4px)">
+<div id="modal-detalle-oc" style="display:none;position:fixed;inset:0;z-index:var(--z-modal);align-items:center;justify-content:center;background:rgba(16,13,22,.72);backdrop-filter:blur(4px)">
   <div style="background:radial-gradient(120% 130% at 100% 0%, rgba(148,128,232,.22) 0%, rgba(148,128,232,0) 55%), linear-gradient(180deg, var(--surface) 0%, var(--surface2) 100%);border:1px solid var(--border2);border-radius:var(--r3);width:min(1160px,96vw);max-height:88vh;box-shadow:var(--shadow-lg),var(--shadow-glow);display:flex;flex-direction:column;overflow:hidden">
     <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
       <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)" id="detalle-oc-title">Detalle de OC</div>
@@ -601,7 +601,7 @@ window.addEventListener('load', function(){
   </div>
 </div>
 
-<div id="modal-cancelar" style="display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
+<div id="modal-cancelar" style="display:none;position:fixed;inset:0;z-index:var(--z-modal);align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--danger);border-radius:var(--r2);padding:28px;width:480px;max-width:96vw;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:18px">
     <div>
       <div style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:4px;color:var(--danger)"><svg class="ico-s" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Confirmar cancelación</div>
@@ -627,7 +627,7 @@ window.addEventListener('load', function(){
   </div>
 </div>
 
-<div id="modal-anular-canc" style="display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
+<div id="modal-anular-canc" style="display:none;position:fixed;inset:0;z-index:var(--z-modal);align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--r2);padding:28px;width:480px;max-width:96vw;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:16px">
     <div>
       <div style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:4px"><svg class="ico-s" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>Anular cancelación</div>
@@ -644,7 +644,7 @@ window.addEventListener('load', function(){
 
 <!-- ══ MODAL CONFIRMACIÓN GENÉRICO — reemplaza confirm() nativo ══ -->
 <!-- ══ MODAL: EDITAR SKU DE UNA FILA ══ -->
-<div id="modal-editar-sku-fila" style="display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(3px)">
+<div id="modal-editar-sku-fila" style="display:none;position:fixed;inset:0;z-index:var(--z-modal);align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(3px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);width:min(460px,96vw);box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden">
     <div style="padding:20px 24px 0;border-bottom:1px solid var(--border);padding-bottom:16px">
       <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)"><svg class="ico-s" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Editar SKU y cantidades</div>
@@ -682,7 +682,7 @@ window.addEventListener('load', function(){
   </div>
 </div>
 
-<div id="modal-confirm" style="display:none;position:fixed;inset:0;z-index:400;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
+<div id="modal-confirm" style="display:none;position:fixed;inset:0;z-index:var(--z-confirm);align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--danger);border-radius:var(--r2);padding:24px 28px;width:380px;max-width:94vw;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:16px">
     <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--danger)" id="modal-confirm-title">¿Confirmar acción?</div>
     <div style="font-size:13px;color:var(--text2)" id="modal-confirm-msg"></div>
@@ -693,7 +693,7 @@ window.addEventListener('load', function(){
   </div>
 </div>
 
-<div id="modal-input" style="display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
+<div id="modal-input" style="display:none;position:fixed;inset:0;z-index:var(--z-modal);align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--r2);padding:24px 28px;width:380px;max-width:94vw;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:16px">
     <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)" id="modal-input-title">Editar campo</div>
     <div>
@@ -731,7 +731,7 @@ window.addEventListener('load', function(){
 
 
 <!-- MODAL: DETALLE MOVIMIENTOS VALIDACIÓN -->
-<div id="modal-mov" style="display:none;position:fixed;inset:0;z-index:200;align-items:center;justify-content:center;background:rgba(30,10,60,.35);backdrop-filter:blur(3px)" onclick="if(event.target===this)cerrarModalMov()">
+<div id="modal-mov" style="display:none;position:fixed;inset:0;z-index:var(--z-modal);align-items:center;justify-content:center;background:rgba(30,10,60,.35);backdrop-filter:blur(3px)" onclick="if(event.target===this)cerrarModalMov()">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);width:min(580px,95vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border);flex-shrink:0">
       <div>
@@ -1015,7 +1015,7 @@ window.addEventListener('load', function(){
 </div>
 
 <!-- Diálogo: actualizar salidas con el maestro -->
-<div id="modal-aplicar" style="display:none;position:fixed;inset:0;z-index:110;align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
+<div id="modal-aplicar" style="display:none;position:fixed;inset:0;z-index:var(--z-modal);align-items:center;justify-content:center;background:rgba(46,16,101,.25);backdrop-filter:blur(2px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--r2);padding:24px 28px;width:460px;max-width:94vw;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;gap:14px">
     <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text)">Actualizar salidas con el maestro</div>
     <div id="modal-aplicar-body" style="display:flex;flex-direction:column;gap:12px"></div>

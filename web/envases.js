@@ -395,7 +395,7 @@ function _evcQuitar(id,fin){
 }
 function envDeshacer(){
   var ls=_evcLineas(); if(!ls.length) return; var l=ls[ls.length-1];
-  _evcQuitar(l.id,function(){ ENV.ses.ult=''; showToast('Quitaste la última línea','ok'); _evcPinta(); });
+  _evcQuitar(l.id,function(){ if(ENV.ses.edit===l.id) ENV.ses.edit=null; ENV.ses.ult=''; showToast('Quitaste la última línea','ok'); _evcPinta(); });
 }
 function envQuitarLinea(id){
   _confirmDialog('Quitar línea','Se borra esta línea del conteo de '+ENV_DL[ENV.ses.di]+'. Cambia el total del día.',function(){ _evcQuitar(id,function(){ if(ENV.ses.edit===id) ENV.ses.edit=null; showToast('Línea quitada','ok'); _evcPinta(); }); },'Quitar');

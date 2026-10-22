@@ -283,7 +283,7 @@ function _dcCantTxt(x){
   if(x.med==='und') return x.und+' und';
   if(x.med==='pack'){
     var p=x.und?x.und+(x.und===1?' pack':' packs'):'', s=x.su?x.su+' und':'';
-    return (p&&s?p+' + '+s:p||s)+((x.fac||1)>1?' ('+_dcTotUnd(x)+' und)':'');
+    return (p&&s?p+' + '+s:p||s)+(p&&(x.fac||1)>1?' ('+_dcTotUnd(x)+' und)':'');
   }
   return String(x.und);
 }
@@ -348,6 +348,7 @@ function dcGuardar(tipo,imprimir){
         : tipo==='marcaje'?'Marcaje guardado'+(DCX.env&&d.movs.length?' y registrado en Envases':''):tipo==='nc'?'NC guardada y agregada a M-T como pendiente':'Traslado guardado y descontado del stock (queda en M-T como pendiente)','ok');
       if(tipo==='marcaje') PAGE_LOADED['envases']=false;
       if(tipo==='nc'||tipo==='traslado'){ PAGE_LOADED['mt']=false; PAGE_LOADED['stock']=false; }
+      if(tipo==='traslado') _dcRecordarDestino();
       _dcReset(tipo);
       if(editando){ DCX.h={ reparto:'', transporte:'', placa:'', fecha:DCX.d.hoy }; DCX.tab='his'; }
       renderDocumentos();
@@ -360,14 +361,16 @@ function dcGuardar(tipo,imprimir){
 function _dcReset(tipo){
   if(tipo==='marcaje'){ DCX.gr=_dcGrNuevo(); DCX.hi=''; DCX.hf=''; DCX.env=true; }
   if(tipo==='nc') DCX.nc={ fac:'', lineas:[] };
-  if(tipo==='traslado'){
-    var nd=DCX.tr.destino==='OTRO'?String(DCX.tr.otro||'').trim().toUpperCase():'';
-    if(nd&&DCX_DESTINOS.indexOf(nd)<0&&_dcDestinosGuardados().indexOf(nd)<0){
-      try{ var gl=_dcDestinosGuardados(); gl.push(nd); localStorage.setItem('tada-dc-destinos',JSON.stringify(gl.slice(-8))); }catch(e){}
-    }
-    if(nd) DCX.tr.destino=nd;
-    DCX.tr.otro=''; DCX.tr.lineas=[]; DCX.tr.obs='';
+  if(tipo==='traslado'){ DCX.tr.otro=''; DCX.tr.lineas=[]; DCX.tr.obs=''; }
+}
+/* tras guardar un traslado con "OTRO": el destino escrito queda en la lista y como destino elegido */
+function _dcRecordarDestino(){
+  var nd=DCX.tr.destino==='OTRO'?String(DCX.tr.otro||'').trim().toUpperCase():'';
+  if(!nd) return;
+  if(DCX_DESTINOS.indexOf(nd)<0&&_dcDestinosGuardados().indexOf(nd)<0){
+    try{ var gl=_dcDestinosGuardados(); gl.push(nd); localStorage.setItem('tada-dc-destinos',JSON.stringify(gl.slice(-8))); }catch(e){}
   }
+  DCX.tr.destino=nd;
 }
 
 /* ── editar un documento del historial ── */
