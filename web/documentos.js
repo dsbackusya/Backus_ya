@@ -102,7 +102,7 @@ function renderDocumentos(){
             ['his','Historial','<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5M12 7v5l3 2"/>']];
   root.innerHTML=
     '<div class="dc-wrap">'+
-      '<div class="dc-top"><span class="dc-chip"><i></i>'+esc(DCX.d.sede)+'</span><span class="dc-sub">Se llenan a mano, se guardan en el historial y se imprimen para firma.</span></div>'+
+      '<div class="dc-top"><span class="dc-chip"><i></i>'+esc(DCX.d.sede)+'</span></div>'+
       _dcBannerEdit()+
       (DCX.tab==='his'?'':_dcCabecera())+
       '<div class="dc-tabs">'+tabs.map(function(t){
@@ -121,7 +121,7 @@ function _dcCabecera(){
   var tr=DCX.tab==='tr';
   if(tr) return '';
   return '<div class="dc-card dc-cab"><div class="dc-h"><span class="t">'+(tr?'Datos del traslado':'Datos del reparto')+'</span>'+
-    '<span class="s">'+(tr?'':'se usan en Marcaje y en la orden de NC')+'</span></div>'+
+    '</div>'+
     '<div class="dc-g">'+
       (tr?'':'<div class="dc-f"><label>Reparto</label><input class="inp" value="'+esc(DCX.h.reparto)+'" oninput="DCX.h.reparto=this.value"></div>'+
            '<div class="dc-f"><label>Transporte</label><input class="inp" value="'+esc(DCX.h.transporte)+'" oninput="DCX.h.transporte=this.value"></div>')+
@@ -154,13 +154,13 @@ function _dcMarcajeHtml(){
         '<div class="dm-d" id="dm-d'+gi+'_'+ri+'">0</div><div class="dm-c" id="dm-c'+gi+'_'+ri+'">—</div></div>';
     });
   });
-  return '<div class="dc-card"><div class="dc-h"><span class="t">Conciliación de envases</span><span class="s">Entregado (ENT) contra devuelto (DEV). Al escribir las cajas, la botella se completa sola.</span></div>'+
+  return '<div class="dc-card"><div class="dc-h"><span class="t">Conciliación de envases</span></div>'+
       '<div class="dc-g dc-g2" style="margin-bottom:16px">'+
         '<div class="dc-f"><label>Hora inicio</label><input class="inp" type="time" value="'+esc(DCX.hi)+'" oninput="DCX.hi=this.value"></div>'+
         '<div class="dc-f"><label>Hora fin</label><input class="inp" type="time" value="'+esc(DCX.hf)+'" oninput="DCX.hf=this.value"></div>'+
       '</div>'+
       '<div class="dm-h"><span>Envase</span><span>ENT</span><span>DEV</span><span>Dif.</span><span>Costo</span></div>'+h+'</div>'+
-    '<div class="dc-card"><div class="dc-h"><span class="t">Convertidor · cajas llenas</span><span class="s">botellas ÷ botellas por caja, comparado con las cajas contadas</span></div><div class="dm-conv" id="dm-conv"></div></div>'+
+    '<div class="dc-card"><div class="dc-h"><span class="t">Convertidor · cajas llenas</span></div><div class="dm-conv" id="dm-conv"></div></div>'+
     '<div class="dc-card"><div class="dm-tot"><div><div class="k">Diferencia valorizada</div><div class="v" id="dm-tot">S/ 0.00</div></div><span style="flex:1"></span>'+
       '<label class="dm-sw"><input type="checkbox"'+(DCX.env?' checked':'')+' onchange="DCX.env=this.checked">Registrar también en Envases (entrada y devolución)</label></div></div>'+
     _dcBarra('marcaje');
@@ -218,16 +218,16 @@ function _dcMovs(){
 function _dcListaHtml(w){
   var nc=w==='nc';
   return (nc
-    ? '<div class="dc-card"><div class="dc-h"><span class="t">Nota de crédito</span><span class="s">la factura se guarda en M-T, en la columna Motivo</span></div>'+
+    ? '<div class="dc-card"><div class="dc-h"><span class="t">Nota de crédito</span></div>'+
         '<div class="dc-g dc-g2"><div class="dc-f"><label>Nro. de factura</label><input class="inp" value="'+esc(DCX.nc.fac)+'" placeholder="Ej: F001-000123" oninput="DCX.nc.fac=this.value"></div></div></div>'
-    : '<div class="dc-card"><div class="dc-h"><span class="t">Cargo de despacho</span><span class="s">la placa y el destino salen en la hoja impresa · al guardar se descuenta del stock y queda en M-T como pendiente</span></div><div class="dc-g">'+
+    : '<div class="dc-card"><div class="dc-h"><span class="t">Cargo de despacho</span></div><div class="dc-g">'+
         '<div class="dc-f"><label>Origen</label><input class="inp" value="'+esc(_dcSede())+'" disabled></div>'+
         '<div class="dc-f"><label>Destino</label><select onchange="dcDestinoCambio(this.value)">'+_dcOpcionesDestino().map(function(d){ return '<option'+(d===DCX.tr.destino?' selected':'')+'>'+esc(d)+'</option>'; }).join('')+'</select></div>'+
         '<div class="dc-f" id="dc-dest-otro-f" style="'+(DCX.tr.destino==='OTRO'?'':'display:none')+'"><label>Escribe el destino *</label><input class="inp" id="dc-dest-otro" value="'+esc(DCX.tr.otro||'')+'" placeholder="Ej: TIENDA LINCE" maxlength="60" oninput="DCX.tr.otro=this.value.toUpperCase()" style="text-transform:uppercase"></div>'+
         '<div class="dc-f"><label>Placa *</label><input class="inp" id="dc-placa-tr" value="'+esc(DCX.h.placa)+'" placeholder="Ej: BMN-760" oninput="DCX.h.placa=this.value.toUpperCase()" style="text-transform:uppercase"></div>'+
         '<div class="dc-f"><label>Fecha</label><input class="inp" type="date" value="'+esc(DCX.h.fecha)+'" oninput="DCX.h.fecha=this.value"></div></div>'+
         '<div class="dc-f" style="margin-top:12px"><label>Observaciones</label><input class="inp" value="'+esc(DCX.tr.obs)+'" placeholder="Opcional" oninput="DCX.tr.obs=this.value"></div></div>')+
-    '<div class="dc-card"><div class="dc-h"><span class="t">'+(nc?'Productos que no dejaron':'Productos')+'</span><span class="s">busca por nombre o SKU y escribe '+(nc?'solo las unidades':'las cantidades')+'</span></div>'+
+    '<div class="dc-card"><div class="dc-h"><span class="t">'+(nc?'Productos que no dejaron':'Productos')+'</span></div>'+
       '<div class="dc-sr"><input class="inp" id="dc-q-'+w+'" placeholder="Buscar producto: pilsen, guaraná, 10000092…" autocomplete="off" oninput="dcBuscar(\''+w+'\')" onblur="setTimeout(function(){dcCerrarAc(\''+w+'\')},180)"><div class="dc-ac" id="dc-ac-'+w+'"></div></div>'+
       '<div id="dc-ln-'+w+'"></div></div>'+
     _dcBarra(nc?'nc':'traslado');
@@ -439,7 +439,7 @@ function dcEliminar(id){
 /* ── historial ── */
 function _dcHistHtml(){
   var chips=[['','Todos'],['marcaje','Marcaje'],['nc','NC'],['traslado','Traslado']];
-  return '<div class="dc-card"><div class="dc-h"><span class="t">Historial</span><span class="s">los últimos documentos guardados; se pueden volver a imprimir</span></div>'+
+  return '<div class="dc-card"><div class="dc-h"><span class="t">Historial</span></div>'+
     '<div class="dc-hf">'+chips.map(function(c){ return '<button class="dc-chp'+(DCX.filtro===c[0]?' on':'')+'" onclick="dcHistTipo(\''+c[0]+'\')">'+c[1]+'</button>'; }).join('')+
       '<input class="inp dc-hq" placeholder="Buscar reparto, factura, destino o producto…" value="'+esc(DCX.q)+'" oninput="DCX.q=this.value;dcHistFiltrar()"></div>'+
     '<div id="dc-hlist"></div></div>';
