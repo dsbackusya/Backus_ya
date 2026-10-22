@@ -1041,6 +1041,21 @@
     if (r.error) throw r.error;
     return { ok: true, fila: mapEnvConteo(r.data) };
   });
+  // Cambia una línea ya guardada del conteo (estado, envase, ubicación y cantidades)
+  API.editarEnvConteoLinea = guard(async function (p, id, d) {
+    var packs = enteroNoNeg(d.packs), solas = enteroNoNeg(d.solas), und = enteroNoNeg(d.unidades);
+    if (d.estado !== 'llena' && d.estado !== 'vacia') return { ok: false, error: 'Estado inválido' };
+    if (ENV_TAMANOS.indexOf(Number(d.tamano)) < 0) return { ok: false, error: 'Elige el envase' };
+    if (packs === null || solas === null || und === null) return { ok: false, error: 'Cantidades inválidas' };
+    if (packs + solas + und === 0) return { ok: false, error: 'Ingresa al menos una cantidad' };
+    var ubi = str(d.ubicacion) || 'Palet';
+    if (ubi.toLowerCase() === 'pfn') return { ok: false, error: 'El PFN se registra en su pestaña' };
+    var r = await sb.from('envases_conteo').update({ estado: d.estado, tamano: Number(d.tamano), ubicacion: ubi,
+      packs: packs, cajas_solas: solas, unidades: und }).eq('id', Number(id)).select('*');
+    if (r.error) throw r.error;
+    if (!r.data.length) return { ok: false, error: 'La línea ya no existe o no tienes permiso. Actualiza la pantalla.' };
+    return { ok: true, fila: mapEnvConteo(r.data[0]) };
+  });
   API.quitarEnvConteoLinea = guard(async function (p, id) {
     var r = await sb.from('envases_conteo').delete().eq('id', Number(id)).select('id');
     if (r.error) throw r.error;

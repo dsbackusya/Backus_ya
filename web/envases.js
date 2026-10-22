@@ -312,7 +312,7 @@ function envContar(){
   if(!ENV.d||!ENV.m){ showToast('Espera a que cargue la semana','err'); return; }
   if(ENV.vista!=='ctl'){ ENV.vista='ctl'; _evRender(); }
   var di=ENV.sel;
-  ENV.ses={ di:di, fecha:ENV.m.days[di], cerrado:false, addUbi:false, guardando:false,
+  ENV.ses={ di:di, fecha:ENV.m.days[di], cerrado:false, addUbi:false, guardando:false, edit:null,
     f:{ estado:'llena', tam:null, ubi:'Palet', solas:'', packs:'', und:'' } };
   _evcMontar(); _evcPinta();
 }
@@ -346,6 +346,7 @@ function envAgregar(){
   if(s.guardando) return;
   if(!f.tam){ showToast('Elige el envase antes de agregar','err'); return; }
   if(packs+solas+und===0){ showToast('Ingresa al menos una cantidad','err'); return; }
+  if(s.edit){ _evcGuardarEdicion(); return; }
   var ya=_evcLineas().filter(function(l){ return l.estado===f.estado&&l.tamano===f.tam&&_evUbiEtq(l.ubicacion)===_evUbiEtq(f.ubi); });
   var hacer=function(){
     var etq=_evcEtq(f), dato={ fecha:s.fecha, estado:f.estado, tamano:f.tam, ubicacion:f.ubi, packs:packs, solas:solas, unidades:und };
@@ -363,6 +364,29 @@ function envAgregar(){
     _confirmDialog('¿Mismo envase otra vez?','Ya guardaste '+ENV_TAMN[f.tam]+' '+(f.estado==='llena'?'llena':'vacía')+' en '+_evUbiEtq(f.ubi)+' ('+q+'). Si esta línea es de otro envase, cámbialo antes de agregar. ¿Guardarla igual?',hacer,'Guardar igual');
   } else hacer();
 }
+/* editar una línea ya guardada: sus datos pasan al formulario y se guardan con "Guardar cambios" */
+function envEditarLinea(id){
+  var l=ENV.d.conteo.filter(function(x){ return x.id===id; })[0]; if(!l||!ENV.ses) return;
+  var s=ENV.ses; s.cerrado=false; s.edit=id; s.ult='';
+  s.f={ estado:l.estado, tam:l.tamano, ubi:l.ubicacion, solas:l.solas?String(l.solas):'', packs:l.packs?String(l.packs):'', und:l.unidades?String(l.unidades):'' };
+  _evcPinta(); var c=document.getElementById('evc-cuerpo'); if(c) c.scrollTop=0; window.scrollTo(0,0);
+}
+function envCancelarEdicion(){
+  var s=ENV.ses; if(!s) return; s.edit=null; s.f={ estado:'llena', tam:null, ubi:'Palet', solas:'', packs:'', und:'' }; _evcPinta();
+}
+function _evcGuardarEdicion(){
+  var s=ENV.ses, f=s.f, id=s.edit;
+  s.guardando=true; var btn=document.getElementById('evcf-add'); if(btn){ btn.disabled=true; btn.textContent='Guardando…'; }
+  google.script.run.withSuccessHandler(function(r){
+    s.guardando=false;
+    if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo guardar el cambio','err'); _evcPinta(); return; }
+    ENV.d.conteo=ENV.d.conteo.map(function(x){ return x.id===id?r.fila:x; }); _evCalc();
+    var etq=_evcEtq(f); s.edit=null; s.f={ estado:'llena', tam:null, ubi:'Palet', solas:'', packs:'', und:'' };
+    s.ult='Editaste: '+etq+' — '+_evNLin(r.fila).bot+' botellas, '+_evNLin(r.fila).cajas+' cajas';
+    showToast('Línea actualizada: '+etq,'ok'); _evcPinta();
+  }).withFailureHandler(function(e){ s.guardando=false; showToast(e.message,'err'); _evcPinta(); })
+    .editarEnvConteoLinea(S.token,id,{ estado:f.estado, tamano:f.tam, ubicacion:f.ubi, packs:_evNum(f.packs)||0, solas:_evNum(f.solas)||0, unidades:_evNum(f.und)||0 });
+}
 function _evcQuitar(id,fin){
   google.script.run.withSuccessHandler(function(r){
     if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo quitar la línea','err'); return; }
@@ -374,7 +398,7 @@ function envDeshacer(){
   _evcQuitar(l.id,function(){ ENV.ses.ult=''; showToast('Quitaste la última línea','ok'); _evcPinta(); });
 }
 function envQuitarLinea(id){
-  _confirmDialog('Quitar línea','Se borra esta línea del conteo de '+ENV_DL[ENV.ses.di]+'. Cambia el total del día.',function(){ _evcQuitar(id,function(){ showToast('Línea quitada','ok'); _evcPinta(); }); },'Quitar');
+  _confirmDialog('Quitar línea','Se borra esta línea del conteo de '+ENV_DL[ENV.ses.di]+'. Cambia el total del día.',function(){ _evcQuitar(id,function(){ if(ENV.ses.edit===id) ENV.ses.edit=null; showToast('Línea quitada','ok'); _evcPinta(); }); },'Quitar');
 }
 function envOtraUbi(){ ENV.ses.addUbi=!ENV.ses.addUbi; _evcPinta(); var i=document.getElementById('evcf-nueva'); if(i) i.focus(); }
 function envGuardarUbi(){
@@ -396,9 +420,13 @@ function _evcPinta(){
   if(s.cerrado){ _evcCierre(ls); return; }
   var f=s.f, n=ENV_MULT[f.tam]||0, ubis=_evUbiLista();
   var ultima=ls.length?ls[ls.length-1]:null;
-  document.getElementById('evc-cuerpo').innerHTML=
-   '<div class="evc-card evcf"><div class="evcf-k">Agregar al conteo</div>'+
-    '<div class="sel-aviso'+(f.tam?'':' w')+'">Vas a agregar: <b>'+_evcEtq(f)+'</b></div>'+
+  var lista=nl?'<div class="evc-card" style="padding:14px 16px;margin-bottom:12px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Líneas de este conteo</h3><div class="evcf-h" style="margin:0 0 6px">Toca ✎ para cambiar una línea o ✕ para quitarla.</div>'+
+    ls.map(function(l){ var x=_evNLin(l);
+      return '<div class="hist-li'+(s.edit===l.id?' ed':'')+'"><span class="sc '+(l.estado==='llena'?'ll':'va')+'">'+(l.estado==='llena'?'Llena':'Vacía')+'</span><span>'+ENV_TAMN[l.tamano]+' · '+esc(_evUbiEtq(l.ubicacion))+'</span><span class="q">'+x.bot+' bot · '+x.cajas+' cajas</span>'+
+        '<button title="Editar" onclick="envEditarLinea('+l.id+')">✎</button><button title="Quitar" onclick="envQuitarLinea('+l.id+')">✕</button></div>'; }).join('')+'</div>':'';
+  document.getElementById('evc-cuerpo').innerHTML=lista+
+   '<div class="evc-card evcf'+(s.edit?' editando':'')+'"><div class="evcf-k">'+(s.edit?'Editar línea del conteo':'Agregar al conteo')+'</div>'+
+    '<div class="sel-aviso'+(f.tam?'':' w')+'">'+(s.edit?'Vas a cambiar la línea por: ':'Vas a agregar: ')+'<b>'+_evcEtq(f)+'</b></div>'+
     '<label class="evcf-l">Ubicación</label>'+_evcSeg(ubis.map(function(u){ return [u[0],u[1]]; }),f.ubi,'envFU','<button class="mas" onclick="envOtraUbi()" title="Solo para esta sede">+ Otra</button>')+
     (s.addUbi?'<div class="nueva-ubi"><input class="inp" id="evcf-nueva" maxlength="30" placeholder="Ej: Pasillo, Mezanine" onkeydown="if(event.key===\'Enter\')envGuardarUbi()"><button class="btn btn-primary btn-sm" onclick="envGuardarUbi()">Guardar ubicación</button></div><div class="ubi-nota">Solo aparecerá en esta sede.</div>':'')+
     '<label class="evcf-l">Estado</label>'+_evcSeg([['llena','Llenas'],['vacia','Vacías']],f.estado,'envFE')+
@@ -413,7 +441,7 @@ function _evcPinta(){
       '<div><label>Solas (sin botellas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.solas)+'" oninput="envFIn(\'solas\',this)"></div></div>'+
       '<div class="evcf-eq" id="evcf-c"></div></div>'+
     '<div class="evcf-h">Los packs de botellas ya cuentan como "cajas con botellas": solo se escriben una vez.</div>'+
-    '<button class="btn btn-primary evcf-add" id="evcf-add" onclick="envAgregar()">✓ Agregar y guardar: '+_evcEtq(f)+'</button>'+
+    '<button class="btn btn-primary evcf-add" id="evcf-add" onclick="envAgregar()">✓ '+(s.edit?'Guardar cambios: ':'Agregar y guardar: ')+_evcEtq(f)+'</button>'+(s.edit?'<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="envCancelarEdicion()">Cancelar edición</button>':'')+
     '<div class="lista-ult">'+(s.ult?'Último guardado: <b>'+esc(s.ult)+'</b> · <a href="#" onclick="envDeshacer();return false">Deshacer</a>':(ultima?'<a href="#" onclick="envDeshacer();return false">Deshacer última línea</a>':'Cada línea se guarda al instante; no hace falta guardar al final.'))+'</div>'+
    '</div>';
   _evcForm();
@@ -435,14 +463,14 @@ function _evcCierre(ls){
   var s=ENV.ses, m=ENV.m, sos=_evcSospechas();
   var hist=ls.length
     ? ls.slice().reverse().map(function(l){ var x=_evNLin(l);
-        return '<div class="hist-li"><span class="sc '+(l.estado==='llena'?'ll':'va')+'">'+(l.estado==='llena'?'Llena':'Vacía')+'</span><span>'+ENV_TAMN[l.tamano]+' · '+esc(_evUbiEtq(l.ubicacion))+'</span><span class="q">'+x.bot+' bot · '+x.cajas+' cajas</span><button title="Quitar" onclick="envQuitarLinea('+l.id+')">✕</button></div>'; }).join('')
+        return '<div class="hist-li"><span class="sc '+(l.estado==='llena'?'ll':'va')+'">'+(l.estado==='llena'?'Llena':'Vacía')+'</span><span>'+ENV_TAMN[l.tamano]+' · '+esc(_evUbiEtq(l.ubicacion))+'</span><span class="q">'+x.bot+' bot · '+x.cajas+' cajas</span><button title="Editar" onclick="envEditarLinea('+l.id+')">✎</button><button title="Quitar" onclick="envQuitarLinea('+l.id+')">✕</button></div>'; }).join('')
     : '<div class="evc-le">Aún no hay líneas en este conteo.</div>';
   var tot=m.tot[s.di], filas=[630,310,1000].map(function(t){
     var c=ENV_FILAS.map(function(r,j){ return r.tam===t?[r.k,tot?tot[j]:0]:null; }).filter(Boolean), o={}; c.forEach(function(x){ o[x[0]]=x[1]; });
     return '<div class="resumen-fila"><span>'+ENV_TAMN[t]+'</span><span>'+(o.caja||0)+'</span><span>'+(o.vac||0)+'</span><span>'+(o.lle||0)+'</span></div>'; }).join('');
   document.getElementById('evc-cuerpo').innerHTML=
    (sos.length?'<div class="sel-aviso w" style="display:block;margin-bottom:12px"><b>Revisa tu conteo.</b> Estas familias se alejan mucho de lo esperado; puede ser un envase mal elegido en alguna línea:<br>• '+sos.map(esc).join('<br>• ')+'</div>':'')+
-   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Historial del conteo</h3><div class="evcf-h" style="margin:0 0 8px">Cada línea ya está guardada. Puedes quitar una si te equivocaste.</div>'+hist+'</div>'+
+   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Historial del conteo</h3><div class="evcf-h" style="margin:0 0 8px">Cada línea ya está guardada. Puedes editar o quitar una si te equivocaste.</div>'+hist+'</div>'+
    '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Lo que verá el Control</h3><div class="evcf-h" style="margin:0 0 8px">Conteo total del día: lo contado + PFN + lo que deben los motorizados.</div>'+
      '<div class="resumen-fila h"><span>Envase</span><span>Caja plástica</span><span>Vacías</span><span>Llenas</span></div>'+filas+'</div>'+
    '<div style="display:flex;gap:10px"><button class="btn btn-ghost" style="flex:1" onclick="envSeguir()">‹ Seguir contando</button><button class="btn btn-primary" style="flex:1" onclick="envCerrarConteo()">Terminar</button></div>';
