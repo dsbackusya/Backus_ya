@@ -23,7 +23,22 @@ var DCX_GR0 = [
 ];
 var DCX_PRECIO0 = { caja:3.8, bot630_1000:0.6, bot310:0.5 };
 var DCX_TIT = { marcaje:'Conciliación de envases', nc:'Orden para nota de crédito', traslado:'Cargo de despacho' };
-var DCX_DESTINOS = ['TADA EVENTOS','ATE','CHORRILLOS','SAN MIGUEL','OTRO'];
+var DCX_DESTINOS = ['TADA EVENTOS','ATE','CHORRILLOS','SAN MIGUEL'];
+// Destinos escritos antes con "OTRO" (se recuerdan en este equipo)
+function _dcDestinosGuardados(){
+  try{ return JSON.parse(localStorage.getItem('tada-dc-destinos')||'[]')||[]; }catch(e){ return []; }
+}
+function _dcOpcionesDestino(){
+  var l=DCX_DESTINOS.slice();
+  _dcDestinosGuardados().forEach(function(x){ if(l.indexOf(x)<0) l.push(x); });
+  if(DCX.tr.destino&&DCX.tr.destino!=='OTRO'&&l.indexOf(DCX.tr.destino)<0) l.unshift(DCX.tr.destino);
+  l.push('OTRO');
+  return l;
+}
+function dcDestinoCambio(v){
+  DCX.tr.destino=v;
+  var o=document.getElementById('dc-dest-otro-f'); if(o){ o.style.display=v==='OTRO'?'':'none'; if(v==='OTRO'){ var i=document.getElementById('dc-dest-otro'); if(i) i.focus(); } }
+}
 
 var DCX = {
   d:null, tab:'mar', busy:false,
@@ -207,7 +222,8 @@ function _dcListaHtml(w){
         '<div class="dc-g dc-g2"><div class="dc-f"><label>Nro. de factura</label><input class="inp" value="'+esc(DCX.nc.fac)+'" placeholder="Ej: F001-000123" oninput="DCX.nc.fac=this.value"></div></div></div>'
     : '<div class="dc-card"><div class="dc-h"><span class="t">Cargo de despacho</span><span class="s">la placa y el destino salen en la hoja impresa · al guardar se descuenta del stock y queda en M-T como pendiente</span></div><div class="dc-g">'+
         '<div class="dc-f"><label>Origen</label><input class="inp" value="'+esc(_dcSede())+'" disabled></div>'+
-        '<div class="dc-f"><label>Destino</label><select onchange="DCX.tr.destino=this.value">'+(DCX_DESTINOS.indexOf(DCX.tr.destino)<0?[DCX.tr.destino].concat(DCX_DESTINOS):DCX_DESTINOS).map(function(d){ return '<option'+(d===DCX.tr.destino?' selected':'')+'>'+esc(d)+'</option>'; }).join('')+'</select></div>'+
+        '<div class="dc-f"><label>Destino</label><select onchange="dcDestinoCambio(this.value)">'+_dcOpcionesDestino().map(function(d){ return '<option'+(d===DCX.tr.destino?' selected':'')+'>'+esc(d)+'</option>'; }).join('')+'</select></div>'+
+        '<div class="dc-f" id="dc-dest-otro-f" style="'+(DCX.tr.destino==='OTRO'?'':'display:none')+'"><label>Escribe el destino *</label><input class="inp" id="dc-dest-otro" value="'+esc(DCX.tr.otro||'')+'" placeholder="Ej: TIENDA LINCE" maxlength="60" oninput="DCX.tr.otro=this.value.toUpperCase()" style="text-transform:uppercase"></div>'+
         '<div class="dc-f"><label>Placa *</label><input class="inp" id="dc-placa-tr" value="'+esc(DCX.h.placa)+'" placeholder="Ej: BMN-760" oninput="DCX.h.placa=this.value.toUpperCase()" style="text-transform:uppercase"></div>'+
         '<div class="dc-f"><label>Fecha</label><input class="inp" type="date" value="'+esc(DCX.h.fecha)+'" oninput="DCX.h.fecha=this.value"></div></div>'+
         '<div class="dc-f" style="margin-top:12px"><label>Observaciones</label><input class="inp" value="'+esc(DCX.tr.obs)+'" placeholder="Opcional" oninput="DCX.tr.obs=this.value"></div></div>')+
@@ -302,6 +318,10 @@ function dcGuardar(tipo,imprimir){
     d.lineas=DCX.tr.lineas.filter(function(x){ return x.und>0||x.su>0; }).map(function(x){ return { sku:x.sku, sap:x.sap, desc:x.desc, und:x.und||0, su:x.su||0, med:x.med||'und', fac:x.fac||1 }; });
     if(!d.lineas.length){ showToast('Agrega al menos un producto con cantidad','err'); return; }
     d.destino=DCX.tr.destino; d.observaciones=DCX.tr.obs;
+    if(d.destino==='OTRO'){
+      d.destino=String(DCX.tr.otro||'').trim().toUpperCase();
+      if(!d.destino){ showToast('Escribe el destino','err'); var od=document.getElementById('dc-dest-otro'); if(od) od.focus(); return; }
+    }
   }
   DCX.busy=true;
   var editando=DCX.edit&&DCX.edit.tipo===tipo ? DCX.edit : null;
@@ -340,7 +360,14 @@ function dcGuardar(tipo,imprimir){
 function _dcReset(tipo){
   if(tipo==='marcaje'){ DCX.gr=_dcGrNuevo(); DCX.hi=''; DCX.hf=''; DCX.env=true; }
   if(tipo==='nc') DCX.nc={ fac:'', lineas:[] };
-  if(tipo==='traslado'){ DCX.tr.lineas=[]; DCX.tr.obs=''; }
+  if(tipo==='traslado'){
+    var nd=DCX.tr.destino==='OTRO'?String(DCX.tr.otro||'').trim().toUpperCase():'';
+    if(nd&&DCX_DESTINOS.indexOf(nd)<0&&_dcDestinosGuardados().indexOf(nd)<0){
+      try{ var gl=_dcDestinosGuardados(); gl.push(nd); localStorage.setItem('tada-dc-destinos',JSON.stringify(gl.slice(-8))); }catch(e){}
+    }
+    if(nd) DCX.tr.destino=nd;
+    DCX.tr.otro=''; DCX.tr.lineas=[]; DCX.tr.obs='';
+  }
 }
 
 /* ── editar un documento del historial ── */
