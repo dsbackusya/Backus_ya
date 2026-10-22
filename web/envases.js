@@ -494,7 +494,7 @@ function _evMotPinta(){
   if(ENV.mForm){
     f='<div class="evm-form"><span class="t">Nuevo pendiente: el motorizado queda debiendo botellas vacías</span><div class="evm-f">'+
       '<div><label>Motorizado</label><input class="inp" id="evm-n" list="evm-nl" placeholder="Escribe o elige un nombre" autocomplete="off"><datalist id="evm-nl">'+lista.map(function(m){ return '<option value="'+esc(m.n)+'">'; }).join('')+'</datalist></div>'+
-      '<div><label>Envase</label><select id="evm-t"><option value="630">Botella 630</option><option value="310">Botella 305</option><option value="1000">Botella litro</option><option value="630c">Caja 620/650</option><option value="310c">Caja 330</option><option value="1000c">Caja 1100</option></select></div>'+
+      '<div><label>Envase</label><select id="evm-t"><option value="630">Botella 630</option><option value="310">Botella 305</option><option value="1000">Botella litro</option></select></div>'+
       '<div><label>Cantidad</label><input class="inp" id="evm-q" inputmode="numeric" placeholder="0"></div>'+
       '<div><label>Fecha</label><input class="inp" id="evm-d" type="date" value="'+esc(ENV.mForm.fecha)+'"></div>'+
       '<div><label>Nota (opcional)</label><input class="inp" id="evm-o" placeholder="Ej: pedido 4821"></div></div>'+
@@ -512,7 +512,7 @@ function _evMotPinta(){
       var deb=Object.keys(m.bal).filter(function(t){ return m.bal[t]>0; }), ab=ENV.mAb[m.n], kk=_evK(m.n), panel='';
       var chips=deb.length?deb.map(function(t){ return '<span>'+ENV_TAMN[t]+' · '+m.bal[t]+'</span>'; }).join(''):'<span class="ok">Al día</span>';
       if(ab){
-        var opts=(ab==='dev'?deb:['630','310','1000','630c','310c','1000c']).map(function(t){ return '<option value="'+t+'">'+ENV_TAMN[t]+(ab==='dev'?' (debe '+m.bal[t]+')':'')+'</option>'; }).join('');
+        var opts=(ab==='dev'?deb:['630','310','1000']).map(function(t){ return '<option value="'+t+'">'+ENV_TAMN[t]+(ab==='dev'?' (debe '+m.bal[t]+')':'')+'</option>'; }).join('');
         panel='<div class="evm-pn"><div class="r"><div><label>Envase</label><select id="evp-t-'+kk+'" onchange="envMotoSel(\''+esc(m.n).replace(/'/g,"\\'")+'\',this.value)">'+opts+'</select></div>'+
           '<div><label>'+(ab==='dev'?'Cantidad que devolvió':'Cantidad que debe')+'</label><input class="inp" id="evp-q-'+kk+'" inputmode="numeric" value="'+(ab==='dev'&&deb.length?m.bal[deb[0]]:'')+'" placeholder="0"></div>'+
           '<div><label>Fecha</label><input class="inp" id="evp-d-'+kk+'" type="date" value="'+esc(_evHoy())+'"></div><div></div>'+
