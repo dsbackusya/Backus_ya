@@ -543,6 +543,7 @@ function skuEv(){
   document.getElementById('sku-dcount').textContent=document.getElementById('sku-desc').value.length+' / 120';
 
   var sedeSel=(document.getElementById('sku-sede')||{}).value||'';
+  if(esEd){ var fe=(DATA.stock||[]).filter(function(r){return r._row===SKU_EDIT_ROW;})[0]; sedeSel=fe?fe.sede:''; }  // al editar, solo cuenta la sede del producto (el mismo código puede existir en otra sede)
   var ex=null;
   if(sku){
     ex=SKU_CACHE.filter(function(r){
