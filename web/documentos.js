@@ -205,7 +205,7 @@ function _dcListaHtml(w){
   return (nc
     ? '<div class="dc-card"><div class="dc-h"><span class="t">Nota de crédito</span><span class="s">la factura se guarda en M-T, en la columna Motivo</span></div>'+
         '<div class="dc-g dc-g2"><div class="dc-f"><label>Nro. de factura</label><input class="inp" value="'+esc(DCX.nc.fac)+'" placeholder="Ej: F001-000123" oninput="DCX.nc.fac=this.value"></div></div></div>'
-    : '<div class="dc-card"><div class="dc-h"><span class="t">Cargo de despacho</span><span class="s">la placa y el destino salen en la hoja impresa</span></div><div class="dc-g">'+
+    : '<div class="dc-card"><div class="dc-h"><span class="t">Cargo de despacho</span><span class="s">la placa y el destino salen en la hoja impresa · al guardar se descuenta del stock y queda en M-T como pendiente</span></div><div class="dc-g">'+
         '<div class="dc-f"><label>Origen</label><input class="inp" value="'+esc(_dcSede())+'" disabled></div>'+
         '<div class="dc-f"><label>Destino</label><select onchange="DCX.tr.destino=this.value">'+(DCX_DESTINOS.indexOf(DCX.tr.destino)<0?[DCX.tr.destino].concat(DCX_DESTINOS):DCX_DESTINOS).map(function(d){ return '<option'+(d===DCX.tr.destino?' selected':'')+'>'+esc(d)+'</option>'; }).join('')+'</select></div>'+
         '<div class="dc-f"><label>Placa *</label><input class="inp" id="dc-placa-tr" value="'+esc(DCX.h.placa)+'" placeholder="Ej: BMN-760" oninput="DCX.h.placa=this.value.toUpperCase()" style="text-transform:uppercase"></div>'+
@@ -323,9 +323,9 @@ function dcGuardar(tipo,imprimir){
         if(tipo==='marcaje'&&d.movs.length) DCX.d.conEnv[r.id]=true;
       }
       showToast(editando ? 'Documento actualizado'
-        : tipo==='marcaje'?'Marcaje guardado'+(DCX.env&&d.movs.length?' y registrado en Envases':''):tipo==='nc'?'NC guardada y agregada a M-T como pendiente':'Traslado guardado','ok');
+        : tipo==='marcaje'?'Marcaje guardado'+(DCX.env&&d.movs.length?' y registrado en Envases':''):tipo==='nc'?'NC guardada y agregada a M-T como pendiente':'Traslado guardado y descontado del stock (queda en M-T como pendiente)','ok');
       if(tipo==='marcaje') PAGE_LOADED['envases']=false;
-      if(tipo==='nc') PAGE_LOADED['mt']=false;
+      if(tipo==='nc'||tipo==='traslado'){ PAGE_LOADED['mt']=false; PAGE_LOADED['stock']=false; }
       _dcReset(tipo);
       if(editando){ DCX.h={ reparto:'', transporte:'', placa:'', fecha:DCX.d.hoy }; DCX.tab='his'; }
       renderDocumentos();
@@ -345,7 +345,7 @@ function _dcReset(tipo){
 function _dcBannerEdit(){
   var e=DCX.edit; if(!e||e.tab!==DCX.tab) return '';
   return '<div class="dc-edit"><span>Editando <b>'+esc(DCX_TIT[e.tipo])+'</b> N.º '+e.id+' · '+_dcF(e.fecha)+'. Los cambios reemplazan lo guardado'+
-    (e.tipo==='marcaje'?' y lo registrado en Envases':e.tipo==='nc'?' y las filas de M-T':'')+'.</span>'+
+    (e.tipo==='marcaje'?' y lo registrado en Envases':e.tipo==='nc'?' y las filas de M-T':e.tipo==='traslado'?' y las filas de M-T, si las tiene':'')+'.</span>'+
     '<button class="btn btn-ghost btn-sm" onclick="dcCancelarEdicion()">Cancelar edición</button></div>';
 }
 function _dcBarra(tipo){
@@ -380,7 +380,8 @@ function dcCancelarEdicion(silencioso){
 function dcEliminar(id){
   var d=DCX.hist.filter(function(x){ return x.id===id; })[0]; if(!d) return;
   var efecto=d.tipo==='marcaje'?' También se quitan los movimientos que registró en Envases.'
-    :d.tipo==='nc'?' También se quitan sus filas pendientes de M-T (las ya retiradas se conservan).':'';
+    :d.tipo==='nc'?' También se quitan sus filas pendientes de M-T (las ya retiradas se conservan).'
+    :d.tipo==='traslado'?' Si descontó stock, se devuelve: se quitan sus filas pendientes de M-T (las ya retiradas se conservan).':'';
   _confirmDialog('Eliminar documento','Se eliminará el '+DCX_TIT[d.tipo].toLowerCase()+' del '+_dcF(d.fecha)+(d.reparto?' (reparto '+d.reparto+')':d.nroFactura?' (factura '+d.nroFactura+')':'')+'.'+efecto,
     function(){
       google.script.run
@@ -389,7 +390,7 @@ function dcEliminar(id){
           DCX.hist=DCX.hist.filter(function(x){ return x.id!==id; });
           if(DCX.edit&&DCX.edit.id===id) DCX.edit=null;
           if(d.tipo==='marcaje') PAGE_LOADED['envases']=false;
-          if(d.tipo==='nc') PAGE_LOADED['mt']=false;
+          if(d.tipo==='nc'||d.tipo==='traslado'){ PAGE_LOADED['mt']=false; PAGE_LOADED['stock']=false; }
           showToast('Documento eliminado'+(r.conservadas?' · '+r.conservadas+' fila(s) de M-T ya retiradas se conservaron':''),'ok');
           renderDocumentos();
         })
