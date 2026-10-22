@@ -89,7 +89,6 @@ function renderMT(r){
   _MT_TIPO=''; _MT_EST='';
   var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
   document.getElementById('mt-root').innerHTML=
-    '<div class="mt2-note">'+ICO('info',13)+'Resumen del período · no cambia con el filtro de tipo ni la búsqueda</div>'+
     '<div class="sal2-sum mt2-sum" id="mt-kpis"></div>'+
     '<div class="sal2-fl">'+
       '<div class="sal2-srch">'+icoBuscar+'<input id="mt-busq" placeholder="Buscar SKU, producto o motivo…" oninput="filterMT()"/></div>'+

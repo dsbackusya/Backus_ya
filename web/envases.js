@@ -420,7 +420,7 @@ function _evcPinta(){
   if(s.cerrado){ _evcCierre(ls); return; }
   var f=s.f, n=ENV_MULT[f.tam]||0, ubis=_evUbiLista();
   var ultima=ls.length?ls[ls.length-1]:null;
-  var lista=nl?'<div class="evc-card" style="padding:14px 16px;margin-bottom:12px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Líneas de este conteo</h3><div class="evcf-h" style="margin:0 0 6px">Toca ✎ para cambiar una línea o ✕ para quitarla.</div>'+
+  var lista=nl?'<div class="evc-card" style="padding:14px 16px;margin-bottom:12px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Líneas de este conteo</h3>'+
     ls.map(function(l){ var x=_evNLin(l);
       return '<div class="hist-li'+(s.edit===l.id?' ed':'')+'"><span class="sc '+(l.estado==='llena'?'ll':'va')+'">'+(l.estado==='llena'?'Llena':'Vacía')+'</span><span>'+ENV_TAMN[l.tamano]+' · '+esc(_evUbiEtq(l.ubicacion))+'</span><span class="q">'+x.bot+' bot · '+x.cajas+' cajas</span>'+
         '<button title="Editar" onclick="envEditarLinea('+l.id+')">✎</button><button title="Quitar" onclick="envQuitarLinea('+l.id+')">✕</button></div>'; }).join('')+'</div>':'';
@@ -428,10 +428,10 @@ function _evcPinta(){
    '<div class="evc-card evcf'+(s.edit?' editando':'')+'"><div class="evcf-k">'+(s.edit?'Editar línea del conteo':'Agregar al conteo')+'</div>'+
     '<div class="sel-aviso'+(f.tam?'':' w')+'">'+(s.edit?'Vas a cambiar la línea por: ':'Vas a agregar: ')+'<b>'+_evcEtq(f)+'</b></div>'+
     '<label class="evcf-l">Ubicación</label>'+_evcSeg(ubis.map(function(u){ return [u[0],u[1]]; }),f.ubi,'envFU','<button class="mas" onclick="envOtraUbi()" title="Solo para esta sede">+ Otra</button>')+
-    (s.addUbi?'<div class="nueva-ubi"><input class="inp" id="evcf-nueva" maxlength="30" placeholder="Ej: Pasillo, Mezanine" onkeydown="if(event.key===\'Enter\')envGuardarUbi()"><button class="btn btn-primary btn-sm" onclick="envGuardarUbi()">Guardar ubicación</button></div><div class="ubi-nota">Solo aparecerá en esta sede.</div>':'')+
+    (s.addUbi?'<div class="nueva-ubi"><input class="inp" id="evcf-nueva" maxlength="30" placeholder="Ej: Pasillo, Mezanine" onkeydown="if(event.key===\'Enter\')envGuardarUbi()"><button class="btn btn-primary btn-sm" onclick="envGuardarUbi()">Guardar ubicación</button></div>':'')+
     '<label class="evcf-l">Estado</label>'+_evcSeg([['llena','Llenas'],['vacia','Vacías']],f.estado,'envFE')+
     '<label class="evcf-l">Envase</label>'+_evcSeg([[630,'Botella 630'],[310,'Botella 305'],[1000,'Botella 1000']],f.tam,'envFT')+
-    '<div class="evcf-h">'+(f.tam?'Multiplica ×'+n+' · caja plástica asociada: '+ENV_CAJA[f.tam]:'Elige el envase de esta línea.')+'</div>'+
+    ''+
     '<div class="evcf-box"><div class="evcf-bt"><b>1 · Botellas</b><span>× '+(n||'—')+' automático</span></div><div class="evcf-g">'+
       '<div><label>Packs (cajas completas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.packs)+'" oninput="envFIn(\'packs\',this)"></div>'+
       '<div><label>Unidades sueltas</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.und)+'" oninput="envFIn(\'und\',this)"></div></div>'+
@@ -440,7 +440,6 @@ function _evcPinta(){
       '<div><label>Con botellas</label><div class="evcf-auto"><em>AUTO</em><b id="evcf-auto">'+(_evNum(f.packs)||0)+'</b></div></div>'+
       '<div><label>Solas (sin botellas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.solas)+'" oninput="envFIn(\'solas\',this)"></div></div>'+
       '<div class="evcf-eq" id="evcf-c"></div></div>'+
-    '<div class="evcf-h">Los packs de botellas ya cuentan como "cajas con botellas": solo se escriben una vez.</div>'+
     '<button class="btn btn-primary evcf-add" id="evcf-add" onclick="envAgregar()">✓ '+(s.edit?'Guardar cambios: ':'Agregar y guardar: ')+_evcEtq(f)+'</button>'+(s.edit?'<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="envCancelarEdicion()">Cancelar edición</button>':'')+
     '<div class="lista-ult">'+(s.ult?'Último guardado: <b>'+esc(s.ult)+'</b> · <a href="#" onclick="envDeshacer();return false">Deshacer</a>':(ultima?'<a href="#" onclick="envDeshacer();return false">Deshacer última línea</a>':'Cada línea se guarda al instante; no hace falta guardar al final.'))+'</div>'+
    '</div>';
@@ -470,8 +469,8 @@ function _evcCierre(ls){
     return '<div class="resumen-fila"><span>'+ENV_TAMN[t]+'</span><span>'+(o.caja||0)+'</span><span>'+(o.vac||0)+'</span><span>'+(o.lle||0)+'</span></div>'; }).join('');
   document.getElementById('evc-cuerpo').innerHTML=
    (sos.length?'<div class="sel-aviso w" style="display:block;margin-bottom:12px"><b>Revisa tu conteo.</b> Estas familias se alejan mucho de lo esperado; puede ser un envase mal elegido en alguna línea:<br>• '+sos.map(esc).join('<br>• ')+'</div>':'')+
-   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Historial del conteo</h3><div class="evcf-h" style="margin:0 0 8px">Cada línea ya está guardada. Puedes editar o quitar una si te equivocaste.</div>'+hist+'</div>'+
-   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Lo que verá el Control</h3><div class="evcf-h" style="margin:0 0 8px">Conteo total del día: lo contado + PFN + lo que deben los motorizados.</div>'+
+   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Historial del conteo</h3>'+hist+'</div>'+
+   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Lo que verá el Control</h3>'+
      '<div class="resumen-fila h"><span>Envase</span><span>Caja plástica</span><span>Vacías</span><span>Llenas</span></div>'+filas+'</div>'+
    '<div style="display:flex;gap:10px"><button class="btn btn-ghost" style="flex:1" onclick="envSeguir()">‹ Seguir contando</button><button class="btn btn-primary" style="flex:1" onclick="envCerrarConteo()">Terminar</button></div>';
 }
@@ -506,7 +505,6 @@ function _evMotPinta(){
     '<div class="evm-kp"><div class="ev-card"><div class="ev-k">Botellas que deben</div><div class="ev-v" style="font-size:28px">'+deben+'</div><div class="ev-n">entre todos los motorizados</div></div>'+
       '<div class="ev-card"><div class="ev-k">Motorizados con saldo</div><div class="ev-v" style="font-size:28px">'+conSaldo+'</div><div class="ev-n">de '+lista.length+' registrados</div></div>'+
       '<div class="ev-card"><div class="ev-k">Devuelto esta semana</div><div class="ev-v ev-pos" style="font-size:28px">'+devSem+'</div><div class="ev-n">ya pasaron al almacén</div></div></div>'+
-    '<p class="evm-note">Cuando se vende producto retornable, el motorizado queda debiendo las botellas vacías. Aquí anotas cuántas debe y, cuando las trae, registras la devolución (puede ser parcial). Lo que deben <b>cuenta como parte del conteo de vacías</b> mientras no lo traigan; cuando lo devuelven pasa a estar físicamente en el almacén y el total no cambia.</p>'+
     '<div class="evm-bar"><button class="btn btn-primary" onclick="ENV.mForm={fecha:\''+_evHoy()+'\'};_evMotPinta();var n=document.getElementById(\'evm-n\');if(n)n.focus()">+ Nuevo pendiente</button><span class="ev-sp"></span>'+
       '<div class="ev-seg"><button class="'+(ENV.mf==='pen'?'on':'')+'" onclick="envMF(\'pen\')">Con saldo</button><button class="'+(ENV.mf==='todos'?'on':'')+'" onclick="envMF(\'todos\')">Todos</button></div></div>'+
     f+
@@ -519,7 +517,7 @@ function _evMotPinta(){
           '<div><label>'+(ab==='dev'?'Cantidad que devolvió':'Cantidad que debe')+'</label><input class="inp" id="evp-q-'+kk+'" inputmode="numeric" value="'+(ab==='dev'&&deb.length?m.bal[deb[0]]:'')+'" placeholder="0"></div>'+
           '<div><label>Fecha</label><input class="inp" id="evp-d-'+kk+'" type="date" value="'+esc(_evHoy())+'"></div><div></div>'+
           '<button class="btn btn-primary" onclick="envMotoMov(\''+esc(m.n).replace(/'/g,"\\'")+'\')">'+(ab==='dev'?'Registrar devolución':'Agregar')+'</button>'+
-          '<div class="hint">'+(ab==='dev'?'Por defecto aparece todo lo que debe; cámbialo si devolvió solo una parte (el resto queda pendiente).':'Suma a lo que ya debe.')+'</div></div></div>';
+          '</div></div>';
       }
       var hist=ENV.mHist[m.n]?'<div class="evm-hist">'+m.led.slice().reverse().map(function(e){
         return '<div class="evm-l"><span class="d">'+_evF(e.fecha)+'</span><span>'+ENV_TAMN[_evMk(e)]+(e.nota?' · '+esc(e.nota):'')+'</span><span class="q '+(e.tipo==='debe'?'d1':'d2')+'">'+(e.tipo==='debe'?'debe +':'devolvió −')+e.cantidad+'</span><button title="Quitar" onclick="envMotoQuitar('+e.id+')">✕</button></div>'; }).join('')+'</div>':'';
@@ -529,7 +527,7 @@ function _evMotPinta(){
         '<button class="btn btn-ghost" onclick="envMotoPanel(\''+nq+'\',\'debe\')">+ Debe más</button>'+
         '<button class="btn btn-ghost" onclick="ENV.mHist[\''+nq+'\']=!ENV.mHist[\''+nq+'\'];_evMotPinta()">'+(ENV.mHist[m.n]?'Ocultar historial':'Ver historial')+'</button>'+
         '<button class="btn btn-ghost" onclick="envMotoRenPanel(\''+nq+'\')">Cambiar nombre</button></div>'+
-        (ENV.mRen&&ENV.mRen[m.n]?'<div class="evm-pn"><div class="r"><div><label>Nuevo nombre</label><input class="inp" id="evr-'+kk+'" value="'+esc(m.n)+'" autocomplete="off"></div><div></div><button class="btn btn-primary" onclick="envMotoRenombrar(\''+nq+'\')">Guardar nombre</button><div class="hint">Cambia el nombre en todos sus movimientos. Si escribes el nombre de otro motorizado, se juntan sus saldos.</div></div></div>':'')+
+        (ENV.mRen&&ENV.mRen[m.n]?'<div class="evm-pn"><div class="r"><div><label>Nuevo nombre</label><input class="inp" id="evr-'+kk+'" value="'+esc(m.n)+'" autocomplete="off"></div><div></div><button class="btn btn-primary" onclick="envMotoRenombrar(\''+nq+'\')">Guardar nombre</button></div></div>':'')+
         panel+hist+'</div>';
     }).join(''):'<div class="evm-empty">'+(lista.length?'Nadie debe botellas. Todos los motorizados están al día.':'Aún no hay motorizados. Agrega el primero con "+ Nuevo pendiente".')+'</div>');
 }
@@ -622,7 +620,6 @@ function _evPfnPinta(){
   });
   el.innerHTML=
     '<div class="ev-card"><div class="ev-h"><span class="t">PFN</span><span class="s">'+(desde?'Vigente desde el '+_evF(desde):'Aún no hay PFN registrado')+' · total '+tot+'</span></div>'+
-    '<p class="evm-note">El PFN que guardes vale desde la fecha que elijas y se mantiene todos los días siguientes hasta que lo vuelvas a editar. Se suma al conteo de cada día (Palet + Cámara + PFN + lo que deben los motorizados); lo ves en la columna PFN de Movimientos y conteo. En las cajas va la cantidad de cajas; en las botellas, la cantidad de botellas.</p>'+
     '<div style="display:grid;grid-template-columns:minmax(150px,1.5fr) 80px 110px;gap:6px 12px;align-items:center;max-width:520px">'+
       '<span class="ev-k">Envase</span><span class="ev-k" style="text-align:center">Vigente</span><span class="ev-k" style="text-align:center">Nuevo PFN</span>'+h+'</div>'+
     '<div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px;flex-wrap:wrap"><label class="ev-k">Aplica desde</label>'+

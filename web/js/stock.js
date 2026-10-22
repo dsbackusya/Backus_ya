@@ -462,7 +462,7 @@ function _skuMostrar(modo){ // 'form' | 'ok'
 function _skuTextos(esEdicion){
   document.getElementById('fs-sku-title').textContent=esEdicion?'Editar SKU':'Nuevo SKU';
   document.getElementById('sku-h1').textContent=esEdicion?'Editar SKU':'Nuevo SKU';
-  document.getElementById('sku-sub').textContent=esEdicion?'Cambia los datos de identificación del producto.':'Agrega un producto a tu Stock. Se crea con stock en cero.';
+  document.getElementById('sku-sub').textContent='';
   document.getElementById('sku-nota-edit').style.display=esEdicion?'flex':'none';
   document.getElementById('sku-pnote').textContent=esEdicion?'El stock y los movimientos de este producto no cambian.':'El producto se crea con stock en cero. Para ingresar unidades registra una Entrada o haz un Conteo.';
   document.getElementById('btn-sku-save').textContent=esEdicion?'Guardar cambios':'Guardar SKU';
