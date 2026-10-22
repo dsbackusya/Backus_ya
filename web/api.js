@@ -1164,7 +1164,7 @@
     var sede = exigirSede(p, null);
     var terms = String(query || '').replace(/[,()*%\\]/g, ' ').trim().split(/\s+/).filter(Boolean).slice(0, 5);
     if (!terms.length || terms.join('').length < 2) return { ok: true, results: [] };
-    var q = sb.from('sede_productos').select('sku,descripcion').eq('sede_id', sede);
+    var q = sb.from('sede_productos').select('sku,descripcion,packs').eq('sede_id', sede);
     // las vocales y la ñ se buscan como comodín para que "guarana" encuentre "GUARANÁ"
     terms.forEach(function (t) { q = q.or('descripcion.ilike.%' + t.replace(/[aeiouáéíóúüñ]/gi, '_') + '%,sku.ilike.%' + t + '%'); });
     var r = await q.order('descripcion').limit(12);
@@ -1187,7 +1187,7 @@
         if (/^[0-9]+$/.test(v)) sap[x.sku] = v;
       });
     }
-    return { ok: true, results: r.data.map(function (x) { return { sku: str(x.sku), desc: str(x.descripcion), sap: sap[x.sku] || '' }; }) };
+    return { ok: true, results: r.data.map(function (x) { return { sku: str(x.sku), desc: str(x.descripcion), sap: sap[x.sku] || '', fac: num(x.packs) > 1 ? num(x.packs) : 1 }; }) };
   });
 
   // d: { tipo, fecha, reparto, transporte, placa, horaInicio, horaFin, nroFactura, destino, observaciones, lineas, movs }

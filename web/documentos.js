@@ -241,7 +241,7 @@ function dcAgregar(w,i){
   var c=(DCX.res[w]||[])[i]; if(!c) return;
   var L=_dcL(w), idx=-1;
   L.forEach(function(x,k){ if(x.sku===c.sku) idx=k; });
-  if(idx<0){ L.push({ sku:c.sku, sap:c.sap, desc:c.desc, und:0 }); idx=L.length-1; }
+  if(idx<0){ L.push({ sku:c.sku, sap:c.sap, desc:c.desc, und:0, fac:c.fac||1, med:(c.fac||1)>1?'pack':'und' }); idx=L.length-1; }
   var q=document.getElementById('dc-q-'+w); if(q) q.value='';
   dcCerrarAc(w); dcDibujaL(w);
   var ins=document.querySelectorAll('#dc-ln-'+w+' .inp'); var el=ins[idx];
@@ -250,12 +250,27 @@ function dcAgregar(w,i){
 function dcDibujaL(w){
   var L=_dcL(w), el=document.getElementById('dc-ln-'+w); if(!el) return;
   el.innerHTML=L.length ? L.map(function(x,i){
-    return '<div class="dc-ln"><div class="d"><b>'+esc(x.desc)+'</b><small>SKU '+esc(x.sku)+(x.sap?' · SAP '+esc(x.sap):' · sin SAP')+'</small></div>'+
-      '<input class="inp" inputmode="numeric" value="'+(x.und||'')+'" placeholder="'+(w==='nc'?'Und':'Pack/U')+'" oninput="dcUnd(\''+w+'\','+i+',this.value)">'+
+    var tr=w==='tr', conPack=tr&&(x.fac||1)>1;
+    return '<div class="dc-ln'+(tr?' tr':'')+'"><div class="d"><b>'+esc(x.desc)+'</b><small>SKU '+esc(x.sku)+(x.sap?' · SAP '+esc(x.sap):' · sin SAP')+'</small></div>'+
+      '<input class="inp" inputmode="numeric" value="'+(x.und||'')+'" placeholder="'+(w==='nc'?'Und':tr?'Cant.':'Pack/U')+'" oninput="dcUnd(\''+w+'\','+i+',this.value)">'+
+      (tr?'<div class="dc-med">'+(conPack
+          ? '<div class="dc-seg"><button type="button" class="'+(x.med!=='und'?'on':'')+'" onclick="dcMed('+i+',\'pack\')">Pack</button><button type="button" class="'+(x.med==='und'?'on':'')+'" onclick="dcMed('+i+',\'und\')">Und</button></div>'+
+            '<small id="dc-eq-'+i+'">'+_dcEq(x)+'</small>'
+          : '<small>Und</small>')+'</div>':'')+
       '<button class="dc-x" title="Quitar" onclick="dcQuitar(\''+w+'\','+i+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>';
   }).join('') : '<div class="dc-empty">Aún no hay productos. Búscalos arriba.</div>';
 }
-function dcUnd(w,i,v){ var x=_dcL(w)[i]; if(x) x.und=_dcNum(v); }
+// Equivalencia a unidades de una línea de traslado (1 pack de 6 = 6 und)
+function _dcEq(x){ return x.med!=='und'&&x.und>0&&(x.fac||1)>1 ? '= '+fmt(x.und*x.fac)+' und' : (x.med!=='und'?'pack de '+x.fac:''); }
+// Cantidad como se imprime en el cargo: "1 pack (6 und)" o "6 und"; los documentos antiguos solo traen el número
+function _dcCantTxt(x){
+  if(!x.und) return '';
+  if(x.med==='und') return x.und+' und';
+  if(x.med==='pack') return x.und+(x.und===1?' pack':' packs')+((x.fac||1)>1?' ('+(x.und*x.fac)+' und)':'');
+  return String(x.und);
+}
+function dcMed(i,m){ var x=DCX.tr.lineas[i]; if(!x) return; x.med=m; dcDibujaL('tr'); }
+function dcUnd(w,i,v){ var x=_dcL(w)[i]; if(!x) return; x.und=_dcNum(v); var eq=document.getElementById('dc-eq-'+i); if(eq&&w==='tr') eq.textContent=_dcEq(x); }
 function dcQuitar(w,i){ _dcL(w).splice(i,1); dcDibujaL(w); }
 
 /* ── guardar ── */
@@ -282,7 +297,7 @@ function dcGuardar(tipo,imprimir){
       var pl=document.getElementById('dc-placa-tr'); if(pl) pl.focus();
       return;
     }
-    d.lineas=DCX.tr.lineas.filter(function(x){ return x.und>0; }).map(function(x){ return { sku:x.sku, sap:x.sap, desc:x.desc, und:x.und }; });
+    d.lineas=DCX.tr.lineas.filter(function(x){ return x.und>0; }).map(function(x){ return { sku:x.sku, sap:x.sap, desc:x.desc, und:x.und, med:x.med||'und', fac:x.fac||1 }; });
     if(!d.lineas.length){ showToast('Agrega al menos un producto con cantidad','err'); return; }
     d.destino=DCX.tr.destino; d.observaciones=DCX.tr.obs;
   }
@@ -351,7 +366,7 @@ function dcEditar(id){
   } else if(d.tipo==='nc'){
     DCX.nc={ fac:d.nroFactura, lineas:d.lineas.map(function(l){ return { sku:l.sku, sap:l.sap, desc:l.desc, und:l.und }; }) };
   } else {
-    DCX.tr={ destino:d.destino||'TADA EVENTOS', obs:d.observaciones, lineas:d.lineas.map(function(l){ return { sku:l.sku, sap:l.sap, desc:l.desc, und:l.und }; }) };
+    DCX.tr={ destino:d.destino||'TADA EVENTOS', obs:d.observaciones, lineas:d.lineas.map(function(l){ return { sku:l.sku, sap:l.sap, desc:l.desc, und:l.und, med:l.med||'und', fac:l.fac||1 }; }) };
   }
   DCX.tab=tab; renderDocumentos();
   var c=document.getElementById('documentos-root'); if(c&&c.scrollIntoView) c.scrollIntoView({block:'start'});
@@ -442,7 +457,7 @@ function _dcPapel(d){
   t='<h2>CARGO DESPACHO - '+esc(sede)+'</h2><div class="dp-hd"><div><span>Placa:</span><b>'+esc(d.placa)+'</b></div><div><span>Fecha</span><b>'+_dcF(d.fecha)+'</b></div></div>'+
     '<table><tr><th>FECHA</th><th>SKU</th><th>SAP</th><th>DESCRIPCIÓN</th><th>PACK/U</th><th>ORIGEN</th><th>DESTINO</th></tr>';
   for(i=0;i<Math.max(8,d.lineas.length);i++){ x=d.lineas[i];
-    t+=x?'<tr><td class="c">'+_dcF(d.fecha)+'</td><td class="c">'+esc(x.sku)+'</td><td class="c">'+esc(x.sap)+'</td><td>'+esc(x.desc)+'</td><td class="c">'+(x.und||'')+'</td><td class="c">'+esc(sede)+'</td><td class="c">'+esc(d.destino)+'</td></tr>'
+    t+=x?'<tr><td class="c">'+_dcF(d.fecha)+'</td><td class="c">'+esc(x.sku)+'</td><td class="c">'+esc(x.sap)+'</td><td>'+esc(x.desc)+'</td><td class="c">'+_dcCantTxt(x)+'</td><td class="c">'+esc(sede)+'</td><td class="c">'+esc(d.destino)+'</td></tr>'
         :'<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>'; }
   return t+'</table><p class="dp-note"><b>Observaciones:</b> '+esc(d.observaciones)+'</p>'+_dcFirmas('DS '+esc(sede),'PROVEEDOR');
 }
