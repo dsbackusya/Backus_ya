@@ -160,8 +160,8 @@ function _evRender(){
   else if(ENV.vista==='pfn') _evPfnPinta();
   else _evMotPinta();
 }
-function envVista(v){ ENV.vista=v; _evRender(); }
-function envSel(i){ ENV.sel=i; _evDias(); _evTabla(); _evResumen(); }
+function envVista(v){ ENV.vista=v; ENV.pfnFecha=null; _evRender(); }
+function envSel(i){ ENV.sel=i; ENV.pfnFecha=null; _evDias(); _evTabla(); _evResumen(); }
 function envMet(x){ ENV.met=x; _evMerge(); }
 
 function _evDias(){
@@ -636,6 +636,9 @@ function envPfnGuardar(){
   var lineas=Object.keys(por).map(function(k){ return por[k]; });
   google.script.run.withSuccessHandler(function(res){
     if(!res||!res.ok){ showToast((res&&res.error)||'No se pudo guardar el PFN','err'); return; }
-    ENV.pfnFecha=f; showToast('PFN guardado desde el '+_evF(f)); _evRecargar();
+    ENV.pfnFecha=null;
+    var mas=''; ENV.d.conteo.concat(ENV.d.pfnPrev).forEach(function(l){ if(_evSec(l.ubicacion)==='PFN'&&l.fecha>f&&l.fecha>mas) mas=l.fecha; });
+    if(mas) showToast('PFN guardado desde el '+_evF(f)+'. Ojo: hay un PFN más nuevo del '+_evF(mas)+' que prevalece desde esa fecha','err');
+    else showToast('PFN guardado desde el '+_evF(f)); _evRecargar();
   }).withFailureHandler(function(e){ showToast(e.message,'err'); }).guardarEnvPfn(S.token,{ fecha:f, lineas:lineas });
 }
