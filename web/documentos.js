@@ -269,8 +269,8 @@ function dcDibujaL(w){
     var tr=w==='tr', conPack=tr&&(x.fac||1)>1;
     return '<div class="dc-ln'+(tr?' tr':'')+'"><div class="d"><b>'+esc(x.desc)+'</b><small>SKU '+esc(x.sku)+(x.sap?' · SAP '+esc(x.sap):' · sin SAP')+'</small>'+
         (conPack?'<small id="dc-eq-'+i+'" class="dc-eq">'+_dcEq(x)+'</small>':'')+'</div>'+
-      '<input class="inp" inputmode="numeric" value="'+(x.und||'')+'" placeholder="'+(w==='nc'?'Und':tr?(conPack?'Packs':'Und'):'Pack/U')+'" oninput="dcUnd(\''+w+'\','+i+',this.value)">'+
-      (conPack?'<input class="inp" inputmode="numeric" value="'+(x.su||'')+'" placeholder="Und" title="Unidades sueltas" oninput="dcSu('+i+',this.value)">':(tr?'<span></span>':''))+
+      (tr?'<div class="dc-cp">':'')+'<input class="inp" inputmode="numeric" value="'+(x.und||'')+'" placeholder="'+(w==='nc'?'Und':tr?(conPack?'Packs':'Und'):'Pack/U')+'" oninput="dcUnd(\''+w+'\','+i+',this.value)">'+(tr?'<small>'+(conPack?'Packs':'Und')+'</small></div>':'')+
+      (conPack?'<div class="dc-cp"><input class="inp" inputmode="numeric" value="'+(x.su||'')+'" placeholder="Und" title="Unidades sueltas" oninput="dcSu('+i+',this.value)"><small>Und sueltas</small></div>':(tr?'<span></span>':''))+
       '<button class="dc-x" title="Quitar" onclick="dcQuitar(\''+w+'\','+i+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>';
   }).join('') : '<div class="dc-empty">Aún no hay productos. Búscalos arriba.</div>';
 }

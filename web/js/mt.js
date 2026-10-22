@@ -203,7 +203,7 @@ var _MT_MOTIVOS={
   'Nota de credito':['Devolución de cliente','Error de facturación','Producto en mal estado']
 };
 var _MT_NOMBRE={'MERMA':'Merma','TRASLADO':'Traslado','Nota de credito':'Nota de crédito'};
-var _MTF={tipo:'',motivo:'',dest:'',otro:false,sel:null,lineas:[],edit:false,destinos:null,res:[],seq:0,timer:0};
+var _MTF={tipo:'',tipoOrig:'',cambiado:false,motivo:'',dest:'',otro:false,sel:null,lineas:[],edit:false,destinos:null,res:[],seq:0,timer:0};
 
 function _mtFechaHoy(){
   var d=new Date(), p=function(n){return (n<10?'0':'')+n;};
@@ -213,6 +213,7 @@ function _mtEl(id){return document.getElementById(id);}
 
 function mtTipo(t,conservar){
   _MTF.tipo=t;
+  if(!conservar){ _MTF.cambiado=true; _mtEl('mt-tipo-otro').classList.add('mt3-oculto'); }
   if(!conservar){ _MTF.motivo=''; _MTF.dest=''; _MTF.otro=false; _mtEl('mt-dest-otro').value=''; _mtEl('mt-motivo').value=''; }
   document.querySelectorAll('.mt3-tp').forEach(function(b){ b.classList.toggle('on',b.dataset.t===t); });
   _mtEl('mt-b-motivo').classList.remove('mt3-oculto');
@@ -354,9 +355,9 @@ function _mtExceso(){ return _MTF.lineas.filter(function(l){ return l.s!==Infini
 
 function mtPintar(sinLineas){
   if(!sinLineas) _mtPintarLineas();
-  var t=_MTF.tipo, tot=_MTF.lineas.reduce(function(a,l){ return a+l.c; },0), td=t==='TRASLADO'&&!_MTF.edit;
+  var t=_MTF.tipo||(_MTF.edit&&!_MTF.cambiado?_MTF.tipoOrig:''), tot=_MTF.lineas.reduce(function(a,l){ return a+l.c; },0), td=_MTF.tipo==='TRASLADO'&&!_MTF.edit;
   var vacio='<span style="color:var(--text4)">—</span>';
-  _mtEl('mt-r-tipo').innerHTML=t?'<span class="mt3-bd '+(t==='MERMA'?'merma':t==='TRASLADO'?'':'nc')+'">'+esc(_MT_NOMBRE[t])+'</span>':vacio;
+  _mtEl('mt-r-tipo').innerHTML=t?'<span class="mt3-bd '+(t==='MERMA'?'merma':t==='TRASLADO'?'':'nc')+'">'+esc(_MT_NOMBRE[t]||t)+'</span>':vacio;
   _mtEl('mt-r-mot').innerHTML=_MTF.motivo?esc(_MTF.motivo):vacio;
   _mtEl('mt-r-dest-l').classList.toggle('mt3-oculto',!td);
   _mtEl('mt-r-dest').classList.toggle('mt3-oculto',!td);
@@ -374,9 +375,9 @@ function mtPintar(sinLineas){
 }
 
 function _mtReset(){
-  _MTF.tipo=''; _MTF.motivo=''; _MTF.dest=''; _MTF.otro=false; _MTF.sel=null; _MTF.lineas=[]; _MTF.edit=false; _MTF.res=[];
+  _MTF.tipo=''; _MTF.tipoOrig=''; _MTF.cambiado=false; _MTF.motivo=''; _MTF.dest=''; _MTF.otro=false; _MTF.sel=null; _MTF.lineas=[]; _MTF.edit=false; _MTF.res=[];
   document.querySelectorAll('.mt3-tp').forEach(function(b){ b.classList.remove('on'); });
-  _mtEl('mt-b-motivo').classList.add('mt3-oculto'); _mtEl('mt-b-destino').classList.add('mt3-oculto');
+  _mtEl('mt-b-motivo').classList.add('mt3-oculto'); _mtEl('mt-b-destino').classList.add('mt3-oculto'); _mtEl('mt-tipo-otro').classList.add('mt3-oculto');
   ['mt-motivo','mt-q','mt-cant','mt-obs','mt-nro-factura','mt-fecha-retiro','mt-dest-otro'].forEach(function(id){ _mtEl(id).value=''; });
   var f=_mtEl('mt-fecha'); f.value=_mtFechaHoy(); f.max=f.value; f.disabled=false;
   _mtEl('mt-ext').open=false;
@@ -404,10 +405,11 @@ function abrirNuevoMT(){
 
 function guardarMT(){
   var rowNum=_mtEl('mt-row').value, btn=_mtEl('btn-mt-save');
-  if(!_MTF.tipo||!_MTF.lineas.length){ showToast('Completa el tipo y al menos un producto','err'); return; }
+  var tipoGuardar=(rowNum&&!_MTF.cambiado&&_MTF.tipoOrig)?_MTF.tipoOrig:_MTF.tipo;
+  if(!tipoGuardar||!_MTF.lineas.length){ showToast('Completa el tipo y al menos un producto','err'); return; }
   var obs=_mtEl('mt-obs').value.trim();
   if(_MTF.dest) obs='Destino: '+_MTF.dest+(obs?' · '+obs:'');
-  var comun={tipo:_MTF.tipo,motivo:_MTF.motivo,obs:obs,fecha:_mtEl('mt-fecha').value,
+  var comun={tipo:tipoGuardar,motivo:_MTF.motivo,obs:obs,fecha:_mtEl('mt-fecha').value,
     nroFactura:_mtEl('mt-nro-factura').value.trim(),fechaRetiro:_mtEl('mt-fecha-retiro').value};
   var restaurar=function(){ delete btn.dataset.ocupado; btn.textContent=rowNum?'Guardar cambios':'Guardar movimiento'; mtPintar(true); };
   var enviar=function(){
@@ -456,7 +458,14 @@ function editarMTRow(rowNum){
   _mtEl('mt-btn-limpiar').style.display='none';
   _mtEl('fs-mt-title').textContent='Editar M-T';
   _mtEl('btn-mt-save').textContent='Guardar cambios';
-  mtTipo(r.tipo||'',true);
+  _MTF.tipoOrig=String(r.tipo||'').trim();
+  var canon=_mtTipo(r), boton={MERMA:'MERMA',TRASLADO:'TRASLADO',NC:'Nota de credito'}[canon];
+  if(boton) mtTipo(boton,true);
+  else {
+    _mtEl('mt-b-motivo').classList.remove('mt3-oculto');
+    _mtEl('mt-tipo-otro').innerHTML='Tipo actual: <b>'+esc(_MTF.tipoOrig||'SIN TIPO')+'</b>. Se mantiene a menos que elijas otro de arriba.';
+    _mtEl('mt-tipo-otro').classList.remove('mt3-oculto'); mtPintar();
+  }
   openFS('fs-mt');
 }
 
