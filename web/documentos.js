@@ -241,7 +241,7 @@ function dcAgregar(w,i){
   var c=(DCX.res[w]||[])[i]; if(!c) return;
   var L=_dcL(w), idx=-1;
   L.forEach(function(x,k){ if(x.sku===c.sku) idx=k; });
-  if(idx<0){ L.push({ sku:c.sku, sap:c.sap, desc:c.desc, und:0, fac:c.fac||1, med:(c.fac||1)>1?'pack':'und' }); idx=L.length-1; }
+  if(idx<0){ L.push({ sku:c.sku, sap:c.sap, desc:c.desc, und:0, fac:c.fac||1, su:0, med:(c.fac||1)>1?'pack':'und' }); idx=L.length-1; }
   var q=document.getElementById('dc-q-'+w); if(q) q.value='';
   dcCerrarAc(w); dcDibujaL(w);
   var ins=document.querySelectorAll('#dc-ln-'+w+' .inp'); var el=ins[idx];
@@ -251,25 +251,27 @@ function dcDibujaL(w){
   var L=_dcL(w), el=document.getElementById('dc-ln-'+w); if(!el) return;
   el.innerHTML=L.length ? L.map(function(x,i){
     var tr=w==='tr', conPack=tr&&(x.fac||1)>1;
-    return '<div class="dc-ln'+(tr?' tr':'')+'"><div class="d"><b>'+esc(x.desc)+'</b><small>SKU '+esc(x.sku)+(x.sap?' · SAP '+esc(x.sap):' · sin SAP')+'</small></div>'+
-      '<input class="inp" inputmode="numeric" value="'+(x.und||'')+'" placeholder="'+(w==='nc'?'Und':tr?'Cant.':'Pack/U')+'" oninput="dcUnd(\''+w+'\','+i+',this.value)">'+
-      (tr?'<div class="dc-med">'+(conPack
-          ? '<div class="dc-seg"><button type="button" class="'+(x.med!=='und'?'on':'')+'" onclick="dcMed('+i+',\'pack\')">Pack</button><button type="button" class="'+(x.med==='und'?'on':'')+'" onclick="dcMed('+i+',\'und\')">Und</button></div>'+
-            '<small id="dc-eq-'+i+'">'+_dcEq(x)+'</small>'
-          : '<small>Und</small>')+'</div>':'')+
+    return '<div class="dc-ln'+(tr?' tr':'')+'"><div class="d"><b>'+esc(x.desc)+'</b><small>SKU '+esc(x.sku)+(x.sap?' · SAP '+esc(x.sap):' · sin SAP')+'</small>'+
+        (conPack?'<small id="dc-eq-'+i+'" class="dc-eq">'+_dcEq(x)+'</small>':'')+'</div>'+
+      '<input class="inp" inputmode="numeric" value="'+(x.und||'')+'" placeholder="'+(w==='nc'?'Und':tr?(conPack?'Packs':'Und'):'Pack/U')+'" oninput="dcUnd(\''+w+'\','+i+',this.value)">'+
+      (conPack?'<input class="inp" inputmode="numeric" value="'+(x.su||'')+'" placeholder="Und" title="Unidades sueltas" oninput="dcSu('+i+',this.value)">':(tr?'<span></span>':''))+
       '<button class="dc-x" title="Quitar" onclick="dcQuitar(\''+w+'\','+i+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>';
   }).join('') : '<div class="dc-empty">Aún no hay productos. Búscalos arriba.</div>';
 }
-// Equivalencia a unidades de una línea de traslado (1 pack de 6 = 6 und)
-function _dcEq(x){ return x.med!=='und'&&x.und>0&&(x.fac||1)>1 ? '= '+fmt(x.und*x.fac)+' und' : (x.med!=='und'?'pack de '+x.fac:''); }
-// Cantidad como se imprime en el cargo: "1 pack (6 und)" o "6 und"; los documentos antiguos solo traen el número
+// Total en unidades de una línea de traslado con pack: packs × unidades por pack + sueltas
+function _dcTotUnd(x){ return (x.med==='pack'?(x.und||0)*(x.fac||1):(x.und||0))+(x.su||0); }
+function _dcEq(x){ return 'Pack de '+x.fac+(_dcTotUnd(x)>0?' · total '+fmt(_dcTotUnd(x))+' und':''); }
+// Cantidad como se imprime en el cargo: "2 packs + 3 und (15 und)"; los documentos antiguos solo traen el número
 function _dcCantTxt(x){
-  if(!x.und) return '';
+  if(!x.und&&!x.su) return '';
   if(x.med==='und') return x.und+' und';
-  if(x.med==='pack') return x.und+(x.und===1?' pack':' packs')+((x.fac||1)>1?' ('+(x.und*x.fac)+' und)':'');
+  if(x.med==='pack'){
+    var p=x.und?x.und+(x.und===1?' pack':' packs'):'', s=x.su?x.su+' und':'';
+    return (p&&s?p+' + '+s:p||s)+((x.fac||1)>1?' ('+_dcTotUnd(x)+' und)':'');
+  }
   return String(x.und);
 }
-function dcMed(i,m){ var x=DCX.tr.lineas[i]; if(!x) return; x.med=m; dcDibujaL('tr'); }
+function dcSu(i,v){ var x=DCX.tr.lineas[i]; if(!x) return; x.su=_dcNum(v); var eq=document.getElementById('dc-eq-'+i); if(eq) eq.textContent=_dcEq(x); }
 function dcUnd(w,i,v){ var x=_dcL(w)[i]; if(!x) return; x.und=_dcNum(v); var eq=document.getElementById('dc-eq-'+i); if(eq&&w==='tr') eq.textContent=_dcEq(x); }
 function dcQuitar(w,i){ _dcL(w).splice(i,1); dcDibujaL(w); }
 
@@ -297,7 +299,7 @@ function dcGuardar(tipo,imprimir){
       var pl=document.getElementById('dc-placa-tr'); if(pl) pl.focus();
       return;
     }
-    d.lineas=DCX.tr.lineas.filter(function(x){ return x.und>0; }).map(function(x){ return { sku:x.sku, sap:x.sap, desc:x.desc, und:x.und, med:x.med||'und', fac:x.fac||1 }; });
+    d.lineas=DCX.tr.lineas.filter(function(x){ return x.und>0||x.su>0; }).map(function(x){ return { sku:x.sku, sap:x.sap, desc:x.desc, und:x.und||0, su:x.su||0, med:x.med||'und', fac:x.fac||1 }; });
     if(!d.lineas.length){ showToast('Agrega al menos un producto con cantidad','err'); return; }
     d.destino=DCX.tr.destino; d.observaciones=DCX.tr.obs;
   }
@@ -366,7 +368,12 @@ function dcEditar(id){
   } else if(d.tipo==='nc'){
     DCX.nc={ fac:d.nroFactura, lineas:d.lineas.map(function(l){ return { sku:l.sku, sap:l.sap, desc:l.desc, und:l.und }; }) };
   } else {
-    DCX.tr={ destino:d.destino||'TADA EVENTOS', obs:d.observaciones, lineas:d.lineas.map(function(l){ return { sku:l.sku, sap:l.sap, desc:l.desc, und:l.und, med:l.med||'und', fac:l.fac||1 }; }) };
+    DCX.tr={ destino:d.destino||'TADA EVENTOS', obs:d.observaciones, lineas:d.lineas.map(function(l){
+      var f=l.fac||1;
+      // lineas guardadas con la medida 'und' de un producto con pack: pasan a unidades sueltas
+      if(l.med==='und'&&f>1) return { sku:l.sku, sap:l.sap, desc:l.desc, und:0, su:l.und, med:'pack', fac:f };
+      return { sku:l.sku, sap:l.sap, desc:l.desc, und:l.und, su:l.su||0, med:l.med||'und', fac:f };
+    }) };
   }
   DCX.tab=tab; renderDocumentos();
   var c=document.getElementById('documentos-root'); if(c&&c.scrollIntoView) c.scrollIntoView({block:'start'});
