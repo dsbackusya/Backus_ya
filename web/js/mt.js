@@ -203,7 +203,7 @@ var _MT_MOTIVOS={
   'Nota de credito':['Devolución de cliente','Error de facturación','Producto en mal estado']
 };
 var _MT_NOMBRE={'MERMA':'Merma','TRASLADO':'Traslado','Nota de credito':'Nota de crédito'};
-var _MTF={tipo:'',motivo:'',dest:'',sel:null,lineas:[],edit:false,destinos:null,res:[],seq:0,timer:0};
+var _MTF={tipo:'',motivo:'',dest:'',otro:false,sel:null,lineas:[],edit:false,destinos:null,res:[],seq:0,timer:0};
 
 function _mtFechaHoy(){
   var d=new Date(), p=function(n){return (n<10?'0':'')+n;};
@@ -213,7 +213,7 @@ function _mtEl(id){return document.getElementById(id);}
 
 function mtTipo(t,conservar){
   _MTF.tipo=t;
-  if(!conservar){ _MTF.motivo=''; _MTF.dest=''; _mtEl('mt-motivo').value=''; }
+  if(!conservar){ _MTF.motivo=''; _MTF.dest=''; _MTF.otro=false; _mtEl('mt-dest-otro').value=''; _mtEl('mt-motivo').value=''; }
   document.querySelectorAll('.mt3-tp').forEach(function(b){ b.classList.toggle('on',b.dataset.t===t); });
   _mtEl('mt-b-motivo').classList.remove('mt3-oculto');
   _mtEl('mt-b-destino').classList.toggle('mt3-oculto',t!=='TRASLADO'||_MTF.edit);
@@ -233,13 +233,33 @@ function mtElegirMotivo(i){
 function mtMotivoInput(){
   _MTF.motivo=_mtEl('mt-motivo').value.trim(); _mtMarcarMotivo(); mtPintar();
 }
+// Destinos: las otras sedes, los que se escribieron antes en este equipo y "Otro..."
+function _mtDestinosGuardados(){
+  try{ return JSON.parse(localStorage.getItem('tada-mt-destinos')||'[]')||[]; }catch(e){ return []; }
+}
+function _mtListaDestinos(){
+  var l=(_MTF.destinos||[]).slice();
+  _mtDestinosGuardados().forEach(function(d){ if(l.indexOf(d)<0) l.push(d); });
+  return l;
+}
 function _mtDestinos(){
-  var host=_mtEl('mt-destinos'), lista=_MTF.destinos||[];
+  var host=_mtEl('mt-destinos'), lista=_mtListaDestinos();
+  var enLista=lista.indexOf(_MTF.dest)>=0;
   host.innerHTML=lista.map(function(n,i){
     return '<button type="button" class="mt3-chip'+(n===_MTF.dest?' on':'')+'" onclick="mtElegirDestino('+i+')">'+esc(n)+'</button>';
-  }).join('');
+  }).join('')+'<button type="button" class="mt3-chip'+(_MTF.otro?' on':'')+'" onclick="mtDestinoOtroAbrir()">+ Otro...</button>';
+  _mtEl('mt-dest-otro').classList.toggle('mt3-oculto',!_MTF.otro);
 }
-function mtElegirDestino(i){ _MTF.dest=(_MTF.destinos||[])[i]||''; _mtDestinos(); mtPintar(); }
+function mtElegirDestino(i){ _MTF.otro=false; _MTF.dest=_mtListaDestinos()[i]||''; _mtDestinos(); mtPintar(); }
+function mtDestinoOtroAbrir(){
+  _MTF.otro=true; _MTF.dest=_mtEl('mt-dest-otro').value.trim();
+  _mtDestinos(); mtPintar(); _mtEl('mt-dest-otro').focus();
+}
+function mtDestinoOtro(){ _MTF.dest=_mtEl('mt-dest-otro').value.trim(); mtPintar(true); }
+function _mtRecordarDestino(){
+  var d=_MTF.otro?_MTF.dest:''; if(!d||_mtListaDestinos().indexOf(d)>=0) return;
+  try{ var l=_mtDestinosGuardados(); l.push(d); localStorage.setItem('tada-mt-destinos',JSON.stringify(l.slice(-8))); }catch(e){}
+}
 
 /* Buscador con stock */
 function mtBuscar(){
@@ -354,10 +374,10 @@ function mtPintar(sinLineas){
 }
 
 function _mtReset(){
-  _MTF.tipo=''; _MTF.motivo=''; _MTF.dest=''; _MTF.sel=null; _MTF.lineas=[]; _MTF.edit=false; _MTF.res=[];
+  _MTF.tipo=''; _MTF.motivo=''; _MTF.dest=''; _MTF.otro=false; _MTF.sel=null; _MTF.lineas=[]; _MTF.edit=false; _MTF.res=[];
   document.querySelectorAll('.mt3-tp').forEach(function(b){ b.classList.remove('on'); });
   _mtEl('mt-b-motivo').classList.add('mt3-oculto'); _mtEl('mt-b-destino').classList.add('mt3-oculto');
-  ['mt-motivo','mt-q','mt-cant','mt-obs','mt-nro-factura','mt-fecha-retiro'].forEach(function(id){ _mtEl(id).value=''; });
+  ['mt-motivo','mt-q','mt-cant','mt-obs','mt-nro-factura','mt-fecha-retiro','mt-dest-otro'].forEach(function(id){ _mtEl(id).value=''; });
   var f=_mtEl('mt-fecha'); f.value=_mtFechaHoy(); f.max=f.value; f.disabled=false;
   _mtEl('mt-ext').open=false;
   _mtEl('mt-add').classList.remove('mt3-oculto'); _mtEl('mt-info').classList.remove('on');
@@ -396,6 +416,7 @@ function guardarMT(){
     var onOk=function(r){
       restaurar();
       if(!r.ok){ showToast(r.error,'err'); return; }
+      _mtRecordarDestino();
       onSaved(r,'fs-mt','mt',null,'');
       _mtReset();
     };
