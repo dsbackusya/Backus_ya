@@ -3705,8 +3705,12 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 }
 .pghd .topbar-actions .btn-primary .tb-btn-plus{font-size:16px;font-weight:600;margin-top:-1px}
 
-/* Sin barra de desplazamiento vertical dentro de las tablas: la pagina se desplaza completa */
-.sal2-pnl .table-wrap{max-height:none !important;min-height:0 !important}
-.sal2-pnl .table-wrap::-webkit-scrollbar{width:0;height:6px}
-.sal2-pnl .table-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:99px}
-.sal2-pnl .table-wrap::-webkit-scrollbar-track{background:transparent}
+/* Listas con altura maxima fija y desplazamiento interno, sin barra visible (la barra rompia el diseno) */
+.sal2-pnl .table-wrap,.sal2-pnl .stk-tw,.sal2-pnl .ent-tw,.sal2-pnl .mt2-tw{max-height:493px;overflow-y:auto !important;scrollbar-width:none;-ms-overflow-style:none}
+.sal2-pnl .table-wrap{min-height:300px}
+.sal2-pnl .table-wrap::-webkit-scrollbar,.sal2-pnl .stk-tw::-webkit-scrollbar,.sal2-pnl .ent-tw::-webkit-scrollbar,.sal2-pnl .mt2-tw::-webkit-scrollbar{display:none;width:0;height:0}
+/* los encabezados se quedan arriba mientras se desplaza la lista */
+.sal2-pnl .table-wrap thead th,.sal2-pnl .stk-t th{position:sticky !important;top:0;z-index:3;background:#0A0A0B !important}
+.sal2-pnl .ent-hd,.sal2-pnl .mt2-tr.mt2-h{position:sticky;top:0;z-index:3;background:#0A0A0B}
+@media (max-width:900px){ .sal2-pnl .stk-tw,.sal2-pnl .ent-tw{max-height:none;overflow:visible !important} }
+.sal2-pnl .table-wrap,.sal2-pnl .stk-tw,.sal2-pnl .ent-tw,.sal2-pnl .mt2-tw{padding-top:0 !important}
