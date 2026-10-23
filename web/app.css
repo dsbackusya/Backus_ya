@@ -3538,3 +3538,5 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
   #salidas-root .sal2-pnl .table-wrap{margin:0 8px 8px;padding:8px 6px 2px}
   .sal2-exp{margin-left:0}
 }
+#salidas-root .sal2-sum{margin-bottom:30px}
+@media (max-width:700px){ #salidas-root .sal2-sum{margin-bottom:20px} }
