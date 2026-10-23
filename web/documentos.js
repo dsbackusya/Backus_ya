@@ -20,10 +20,10 @@ var DCX_GR0 = [
     { sku:3502226, code:'BOTAMB305R',    ref:'Botella 305',           cz:'',  main:1 },
     { sku:3501495, code:'BOTVRDPC310R',  ref:'Botellas Pilsen 3xx',   cz:'g' },
     { sku:3501491, code:'BOTAMCUS310R',  ref:'Botellas Cusqueña 3xx', cz:'p' } ] },
-  /* Barriles: se cuentan por unidad; no pasan al módulo Envases ni se valorizan (sin SKU ni precio por ahora). */
+  /* Barriles: se cuentan por unidad; no pasan al módulo Envases ni se valorizan (sin precio por ahora). */
   { g:'BARRILES · 50 L / 30 L', tam:0, mult:1, barril:1, rows:[
-    { sku:'', code:'BARRIL 50 L', ref:'Barriles de 50 L', cz:'' },
-    { sku:'', code:'BARRIL 30 L', ref:'Barriles de 30 L', cz:'' } ] }
+    { sku:10000201, code:'PILSEN CALLAO 50LT BARRIL',       ref:'Barriles de 50 L', cz:'' },
+    { sku:10000160, code:'CUSQUEÑA 30LT DORADA BARRIL',     ref:'Barriles de 30 L', cz:'' } ] }
 ];
 var DCX_PRECIO0 = { caja:3.8, bot630_1000:0.6, bot310:0.5 };
 var DCX_TIT = { marcaje:'Conciliación de envases', nc:'Orden para nota de crédito', traslado:'Cargo de despacho' };
