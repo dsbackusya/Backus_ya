@@ -235,7 +235,7 @@ function _evRefrescar(){
 function _evResumen(){ _evMerge(); }
 
 /* tarjeta única: resultado del día elegido (izquierda) + faltantes y sobrantes de la semana (derecha) */
-var ENV_FCOL = { C6:'#9480E8', B6:'#F2B04B', C3:'#6FD3F2', B3:'#4ADE9F' };
+var ENV_FCOL = { C6:'#7B61EF', B6:'#C4B8FA', C3:'#8A8A93', B3:'#E6E6EA' };
 /* tarjeta con el detalle del día al pasar el mouse por la gráfica */
 function gxTip(col,i){
   var x=ENV._gx&&ENV._gx[i], t=document.getElementById('gx-tip');
@@ -271,12 +271,12 @@ function _evMerge(){
   var acum=ultimo>=0?'Acumulado al conteo del '+ENV_DL[ultimo]+' '+parseInt(m.days[ultimo].slice(8),10):'';
   // panel izquierdo: resultado del día
   var d=dias[s], c, v, st, seg, sub=['',''], ct='';
-  if(s===m.b){ c='#80799A'; v='Inicial'; st='Punto de partida'; seg=['','','','']; sub=['Es el conteo base de la semana',''];
+  if(s===m.b){ c='#8A8A93'; v='Inicial'; st='Punto de partida'; seg=['','','','']; sub=['Es el conteo base de la semana',''];
     ct=''; }
-  else if(!d){ c='#80799A'; v='Sin conteo'; st='Pendiente'; seg=['','','','']; sub=[m.b<0?'Primero cuenta el primer día de la semana':'Toca «Contar este día»','']; }
+  else if(!d){ c='#8A8A93'; v='Sin conteo'; st='Pendiente'; seg=['','','','']; sub=[m.b<0?'Primero cuenta el primer día de la semana':'Toca «Contar este día»','']; }
   else {
     var t=_evTotDif(_evDifs(s)), nf=0, ns=0; Object.keys(ENV_FAM).forEach(function(k){ if(d.o[k]<0) nf++; else if(d.o[k]>0) ns++; });
-    c=t.v<0?'#FF9CAE':t.v>0?'#8FDCEB':(nf||ns)?'#F2B04B':'#4ADE9F';
+    c=t.v<0?'#E8838A':t.v>0?'#B5A5FA':(nf||ns)?'#D9A85A':'#E6E6EA';
     v=(t.v===0&&!nf&&!ns)?'Cuadra':_evMoney(t.v);
     st=nf&&ns?'Faltante y sobrante':nf?'Faltante':ns?'Sobrante':'Todo en orden';
     seg=Object.keys(ENV_FAM).map(function(k){ return d.o[k]<0?'f':d.o[k]>0?'s':'c'; });
