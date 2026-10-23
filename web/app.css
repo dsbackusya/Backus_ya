@@ -3279,11 +3279,15 @@ body.evc-abierto{overflow:hidden}
 @media(max-width:560px){.ev-days{gap:5px}.ev-d{padding:8px 2px 6px;border-radius:11px}.ev-d b{font-size:15px}.ev-st{font-size:9px}}
 
 /* ── Estados activos en violeta pleno + fondo con degradado (paleta de referencia) ── */
-body{ background:
-  radial-gradient(760px 420px at 84% -8%,rgba(123,97,239,.34),transparent 72%),
-  radial-gradient(520px 360px at 100% 14%,rgba(96,70,214,.22),transparent 72%),
-  radial-gradient(520px 360px at 2% 104%,rgba(123,97,239,.12),transparent 70%),
-  #0A0A0B fixed !important; }
+body{
+  background-color:#0A0A0B !important;
+  background-image:
+    radial-gradient(900px 480px at 86% -6%,rgba(123,97,239,.42),transparent 72%),
+    radial-gradient(620px 420px at 100% 16%,rgba(96,70,214,.30),transparent 72%),
+    radial-gradient(620px 420px at 0% 100%,rgba(123,97,239,.16),transparent 70%) !important;
+  background-repeat:no-repeat !important;
+  background-attachment:fixed !important;
+  background-size:100% 100% !important; }
 .sb-item.active{ background:#26262A !important; color:#fff !important; font-weight:600 }
 .sb-item.active .ic{ color:#fff !important }
 .sb-item.active::before,.sb-item.active::after{ display:none !important }
@@ -3340,7 +3344,7 @@ body{ background:
 .sb-logout{ background:transparent !important }
 .sb-footer{ border-top-color:rgba(255,255,255,.08) !important }
 .main{ background:transparent !important }
-.topbar{ background:rgba(10,10,11,.80) !important; border-bottom:1px solid var(--border) !important }
+.topbar{ background:transparent !important; border-bottom:0 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important }
 .stk-t td:first-child .stk-pn{ min-width:220px }
 /* Encabezados y paneles fijos (sticky) siempre opacos: no deben dejar ver las filas que pasan por debajo */
 .main thead th{ background:#141416 !important }
@@ -3481,47 +3485,6 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 @media (max-width:900px){ .tb-find{ display:none } .tb-crumb{ display:none } .tb-back{ display:none } .topbar{ padding:0 14px !important } .tb-right{ margin-left:auto } .pghd{ margin-bottom:14px } }
 @media (max-width:1100px) and (min-width:901px){ .tb-find{ width:200px } }
 
-/* ══ Stock actual: tarjetas con mini gráfica, aviso lateral y filas redondeadas (como la maqueta) ══ */
-.stk-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
-.stk-st{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:14px;min-width:0}
-.stk-sh{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text);margin-bottom:12px}
-.stk-ic{width:26px;height:26px;border-radius:8px;background:var(--surface3);display:grid;place-items:center;color:var(--text2);flex:0 0 auto;font-style:normal}
-.stk-sb2{background:#0C0C0D;border-radius:12px;padding:14px 14px 12px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-height:74px}
-.stk-sv{font:600 22px 'Inter',sans-serif;letter-spacing:-.01em;color:var(--text)}
-.stk-sv small{font:400 13px 'Inter',sans-serif;color:var(--text3);margin-left:5px;letter-spacing:0}
-.stk-bars{display:flex;align-items:flex-end;gap:4px;height:44px}
-.stk-bars i{display:block;width:12px;border-radius:3px}
-.stk-sf{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;color:var(--text3);margin-top:11px;padding:0 2px}
-.stk-sf b{font-weight:500}.stk-sf .dn{color:var(--danger);cursor:pointer}.stk-sf .up{color:var(--ok)}
-.stk-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start}
-.stk-cols.con-lado{grid-template-columns:290px minmax(0,1fr)}
-.stk-ins{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:14px}
-.stk-ih{display:flex;align-items:center;gap:10px;font:500 14px 'Inter',sans-serif;margin-bottom:12px}
-.stk-ib{background:#0C0C0D;border-radius:14px;padding:18px 16px;position:relative;overflow:hidden}
-.stk-ib::after{content:"";position:absolute;right:-60px;top:-60px;width:170px;height:170px;border-radius:50%;border:26px solid rgba(255,255,255,.04)}
-.stk-ib h2{margin:0;font:600 20px 'Inter',sans-serif;letter-spacing:-.01em;line-height:1.2}
-.stk-ib p{color:var(--text2);font-size:12px;line-height:1.55;margin:9px 0 0;position:relative;z-index:1}
-.stk-ib p b{color:var(--text);font-weight:600}
-.stk-cta{margin-top:16px;height:38px;border-radius:10px;border:0;background:linear-gradient(135deg,#F26A1B,#EF4444);color:#fff;font:500 12.5px 'Inter',sans-serif;padding:0 16px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;position:relative;z-index:1}
-.stk-box{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:14px 14px 10px;min-width:0}
-.stk-box .stk-fl{margin-bottom:12px}
-.stk-box .stk-tw{background:#0C0C0D;border:0;border-radius:16px;padding:8px}
-.stk-box .stk-t{border-collapse:separate;border-spacing:0 6px}
-.stk-box .stk-t th{background:none;border:0;padding:6px 14px !important}
-.stk-box .stk-t tbody tr{background:#161618;transition:background .12s}
-.stk-box .stk-t td{padding:11px 14px !important;border:0}
-.stk-box .stk-t tbody tr td:first-child{border-radius:12px 0 0 12px}
-.stk-box .stk-t tbody tr td:last-child{border-radius:0 12px 12px 0}
-.stk-box .stk-t tbody tr:hover{background:#1e1e21}
-.stk-pr{display:flex;align-items:center;gap:12px;min-width:0}
-.stk-in{width:34px;height:34px;border-radius:9px;background:var(--surface3);display:grid;place-items:center;font:600 11px 'Inter',sans-serif;font-style:normal;color:var(--text2);flex:0 0 auto}
-.stk-box .stk-pill{background:none !important;padding:0;color:var(--text2);font-weight:500;font-size:12px;display:inline-flex;align-items:center}
-.stk-box .stk-pill::before{content:"";width:9px;height:9px;border-radius:50%;margin-right:8px;background:var(--text4)}
-.stk-box .stk-pill.ok::before{background:var(--ok)}
-.stk-box .stk-pill.ng::before{background:var(--danger)} .stk-box .stk-pill.ng{color:#ff8a87}
-@media (max-width:1380px){.stk-cols.con-lado{grid-template-columns:minmax(0,1fr)}.stk-side{order:-1}}
-@media (max-width:1000px){.stk-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:560px){.stk-stats{grid-template-columns:minmax(0,1fr)}.stk-box{padding:10px}}
 /* barra de iconos más compacta para que quepan todas las opciones en pantallas bajas */
 @media (min-width:901px){
   .sidebar.collapsed .sb-item{ height:34px; padding:0 !important; margin:0 0 2px !important; min-height:0 }

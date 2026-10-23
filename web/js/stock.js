@@ -298,32 +298,15 @@ function renderStock(r){
   var seg=function(id,val,txt,n){return '<button class="stk-sb'+(val===''?' active':'')+'" id="'+id+'" onclick="setStockFiltroEstado(\''+val+'\')">'+txt+'<span>'+n+'</span></button>';};
   var leg=function(val,color,n,txt){return '<span onclick="setStockFiltroEstado(\''+val+'\')"><em style="background:'+color+'"></em><b>'+n+'</b> '+txt+'</span>';};
 
-  // mini gráficas de las tarjetas (barras con los valores reales)
-  var altos=function(vs,max){ var m=Math.max.apply(null,vs.concat([1])); return vs.map(function(v){ return Math.max(3,Math.round(Math.abs(v)/m*max)); }); };
-  var barras=function(vs,cols){ var hs=altos(vs,44); return '<div class="stk-bars">'+hs.map(function(h,ix){ return '<i style="height:'+h+'px;background:'+cols[ix%cols.length]+'"></i>'; }).join('')+'</div>'; };
-  var topStock=rows.filter(function(x){return x.stock>0;}).sort(function(a,b){return b.stock-a.stock;}).slice(0,5);
-  var topCosto=rows.filter(function(x){return x.costo>0;}).sort(function(a,b){return b.costo-a.costo;}).slice(0,4);
-  var neg=rows.filter(function(x){return x.stock<0;}).sort(function(a,b){return a.stock-b.stock;});
-  var ico=function(p){ return '<i class="stk-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg></i>'; };
-  var tarj=function(ic,tit,valor,grafica,pie1,pie2){ return '<div class="stk-st"><div class="stk-sh">'+ic+'<span>'+tit+'</span></div><div class="stk-sb2"><div class="stk-sv">'+valor+'</div>'+grafica+'</div><div class="stk-sf"><span>'+pie1+'</span><span>'+pie2+'</span></div></div>'; };
-  var stats=
-    tarj(ico('<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>'),'Productos',fmt(rows.length)+'<small>SKUs</small>',
-         barras([conStock,sinStock,negativos],['#2F5BFF','#5a7dff','#EF4444']),conStock+' con stock · '+sinStock+' sin stock',negativos?'<b class="dn" onclick="setStockFiltroEstado(\'neg\')">'+negativos+' negativos</b>':'')+
-    tarj(ico('<path d="M4 7h16M4 12h16M4 17h10"/>'),'Unidades en stock',fmt(totalUnd)+'<small>und.</small>',
-         barras(topStock.map(function(x){return x.stock;}),['#8B4DF0','#8B4DF0','#a073f5']),'Solo stock positivo','Los 5 mayores')+
-    tarj(ico('<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/>'),'Costo total','S/ '+costoK,
-         barras(topCosto.map(function(x){return x.costo;}),['#F26A1B','#f68a4b']),'S/ '+fmt(Math.round(costoTotal*10)/10)+' en inventario','valor al costo')+
-    tarj(ico('<path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'),'Stock negativo',negativos+'<small>SKUs</small>',
-         barras(neg.slice(0,5).map(function(x){return x.stock;}),['#EF4444']),negativos?neg.slice(0,3).map(function(x){return '−'+Math.abs(x.stock);}).join(', ')+' unidades':'Sin negativos',negativos?'<b class="dn">revisar</b>':'<b class="up">todo en orden</b>');
-  var lateral=negativos?
-    '<aside class="stk-side"><div class="stk-ins"><div class="stk-ih">'+ico('<path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')+'Requiere atención</div>'+
-      '<div class="stk-ib"><h2>'+negativos+(negativos===1?' SKU con stock negativo':' SKUs con stock negativo')+'</h2><p>Salieron más unidades de las que entraron. Revisa las <b>entradas sin registrar</b> o haz un conteo.</p>'+
-      '<button class="stk-cta" onclick="setStockFiltroEstado(\'neg\')">Ver negativos <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button></div></div></aside>':'';
-
   document.getElementById('stock-root').innerHTML=
-    '<div class="stk-stats">'+stats+'</div>'+
-    '<div class="stk-cols'+(lateral?' con-lado':'')+'">'+lateral+
-    '<div class="stk-box">'+
+    '<div class="stk-sum">'+
+      '<div class="stk-card"><div class="stk-k">Salud del inventario</div>'+
+        '<div class="stk-v">'+fmt(rows.length)+'<small>SKUs</small></div>'+
+        '<div class="stk-dist"><i style="width:'+pc(conStock)+'%;background:var(--ok)"></i><i style="width:'+pc(sinStock)+'%;background:var(--text4)"></i><i style="width:'+pc(negativos)+'%;background:var(--danger)"></i></div>'+
+        '<div class="stk-leg">'+leg('con','var(--ok)',conStock,'Con stock')+leg('sin','var(--text4)',sinStock,'Sin stock')+leg('neg','var(--danger)',negativos,'Negativos')+'</div></div>'+
+      '<div class="stk-card"><div class="stk-k">Unidades en stock</div><div class="stk-v">'+fmt(totalUnd)+'<small>und.</small></div><div class="stk-n">Solo stock positivo</div></div>'+
+      '<div class="stk-card"><div class="stk-k">Costo total</div><div class="stk-v">S/ '+costoK+'</div><div class="stk-n">S/ '+fmt(Math.round(costoTotal*10)/10)+' en inventario</div></div>'+
+    '</div>'+
     '<div class="stk-fl">'+
       '<div class="stk-srch">'+icoBuscar+'<input id="stock-busq" placeholder="Buscar SKU o producto…" oninput="filterStock()"/></div>'+
       '<select class="stk-sel" id="stock-cat" onchange="filterStock()"><option value="">Todas las categorías</option>'+catOpts+'</select>'+
@@ -335,8 +318,7 @@ function renderStock(r){
       '<thead><tr><th>Producto</th><th class="r">Movimientos</th><th class="r">Stock</th><th class="r">Pack</th><th class="r">Costo</th><th>Estado</th><th></th></tr></thead>'+
       '<tbody id="stock-tbody"></tbody>'+
     '</table></div>'+
-    '<div class="stk-cards" id="stock-cards"></div>'+
-    '</div></div>';
+    '<div class="stk-cards" id="stock-cards"></div>';
 
   if(!document.getElementById('stk-dr')){
     var dr=document.createElement('div'); dr.id='stk-dr';
@@ -393,8 +375,8 @@ var _STK_LAB={ok:'Con stock',no:'Sin stock',ng:'Negativo'}, _STK_COL={ok:'var(--
 function _stkFila(r,mx){
   var e=r.stock>0?'ok':(r.stock<0?'ng':'no');
   return '<tr onclick="stkAbrir('+r._row+')">'+
-    '<td><div class="stk-pr"><i class="stk-in">'+esc(String(r.desc||'').split(/\s+/).slice(0,2).map(function(w){return w.charAt(0);}).join('').toUpperCase())+'</i><div style="min-width:0"><div class="stk-pn">'+esc(r.desc)+'</div><div class="stk-ps"><span class="sk">'+esc(r.sku)+'</span>'+
-      (r.marca?'<i class="dot"></i><span>'+esc(r.marca)+'</span>':'')+(r.categoria?'<i class="dot"></i><span>'+esc(r.categoria)+'</span>':'')+'</div></div></div></td>'+
+    '<td><div class="stk-pn">'+esc(r.desc)+'</div><div class="stk-ps"><span class="sk">'+esc(r.sku)+'</span>'+
+      (r.marca?'<i class="dot"></i><span>'+esc(r.marca)+'</span>':'')+(r.categoria?'<i class="dot"></i><span>'+esc(r.categoria)+'</span>':'')+'</div></td>'+
     '<td class="r"><div class="stk-mv"><span class="e" title="Entradas">+'+fmt(r.entradas)+'</span><span class="s" title="Salidas">−'+fmt(r.salidas)+'</span>'+(r.mt?'<span class="m" title="Mermas y traslados">M-T '+fmt(r.mt)+'</span>':'')+'</div></td>'+
     '<td class="r"><div class="stk-stk"><div class="stk-bar"><i style="width:'+Math.min(100,Math.abs(r.stock)/mx*100)+'%;background:'+_STK_COL[e]+'"></i></div><b'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'</b></div></td>'+
     '<td class="r">'+Math.round(r.stockPack)+'</td>'+
