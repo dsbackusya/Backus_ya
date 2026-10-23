@@ -3358,3 +3358,18 @@ body{ background:linear-gradient(160deg,#161B48 0%,#0E1230 52%,#111437 100%) fix
 }
 .filter-inp:hover,input.filter-inp:hover{ background:var(--surface2) !important; border:1px solid var(--accent-line) !important }
 .filter-inp:focus,input.filter-inp:focus{ background:var(--surface2) !important; border:1px solid var(--accent) !important; box-shadow:var(--shadow-glow) !important }
+
+/* Todos los buscadores comparten el mismo diseño: alto, borde, fondo, esquinas, letra y foco */
+#stock-busq,#ent-busq,#sal-busq,#mt-busq,#canc-busq,#mae-busq,#mc-busq,#cnt-busq,#val-search,.filter-inp,input.filter-inp{
+  height:38px !important; border-radius:10px !important;
+  border:1px solid var(--border2) !important; background:var(--surface2) !important; background-image:none !important;
+  font-size:13px !important; color:var(--text) !important; box-shadow:none;
+}
+#stock-busq:hover,#ent-busq:hover,#sal-busq:hover,#mt-busq:hover,#canc-busq:hover,#mae-busq:hover,#mc-busq:hover,#cnt-busq:hover,#val-search:hover{
+  border-color:var(--accent-line) !important;
+}
+#stock-busq:focus,#ent-busq:focus,#sal-busq:focus,#mt-busq:focus,#canc-busq:focus,#mae-busq:focus,#mc-busq:focus,#cnt-busq:focus,#val-search:focus,.filter-inp:focus{
+  border-color:var(--accent) !important; box-shadow:var(--shadow-glow) !important; outline:none !important;
+}
+#stock-busq::placeholder,#ent-busq::placeholder,#sal-busq::placeholder,#mt-busq::placeholder,#canc-busq::placeholder,#mae-busq::placeholder,#mc-busq::placeholder,#cnt-busq::placeholder,#val-search::placeholder{ color:var(--text4) !important }
+#val-search{ padding-left:36px !important }
