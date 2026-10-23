@@ -3494,3 +3494,6 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
   .sidebar.collapsed .sb-footer{ padding:6px 0 10px !important }
 }
 @media (max-width:900px){ .sidebar.collapsed~.main{ margin-left:0 !important } }
+/* más etiquetas en gris carbón */
+.ent-oc,.stat-unit-pill{ background:#1B1B1E !important; border:1px solid var(--border2) !important; color:var(--text2) !important }
+.ent-oc{ color:var(--text) !important }
