@@ -3665,29 +3665,29 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 @media (max-width:700px){ .sal2-pnl .ev-well{margin:0 8px 8px;padding:8px} .sal2-pnl .ev-acts{margin-left:0} }
 
 /* Envases: colores sobrios que se integran con la paleta (violeta, gris y un rojo apagado; sin tonos fosforescentes) */
-:root{--ev-f:#E8838A;--ev-s:#B5A5FA;--ev-ok:#D8D8DE;--ev-w:#D9A85A}
+:root{--ev-f:#CC7A83;--ev-s:#B5A5FA;--ev-ok:#D8D8DE;--ev-w:#D9A85A}
 .ev-d i{background:#fff}
 .ev-d small{color:var(--ev-s)}
 .ev-leg i{background:var(--ev-s)}
 .ev-neg{color:var(--ev-f)}.ev-pos{color:var(--ev-s)}.ev-zero{color:var(--ev-ok)}
-.ev-bd.f,.ev-st.f{background:rgba(232,131,138,.14);color:var(--ev-f)}
+.ev-bd.f,.ev-st.f{background:rgba(204,122,131,.14);color:var(--ev-f)}
 .ev-bd.s,.ev-st.s{background:rgba(123,97,239,.22);color:var(--ev-s)}
 .ev-bd.c,.ev-st.ok{background:rgba(255,255,255,.07);color:var(--ev-ok)}
 .ev-st.ini{background:rgba(255,255,255,.07);color:#B0B0B7}
 .ev-st.w{background:rgba(217,168,90,.14);color:var(--ev-w)}
 .ev-n1 em.l{background:rgba(255,255,255,.07);color:var(--ev-ok)}
 .ev-n1 em.c{background:rgba(255,255,255,.06);color:#A8A8AF}
-.evm-bal span{background:rgba(232,131,138,.12);color:var(--ev-f)}
+.evm-bal span{background:rgba(204,122,131,.12);color:var(--ev-f)}
 .evm-bal span.ok{background:rgba(255,255,255,.07);color:var(--ev-ok)}
 .evm-l .q.d1{color:var(--ev-f)}.evm-l .q.d2{color:var(--ev-ok)}
 .evcf-li .sc.ll{background:rgba(255,255,255,.07);color:var(--ev-ok)}
 .evm2-sg .f{background:var(--ev-f)}.evm2-sg .s{background:#9C86F6}.evm2-sg .c{background:rgba(255,255,255,.28)}
 .evm2-pl .ok{background:rgba(255,255,255,.5)}
-.gx-bar.f{background:linear-gradient(180deg,#E8838A,#BF5560)}
+.gx-bar.f{background:linear-gradient(180deg,#CC7A83,#A04E58)}
 .gx-bar.s{background:linear-gradient(0deg,#6B52E0,#A895F9)}
 .gx-tg.ini{color:#B0B0B7;background:rgba(255,255,255,.07)}
 .gx-tg.ok{color:var(--ev-ok);background:rgba(255,255,255,.07)}
 .gx-tg.w{color:var(--ev-w);background:rgba(217,168,90,.14)}
-.gx-cell.f{background:rgba(232,131,138,.14);color:var(--ev-f)}
+.gx-cell.f{background:rgba(204,122,131,.14);color:var(--ev-f)}
 .gx-cell.s{background:rgba(123,97,239,.22);color:var(--ev-s)}
 .gx-cell.ok{background:rgba(255,255,255,.06);color:var(--ev-ok)}

@@ -276,7 +276,7 @@ function _evMerge(){
   else if(!d){ c='#8A8A93'; v='Sin conteo'; st='Pendiente'; seg=['','','','']; sub=[m.b<0?'Primero cuenta el primer día de la semana':'Toca «Contar este día»','']; }
   else {
     var t=_evTotDif(_evDifs(s)), nf=0, ns=0; Object.keys(ENV_FAM).forEach(function(k){ if(d.o[k]<0) nf++; else if(d.o[k]>0) ns++; });
-    c=t.v<0?'#E8838A':t.v>0?'#B5A5FA':(nf||ns)?'#D9A85A':'#E6E6EA';
+    c=t.v<0?'#CC7A83':t.v>0?'#B5A5FA':(nf||ns)?'#D9A85A':'#E6E6EA';
     v=(t.v===0&&!nf&&!ns)?'Cuadra':_evMoney(t.v);
     st=nf&&ns?'Faltante y sobrante':nf?'Faltante':ns?'Sobrante':'Todo en orden';
     seg=Object.keys(ENV_FAM).map(function(k){ return d.o[k]<0?'f':d.o[k]>0?'s':'c'; });
