@@ -246,6 +246,24 @@ function doLogout(){
 
 /* ── SIDEBAR TOGGLE ── */
 var LS_KEY='ds-inv:'; // prefijo único — evita colisiones entre proyectos GAS en script.google.com
+/* subtítulo del encabezado: sede y fecha de hoy */
+function _pgSub(){
+  var el=document.getElementById('pg-sub'); if(!el) return;
+  var sede=(document.getElementById('sb-sede')||{}).textContent||'';
+  var f=new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long',timeZone:'America/Lima'});
+  sede=String(sede).replace(/^DS\s+/i,'');
+  el.textContent=(sede&&sede!=='—'?sede+' · ':'')+f.charAt(0).toUpperCase()+f.slice(1);
+}
+/* buscador global del encabezado: abre Stock con la búsqueda aplicada */
+function gSearch(q){
+  q=String(q||'').trim(); if(!q) return;
+  navTo('stock',document.getElementById('nav-stock'));
+  var n=0, t=setInterval(function(){
+    var i=document.getElementById('stock-busq'); n++;
+    if(i){ clearInterval(t); i.value=q; if(typeof filterStock==='function') filterStock(); }
+    else if(n>40) clearInterval(t);
+  },150);
+}
 function toggleSidebar(){
   var sb=document.getElementById('sidebar');
   sb.classList.toggle('collapsed');
@@ -253,7 +271,13 @@ function toggleSidebar(){
 }
 (function(){
   try{
-    if(localStorage.getItem(LS_KEY+'sb_collapsed')==='1'){
+    // en computadora el menú arranca como barra de iconos (se puede abrir y se recuerda)
+    var pref=localStorage.getItem(LS_KEY+'sb_collapsed');
+    if(localStorage.getItem(LS_KEY+'sb_v2')===null){      // una sola vez: el nuevo diseño arranca con la barra de iconos
+      localStorage.setItem(LS_KEY+'sb_v2','1');
+      if(window.innerWidth>=1100){ pref='1'; localStorage.setItem(LS_KEY+'sb_collapsed','1'); }
+    }
+    if(pref==='1'||(pref===null&&window.innerWidth>=1100)){
       var sb=document.getElementById('sidebar');
       if(sb){sb.classList.add('collapsed');}
     }
@@ -304,6 +328,8 @@ function initApp(){
   document.getElementById('sb-sede').textContent=sede;
   document.getElementById('sb-user-name').textContent=sede;
   var mk=document.getElementById('sb-logomark'); if(mk) mk.textContent=_sedeIniciales(sede);
+  var tav=document.getElementById('tb-avatar'); if(tav){ tav.textContent=_sedeIniciales(sede); tav.title=sede; }
+  _pgSub();
   var av=document.getElementById('sb-avatar');
   if(av)av.textContent=sede.charAt(0).toUpperCase();
   _sbSalidasRefrescar();
@@ -342,6 +368,9 @@ function navTo(name,btn){
     if(enMaestro) _setSbGrp(true);
   }
   document.getElementById('pg-title').textContent=PAGE_TITLES[name]||name;
+  var cr=document.getElementById('pg-crumb'); if(cr) cr.textContent=PAGE_TITLES[name]||name;
+  var tbk=document.getElementById('tb-back'); if(tbk) tbk.style.visibility=name==='dashboard'?'hidden':'';
+  _pgSub();
   renderTopbarActions(name);
   if(name==='cancelados'){PAGE_LOADED[name]=false;} // siempre fresco al entrar
   if(name==='validacion' && PAGE_LOADED[name]) _valFechaHoy();
