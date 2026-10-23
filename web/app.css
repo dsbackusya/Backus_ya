@@ -3530,6 +3530,12 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
   #salidas-root .sal2-pnl tbody tr>td:last-child{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:auto !important;padding:0 !important;
     opacity:0;pointer-events:none;transition:opacity .12s;border-radius:10px;background:#1A1A1D;box-shadow:-18px 0 14px #1A1A1D}
   #salidas-root .sal2-pnl tbody tr:hover>td:last-child{opacity:1;pointer-events:auto}
+  /* acciones solo con icono y espacio propio a la derecha: ya no tapan "Confirmar recepción" */
+  #salidas-root .sal2-pnl .sal-act-t{display:none}
+  #salidas-root .sal2-pnl tbody tr>td:last-child .btn{padding:6px 9px !important}
+  #salidas-root .sal2-pnl tbody tr>td:last-child .btn svg{margin:0 !important}
+  #salidas-root .sal2-pnl tbody tr>td:nth-last-child(2){padding-right:116px !important}
+  #salidas-root .sal2-pnl .td-desc{max-width:190px}
 }
 @media (max-width:700px){
   .sal2-pnl{border-radius:22px}

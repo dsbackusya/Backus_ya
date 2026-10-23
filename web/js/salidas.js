@@ -116,13 +116,13 @@ function _salTiempoRelativo(fecha, hora){
 function _salMenuContextual(row){
   var cancelado=row.cancelado||row.estado==='cancelado'||row.estado==='CANCELADO';
   if(cancelado) return '';
-  return '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--accent);white-space:nowrap" '+
-    'onclick="abrirEditarSkuFila('+row._row+')">'+ICO('edit',12)+'SKU</button> '+
-    '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 10px;color:var(--danger);border-color:var(--danger);white-space:nowrap" '+
+  return '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--accent);white-space:nowrap" title="Editar SKU" '+
+    'onclick="abrirEditarSkuFila('+row._row+')">'+ICO('edit',12)+'<span class="sal-act-t">SKU</span></button> '+
+    '<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 10px;color:var(--danger);border-color:var(--danger);white-space:nowrap" title="Cancelar" '+
     'data-row="'+row._row+'" data-nro="'+esc(row.nroPedido)+'" '+
-    'onclick="abrirModalCancelarBtn(this)">'+ICO('x',12)+'Cancelar</button> '+
+    'onclick="abrirModalCancelarBtn(this)">'+ICO('x',12)+'<span class="sal-act-t">Cancelar</span></button> '+
     (_salEsDup(row)?'<button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px;color:var(--text3);white-space:nowrap" title="Fila duplicada: elimina solo esta, la otra se conserva" '+
-    'onclick="eliminarDuplicadoSalida('+row._row+')">'+ICO('trash',12,'s')+'Duplicado</button>':'');
+    'onclick="eliminarDuplicadoSalida('+row._row+')">'+ICO('trash',12,'s')+'<span class="sal-act-t">Duplicado</span></button>':'');
 }
 
 // Una fila es duplicada si otra del mismo pedido tiene el mismo SKU, pack y unidades. Solo esas se pueden eliminar,
