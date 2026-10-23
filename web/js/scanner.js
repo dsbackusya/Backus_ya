@@ -93,7 +93,7 @@ function _scannerNativo(targetId, title){
   ov.id = 'scan-nativo';
   ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;';
   ov.innerHTML =
-    '<div style="color:#fff;padding:12px 16px;font:600 15px DM Sans,sans-serif;display:flex;justify-content:space-between;align-items:center;gap:8px">'+
+    '<div style="color:#fff;padding:12px 16px;font:600 15px Inter,sans-serif;display:flex;justify-content:space-between;align-items:center;gap:8px">'+
       '<span style="flex:1">'+esc(title||'Escanea el código')+'</span>'+
       '<button type="button" id="scan-nativo-luz" style="display:none;background:#333;color:#fff;border:0;border-radius:8px;padding:8px 12px;font-weight:600">'+ICO('bolt',16,'s')+'</button>'+
       '<button type="button" id="scan-nativo-x" style="background:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:600">Cerrar</button>'+
@@ -101,7 +101,7 @@ function _scannerNativo(targetId, title){
     '<div style="position:relative;flex:1;min-height:0">'+
       '<video id="scan-nativo-v" playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'+
       '<div style="position:absolute;left:50%;top:50%;width:78%;max-width:420px;height:34%;transform:translate(-50%,-50%);border:3px solid #B9AEFF;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none"></div>'+
-      '<div id="scan-nativo-msg" style="position:absolute;left:0;right:0;bottom:14px;text-align:center;color:#fff;font:500 13px DM Sans,sans-serif;padding:0 16px">Apunta al código de barras</div>'+
+      '<div id="scan-nativo-msg" style="position:absolute;left:0;right:0;bottom:14px;text-align:center;color:#fff;font:500 13px Inter,sans-serif;padding:0 16px">Apunta al código de barras</div>'+
     '</div>'+
     '<form id="scan-nativo-form" style="display:flex;gap:8px;padding:10px 12px;background:#111">'+
       '<input id="scan-nativo-man" inputmode="numeric" autocomplete="off" placeholder="…o escribe el código y pulsa Enter" style="flex:1;padding:10px;border-radius:8px;border:0;font-size:15px"/>'+

@@ -427,7 +427,7 @@ function _evcPinta(){
   if(s.cerrado){ _evcCierre(ls); return; }
   var f=s.f, n=ENV_MULT[f.tam]||0, ubis=_evUbiLista();
   var ultima=ls.length?ls[ls.length-1]:null;
-  var lista=nl?'<div class="evc-card" style="padding:14px 16px;margin-bottom:12px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Líneas de este conteo</h3>'+
+  var lista=nl?'<div class="evc-card" style="padding:14px 16px;margin-bottom:12px"><h3 style="margin:0 0 4px;font:600 14px \'Inter\'">Líneas de este conteo</h3>'+
     ls.map(function(l){ var x=_evNLin(l);
       return '<div class="hist-li'+(s.edit===l.id?' ed':'')+'"><span class="sc '+(l.estado==='llena'?'ll':'va')+'">'+(l.estado==='llena'?'Llena':'Vacía')+'</span><span>'+ENV_TAMN[l.tamano]+' · '+esc(_evUbiEtq(l.ubicacion))+'</span><span class="q">'+x.bot+' bot · '+x.cajas+' cajas</span>'+
         '<button title="Editar" onclick="envEditarLinea('+l.id+')">✎</button><button title="Quitar" onclick="envQuitarLinea('+l.id+')">✕</button></div>'; }).join('')+'</div>':'';
@@ -476,8 +476,8 @@ function _evcCierre(ls){
     return '<div class="resumen-fila"><span>'+ENV_TAMN[t]+'</span><span>'+(o.caja||0)+'</span><span>'+(o.vac||0)+'</span><span>'+(o.lle||0)+'</span></div>'; }).join('');
   document.getElementById('evc-cuerpo').innerHTML=
    (sos.length?'<div class="sel-aviso w" style="display:block;margin-bottom:12px"><b>Revisa tu conteo.</b> Estas familias se alejan mucho de lo esperado; puede ser un envase mal elegido en alguna línea:<br>• '+sos.map(esc).join('<br>• ')+'</div>':'')+
-   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Historial del conteo</h3>'+hist+'</div>'+
-   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'DM Sans\'">Lo que verá el Control</h3>'+
+   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'Inter\'">Historial del conteo</h3>'+hist+'</div>'+
+   '<div class="evc-card" style="padding:14px 16px;margin-bottom:14px"><h3 style="margin:0 0 4px;font:600 14px \'Inter\'">Lo que verá el Control</h3>'+
      '<div class="resumen-fila h"><span>Envase</span><span>Caja plástica</span><span>Vacías</span><span>Llenas</span></div>'+filas+'</div>'+
    '<div style="display:flex;gap:10px"><button class="btn btn-ghost" style="flex:1" onclick="envSeguir()">‹ Seguir contando</button><button class="btn btn-primary" style="flex:1" onclick="envCerrarConteo()">Terminar</button></div>';
 }
