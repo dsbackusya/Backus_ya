@@ -3339,3 +3339,7 @@ body{ background:linear-gradient(160deg,#161B48 0%,#0E1230 52%,#111437 100%) fix
 /* Encabezados y paneles fijos (sticky) siempre opacos: no deben dejar ver las filas que pasan por debajo */
 .main thead th{ background:#131840 !important }
 .main .mt3-res,.main .evc-l{ background:#181D45 }
+/* Ventanas, avisos, pie de formularios y listas desplegables: siempre con fondo sólido (nada se transparenta) */
+.main [id^="modal-"],.main .toast,.main .fs-footer,.main #esku-busq-results,.main .evc-ft,.main .ac-list,.main .dc-ac{
+  --surface:#181D45; --surface2:#11153A; --surface3:#232A5C; --border:rgba(255,255,255,.10); --border2:rgba(255,255,255,.17);
+}
