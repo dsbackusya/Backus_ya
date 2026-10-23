@@ -317,8 +317,7 @@ function _evMerge(){
   });
   var R='<div class="evm2-r gx"><div class="evm2-rh"><h3>Faltantes y sobrantes de la semana</h3><span class="ev-sp"></span>'+
     '<div class="ev-seg"><button class="'+(val?'on':'')+'" onclick="envMet(\'val\')">S/</button><button class="'+(!val?'on':'')+'" onclick="envMet(\'und\')">Unidades</button></div></div>'+
-    '<div class="gx-kp"><div><span>Faltante</span><b class="ev-neg">'+(val?_evMoney(-f):(f?'−'+f:'0'))+'</b></div><div><span>Sobrante</span><b class="ev-pos">'+(val?_evMoney(sob):'+'+sob)+'</b></div><div><span>Neto</span><b class="'+_evCls(net)+'">'+fm(net)+'</b></div>'+
-      (acum?'<div class="gx-nt"><span>'+acum+'</span>Cada día se compara con el conteo inicial, por eso no se suman los días.</div>':'')+'</div>'+
+    '<div class="gx-kp"><div><span>Faltante</span><b class="ev-neg">'+(val?_evMoney(-f):(f?'−'+f:'0'))+'</b></div><div><span>Sobrante</span><b class="ev-pos">'+(val?_evMoney(sob):'+'+sob)+'</b></div><div><span>Neto</span><b class="'+_evCls(net)+'">'+fm(net)+'</b></div>'+'</div>'+
     '<div class="gx-plot">'+gl+'<div class="gx-cols">'+cs+'</div></div><div class="gx-days">'+dn+'</div>'+
     '<div class="gx-heat"><h4>Detalle por familia</h4><div class="gx-ht">'+ht+'</div></div></div>';
   el.innerHTML=L+R;
