@@ -61,18 +61,17 @@ function _dcMoney(n){ return 'S/ '+Number(n||0).toFixed(2); }
 function _dcHms(v){ v=String(v||''); return v.length===5 ? v+':00' : v; }
 function _dcSede(){ return String((DCX.d&&DCX.d.sede)||'').toUpperCase(); }
 function _dcGrNuevo(){
-  return DCX_GR0.map(function(g){ var rows=[]; g.rows.forEach(function(r){
-    rows.push({ sku:r.sku, code:r.code, ref:r.ref, cz:r.cz, caja:r.caja, main:r.main, ent:0, dev:0 });
-    // cajas plásticas sueltas (sin botellas): van aparte para no multiplicar botellas
-    if(r.caja) rows.push({ sku:r.sku, code:r.code+' (sueltas)', ref:'Cajas sueltas', cz:r.cz, suelta:1, ent:0, dev:0 });
-    // botellas sueltas (unidades): se suman a las de las cajas dentro de la botella auto
-    if(r.main) rows.push({ sku:r.sku, code:r.code+' (sueltas)', ref:'Botellas sueltas', cz:r.cz, sueltaB:1, ent:0, dev:0 });
-  }); return { g:g.g, tam:g.tam, mult:g.mult, rows:rows }; });
+  return DCX_GR0.map(function(g){ return { g:g.g, tam:g.tam, mult:g.mult, rows:g.rows.map(function(r){
+    return { sku:r.sku, code:r.code, ref:r.ref, cz:r.cz, caja:r.caja, main:r.main, ei:0, di:0, ck:0 }; }) }; });
 }
+/* Como en el Excel: se escribe en CAJAS (Entrega y Devolución) y las botellas se pasan a unidades (× botellas por caja).
+   Cascos = lo extra que devuelven (cajas en la fila de la caja, botellas sueltas en la fila de la botella); solo suma a la DEV. */
+function _dcEnt(g,r){ return r.caja ? (r.ei||0) : (r.ei||0)*g.mult; }
+function _dcDev(g,r){ return r.caja ? (r.di||0)+(r.ck||0) : (r.di||0)*g.mult+(r.ck||0); }
 function _dcPrecio(g,r){
   var p=(DCX.d&&DCX.d.precios)||{};
-  var v=(r.caja||r.suelta) ? p.caja : (g.tam===310 ? p.bot310 : p.bot630_1000);
-  if(v==null||isNaN(v)) v=(r.caja||r.suelta) ? DCX_PRECIO0.caja : (g.tam===310 ? DCX_PRECIO0.bot310 : DCX_PRECIO0.bot630_1000);
+  var v=r.caja ? p.caja : (g.tam===310 ? p.bot310 : p.bot630_1000);
+  if(v==null||isNaN(v)) v=r.caja ? DCX_PRECIO0.caja : (g.tam===310 ? DCX_PRECIO0.bot310 : DCX_PRECIO0.bot630_1000);
   return v;
 }
 
@@ -149,14 +148,16 @@ function _dcCuerpo(){
 /* ── Marcaje ── */
 function _dcMarcajeHtml(){
   var h='';
+  var celda=function(l,k,v){ return '<div class="dm-i"><span class="dm-lb">'+l+'</span><input class="inp" inputmode="numeric" value="'+(v||'')+'" placeholder="0" data-k="'+k+'" oninput="dcMIn(this)"></div>'; };
   DCX.gr.forEach(function(g,gi){
     h+='<div class="dm-grp">'+g.g+'</div>';
     g.rows.forEach(function(r,ri){
+      var id=gi+'_'+ri, q=function(l,p){ return '<div class="dm-q"><span class="dm-lb">'+l+'</span><b id="'+p+id+'">—</b></div>'; };
       h+='<div class="dm-r" data-g="'+gi+'" data-r="'+ri+'">'+
-        '<div class="dm-n"><b>'+r.ref+(r.caja?' <em class="dm-x">× '+g.mult+'</em>':'')+(r.suelta?' <em class="dm-x">sin botellas</em>':'')+(r.sueltaB?' <em class="dm-x">unidades</em>':'')+(r.main?' <em class="dm-a">auto</em>':'')+'</b><small>'+r.sku+' · '+r.code+'</small></div>'+
-        '<input class="inp" inputmode="numeric" value="'+(r.ent||'')+'" placeholder="0" data-k="ent" oninput="dcMIn(this)">'+
-        '<input class="inp" inputmode="numeric" value="'+(r.dev||'')+'" placeholder="0" data-k="dev" oninput="dcMIn(this)">'+
-        '<div class="dm-d" id="dm-d'+gi+'_'+ri+'">0</div><div class="dm-c" id="dm-c'+gi+'_'+ri+'">—</div></div>';
+        '<div class="dm-n"><b>'+r.ref+(r.caja?' <em class="dm-x">× '+g.mult+'</em>':'')+(r.main?' <em class="dm-a">auto</em>':'')+'</b><small>'+r.sku+' · '+r.code+(r.caja?'':' · en cajas')+'</small></div>'+
+        celda('Entrega','ei',r.ei)+celda('Devolución','di',r.di)+celda('Cascos','ck',r.ck)+
+        q('ENT','dm-e')+q('DEV','dm-v')+
+        '<div class="dm-d" id="dm-d'+id+'">0</div><div class="dm-c" id="dm-c'+id+'">—</div></div>';
     });
   });
   return '<div class="dc-card"><div class="dc-h"><span class="t">Conciliación de envases</span></div>'+
@@ -164,21 +165,20 @@ function _dcMarcajeHtml(){
         '<div class="dc-f"><label>Hora inicio</label><input class="inp" type="time" value="'+esc(DCX.hi)+'" oninput="DCX.hi=this.value"></div>'+
         '<div class="dc-f"><label>Hora fin</label><input class="inp" type="time" value="'+esc(DCX.hf)+'" oninput="DCX.hf=this.value"></div>'+
       '</div>'+
-      '<div class="dm-h"><span>Envase</span><span>ENT</span><span>DEV</span><span>Dif.</span><span>Costo</span></div>'+h+'</div>'+
+      '<div class="dm-h"><span>Envase</span><span>Entrega</span><span>Devolución</span><span>Cascos</span><span>ENT</span><span>DEV</span><span>Dif.</span><span>Costo</span></div>'+h+'</div>'+
     '<div class="dc-card"><div class="dc-h"><span class="t">Convertidor · cajas llenas</span></div><div class="dm-conv" id="dm-conv"></div></div>'+
     '<div class="dc-card"><div class="dm-tot"><div><div class="k">Diferencia valorizada</div><div class="v" id="dm-tot">S/ 0.00</div></div><span style="flex:1"></span>'+
       '<label class="dm-sw"><input type="checkbox"'+(DCX.env?' checked':'')+' onchange="DCX.env=this.checked">Registrar también en Envases (entrada y devolución)</label></div></div>'+
     _dcBarra('marcaje');
 }
 function dcMIn(el){
-  var r=el.parentNode, gi=r.dataset.g, G=DCX.gr[gi], row=G.rows[r.dataset.r], k=el.dataset.k;
+  var r=el.closest('.dm-r'), gi=r.dataset.g, G=DCX.gr[gi], row=G.rows[r.dataset.r], k=el.dataset.k;
   row[k]=_dcNum(el.value);
-  if(row.caja||row.sueltaB){
-    var caj=0, lo=0;
-    G.rows.forEach(function(x){ if(x.caja) caj=x[k]||0; if(x.sueltaB) lo=x[k]||0; });
+  // la botella auto copia las cajas de entrega o devolución (se puede cambiar a mano)
+  if(row.caja&&(k==='ei'||k==='di')){
     G.rows.forEach(function(x,xi){
       if(!x.main) return;
-      x[k]=caj*G.mult+lo;
+      x[k]=row[k];
       var inp=document.querySelector('.dm-r[data-g="'+gi+'"][data-r="'+xi+'"] input[data-k="'+k+'"]');
       if(inp) inp.value=x[k]||'';
     });
@@ -186,12 +186,12 @@ function dcMIn(el){
   dcCalcM();
 }
 function dcCalcM(){
-  var tot=0;
+  var tot=0, num=function(n){ return n?n.toLocaleString('es-PE'):'—'; };
   DCX.gr.forEach(function(g,gi){ g.rows.forEach(function(r,ri){
-    var de=document.getElementById('dm-d'+gi+'_'+ri), ce=document.getElementById('dm-c'+gi+'_'+ri);
-    if(r.sueltaB){ if(de){ de.textContent=''; de.className='dm-d'; } if(ce) ce.textContent=''; return; }  // ya está dentro de la botella auto
-    var d=(r.ent||0)-(r.dev||0), c=Math.abs(d)*_dcPrecio(g,r); tot+=c;
+    var e=_dcEnt(g,r), v=_dcDev(g,r), d=e-v, c=Math.abs(d)*_dcPrecio(g,r); tot+=c;
+    var id=gi+'_'+ri, ee=document.getElementById('dm-e'+id), ve=document.getElementById('dm-v'+id), de=document.getElementById('dm-d'+id), ce=document.getElementById('dm-c'+id);
     if(!de||!ce) return;
+    if(ee) ee.textContent=num(e); if(ve) ve.textContent=num(v);
     de.textContent=d>0?'+'+d:d; de.className='dm-d '+(d===0?'zero':d>0?'neg':'pos');
     ce.textContent=d===0?'—':_dcMoney(c);
   }); });
@@ -199,24 +199,27 @@ function dcCalcM(){
   if(te){ te.textContent=_dcMoney(tot); te.className='v '+(tot===0?'zero':'neg'); }
   var h='';
   DCX.gr.forEach(function(g){
-    var be=0,bd=0,ce=0,cd=0;
-    g.rows.forEach(function(r){ if(r.suelta||r.sueltaB) return; if(r.caja){ ce=r.ent||0; cd=r.dev||0; } else { be+=r.ent||0; bd+=r.dev||0; } });
-    if(!be&&!bd&&!ce&&!cd) return;
-    var qe=Math.floor(be/g.mult), qd=Math.floor(bd/g.mult), okE=qe===ce, okD=qd===cd;
-    h+='<div class="dm-cv"><b>'+g.g.split(' · ')[0]+'</b>Entrega: '+be+' bot. ÷ '+g.mult+' = <span class="'+(okE?'ok':'bad')+'">'+qe+' cajas'+(okE?' ✓':' · contadas '+ce)+'</span><br>'+
-      'Devolución: '+bd+' bot. ÷ '+g.mult+' = <span class="'+(okD?'ok':'bad')+'">'+qd+' cajas'+(okD?' ✓':' · contadas '+cd)+'</span></div>';
+    var be=0,bd=0,ce=0,cd=0,ck=0;
+    g.rows.forEach(function(r){ if(r.caja){ ce=r.ei||0; cd=r.di||0; ck=r.ck||0; } else { be+=r.ei||0; bd+=r.di||0; } });
+    if(!be&&!bd&&!ce&&!cd&&!ck) return;
+    var est=function(b,c){ return b===c?'<span class="ok">'+b+' cajas ✓</span>':'<span class="'+(c>b?'warn':'bad')+'">botellas en '+b+' · cajas '+c+(c>b?' (+'+(c-b)+' sin botellas)':' (faltan '+(b-c)+')')+'</span>'; };
+    h+='<div class="dm-cv"><b>'+g.g.split(' · ')[0]+'</b>Entrega: '+est(be,ce)+'<br>Devolución: '+est(bd,cd)+(ck?' · cascos '+ck:'')+'</div>';
   });
   var cv=document.getElementById('dm-conv'); if(cv) cv.innerHTML=h||'<div class="dm-cv">Escribe las cantidades para ver el convertidor</div>';
 }
-/* Movimientos de Envases: ENT = entrada llena, DEV = devolución vacía (cajas = packs; botellas sueltas = unidades) */
+/* Movimientos de Envases: packs = cajas con botellas, unidades = botellas sueltas (cascos), cajas = cajas sin botellas.
+   ENT = entrada llena, DEV = devolución vacía. */
 function _dcMovs(){
   var out=[];
   DCX.gr.forEach(function(g){
     ['ent','dev'].forEach(function(k){
-      var caj=0, bot=0, cs=0;
-      g.rows.forEach(function(r){ if(r.sueltaB) return; if(r.suelta) cs+=r[k]||0; else if(r.caja) caj=r[k]||0; else bot+=r[k]||0; });
-      var und=Math.max(0,bot-caj*g.mult);
-      if(caj||und||cs) out.push({ tipo:k==='ent'?'entrada':'devolucion', tamano:g.tam, estado:k==='ent'?'llena':'vacia', packs:caj, unidades:und, cajas:cs });
+      var packs=0, und=0, caja=0;
+      g.rows.forEach(function(r){
+        if(r.caja) caja=k==='ent'?(r.ei||0):(r.di||0)+(r.ck||0);
+        else { packs+=k==='ent'?(r.ei||0):(r.di||0); if(k==='dev') und+=r.ck||0; }
+      });
+      var solas=Math.max(0,caja-packs);
+      if(packs||und||solas) out.push({ tipo:k==='ent'?'entrada':'devolucion', tamano:g.tam, estado:k==='ent'?'llena':'vacia', packs:packs, unidades:und, cajas:solas });
     });
   });
   return out;
@@ -306,8 +309,8 @@ function dcGuardar(tipo,imprimir){
   if(tipo==='marcaje'){
     var hay=false;
     DCX.gr.forEach(function(g){ g.rows.forEach(function(r){
-      if(r.ent||r.dev) hay=true;
-      d.lineas.push({ sku:r.sku, code:r.code, ref:r.ref, cz:r.cz, ent:r.ent||0, dev:r.dev||0, suelta:r.suelta?1:0, sueltaB:r.sueltaB?1:0 });
+      if(r.ei||r.di||r.ck) hay=true;
+      d.lineas.push({ sku:r.sku, code:r.code, ref:r.ref, cz:r.cz, ent:_dcEnt(g,r), dev:_dcDev(g,r), ei:r.ei||0, di:r.di||0, ck:r.ck||0 });
     }); });
     if(!hay){ showToast('Escribe al menos una cantidad en ENT o DEV','err'); return; }
     d.reparto=DCX.h.reparto; d.transporte=DCX.h.transporte; d.horaInicio=DCX.hi; d.horaFin=DCX.hf;
@@ -401,7 +404,12 @@ function dcEditar(id){
   DCX.h={ reparto:d.reparto, transporte:d.transporte, placa:d.placa, fecha:d.fecha };
   if(d.tipo==='marcaje'){
     DCX.gr=_dcGrNuevo();
-    d.lineas.forEach(function(l){ DCX.gr.forEach(function(g){ g.rows.forEach(function(r){ if(r.sku===l.sku&&!!r.suelta===!!l.suelta&&!!r.sueltaB===!!l.sueltaB){ r.ent=l.ent||0; r.dev=l.dev||0; } }); }); });
+    d.lineas.forEach(function(l){ DCX.gr.forEach(function(g){ g.rows.forEach(function(r){
+      if(r.sku!==l.sku||l.suelta||l.sueltaB) return;
+      if(l.ei!==undefined){ r.ei=l.ei||0; r.di=l.di||0; r.ck=l.ck||0; }              // guardado con el formato nuevo
+      else if(r.caja){ r.ei=l.ent||0; r.di=l.dev||0; r.ck=0; }                       // documentos anteriores: se pasan a cajas
+      else { r.ei=Math.floor((l.ent||0)/g.mult); r.di=Math.floor((l.dev||0)/g.mult); r.ck=(l.dev||0)-r.di*g.mult; }
+    }); }); });
     DCX.hi=d.horaInicio; DCX.hf=d.horaFin; DCX.env=!!(DCX.d.conEnv&&DCX.d.conEnv[d.id]);
   } else if(d.tipo==='nc'){
     DCX.nc={ fac:d.nroFactura, lineas:d.lineas.map(function(l){ return { sku:l.sku, sap:l.sap, desc:l.desc, und:l.und }; }) };
