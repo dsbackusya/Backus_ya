@@ -390,11 +390,11 @@ function renderTopbarActions(name){
     var btnPedido=(S&&S.rol==='store')?'<button class="btn btn-primary btn-sm" onclick="abrirPedidoManual()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar pedido</span></button>':'';
     el.innerHTML=btnPedido+btnRefresh; // Exportar vive en el panel de filtros de Salidas
   } else if(name==='entradas'){
-    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirEntrada()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar entrada</span></button>'+btnExport+btnRefresh;
+    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirEntrada()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar entrada</span></button>'+btnRefresh; // Exportar vive en el panel de filtros
   } else if(name==='mt'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirNuevoMT()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar M-T</span></button>'+btnExport+btnRefresh;
   } else if(name==='cancelados'){
-    el.innerHTML=btnExport+btnRefresh;
+    el.innerHTML=btnRefresh; // Exportar vive en el panel de filtros
   } else if(name==='maestro'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMaestroForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar al maestro</span></button>'+btnExport+btnRefresh;
   } else if(name==='mconteo'){

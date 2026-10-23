@@ -75,6 +75,7 @@ function renderCancelados(r){
         ICO('warn',13)+'Mostrando los últimos '+r.data.length+' de '+r.total+' registros totales. Usa el filtro de fecha para buscar registros anteriores.'+
       '</div>'
     : '';
+  var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   document.getElementById('cancelados-root').innerHTML=
     avisoTotal+
     '<div class="stats">'+
@@ -82,10 +83,13 @@ function renderCancelados(r){
       '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="stat-label">Pedidos únicos</div><div class="stat-val-row"><div class="stat-val" id="canc-stat-pedidos" style="color:var(--warn)">'+pedidos+'</div><span class="stat-unit-pill">pedidos</span></div></div>'+
       '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><line x1="3.27" y1="6.96" x2="12" y2="12.01"/><line x1="20.73" y1="6.96" x2="12" y2="12.01"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="stat-label">Unidades canceladas</div><div class="stat-val-row"><div class="stat-val" id="canc-stat-und" style="color:var(--danger)">'+fmt(total)+'</div><span class="stat-unit-pill">und.</span></div></div>'+
     '</div>'+
-    '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
-      '<input class="filter-inp" id="canc-busq" placeholder="Buscar SKU, pedido, descripción..." style="width:240px" oninput="filterCancelados()"/>'+
+    '<div class="sal2-pnl">'+
+    '<div class="sal2-fl">'+
+      '<div class="sal2-srch"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
+        '<input id="canc-busq" placeholder="Buscar SKU, pedido, descripción..." oninput="filterCancelados()"/></div>'+
       _fechaFiltroHTML('canc','filterCancelados','cancRangoCambio')+
-      '<span class="result-count" id="canc-count"></span>'+
+      '<span class="sal2-cnt" id="canc-count"></span>'+
+      '<button id="btn-export-cancelados" class="sal2-exp" onclick="exportCancelados()">'+icoExportar+'Exportar</button>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
       '<thead><tr>'+
@@ -96,7 +100,8 @@ function renderCancelados(r){
         (S&&S.rol==='store'?'<th class="c"></th>':'')+
       '</tr></thead>'+
       '<tbody id="cancelados-tbody"></tbody>'+
-    '</table></div>';
+    '</table></div>'+
+    '</div>';
   _initFiltroFecha('canc','filterCancelados',{page:'cancelados'});
   filterCancelados();
 }
@@ -131,7 +136,7 @@ function _filterCancelados(){
       '<td style="font-size:12px">'+(r.marca?'<span class="brand-pill">'+esc(r.marca)+'</span>':'<span style="color:var(--text4)">—</span>')+'</td>'+
       '<td class="c" style="font-size:12px;color:var(--text3)">'+esc(r.motorizado||'—')+'</td>'+
       '<td class="r" style="font-size:12px">'+esc(r.envases||'—')+'</td>'+
-      '<td class="c"><span style="background:var(--danger-bg);color:var(--danger);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600">'+esc(r.estado||'Cancelado')+'</span></td>'+
+      '<td class="c"><span class="sal-est cx"><i></i>'+esc(r.estado||'Cancelado')+'</span></td>'+
       '<td class="c" style="font-size:12px;color:var(--text3)">'+esc(r.revision||'—')+'</td>'+
       '<td style="font-size:12px" title="'+esc(r.motivo)+'">'+esc(r.motivo||'—')+'</td>'+
       (S&&S.rol==='store'&&r.nroPedido?'<td class="c" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" title="Devolver este pedido a Salidas" data-nro="'+esc(r.nroPedido)+'" onclick="anularCancAbrir(this.dataset.nro)">'+ICO('undo',12)+'Anular</button></td>':(S&&S.rol==='store'?'<td></td>':''))+
