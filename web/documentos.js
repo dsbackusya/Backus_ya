@@ -25,7 +25,10 @@ var DCX_GR0 = [
     { sku:10000201, code:'PILSEN CALLAO 50LT BARRIL',       ref:'Barriles de 50 L', cz:'' },
     { sku:10000160, code:'CUSQUEÑA 30LT DORADA BARRIL',     ref:'Barriles de 30 L', cz:'' } ] }
 ];
-var DCX_PRECIO0 = { caja:3.8, bot630_1000:0.6, bot310:0.5 };
+/* Los primeros documentos con barriles se guardaron sin SKU (BARRIL 50 L / BARRIL 30 L): al verlos o editarlos se completan con el SKU actual. */
+var DCX_BARRIL_ANT = { 'BARRIL 50 L':{ sku:10000201, code:'PILSEN CALLAO 50LT BARRIL' }, 'BARRIL 30 L':{ sku:10000160, code:'CUSQUEÑA 30LT DORADA BARRIL' } };
+function _dcLinea(l){ var a=DCX_BARRIL_ANT[l.code]; return (a&&!l.sku) ? Object.assign({},l,a) : l; }
+var DCX_PRECIO0 ={ caja:3.8, bot630_1000:0.6, bot310:0.5 };
 var DCX_TIT = { marcaje:'Conciliación de envases', nc:'Orden para nota de crédito', traslado:'Cargo de despacho' };
 var DCX_DESTINOS = ['TADA EVENTOS','ATE','CHORRILLOS','SAN MIGUEL'];
 // Destinos escritos antes con "OTRO" (se recuerdan en este equipo)
@@ -405,7 +408,7 @@ function dcEditar(id){
   DCX.h={ reparto:d.reparto, transporte:d.transporte, placa:d.placa, fecha:d.fecha };
   if(d.tipo==='marcaje'){
     DCX.gr=_dcGrNuevo();
-    d.lineas.forEach(function(l){ DCX.gr.forEach(function(g){ g.rows.forEach(function(r){
+    d.lineas.forEach(function(l){ l=_dcLinea(l); DCX.gr.forEach(function(g){ g.rows.forEach(function(r){
       if(r.sku!==l.sku||r.code!==l.code||l.suelta||l.sueltaB) return;
       if(l.ei!==undefined){ r.ei=l.ei||0; r.di=(l.di||0)+(r.caja?(l.ck||0):0); }       // guardado con el formato nuevo (los cascos de cajas pasan a la devolución)
       else if(r.caja){ r.ei=l.ent||0; r.di=l.dev||0; }                                // documentos anteriores: se pasan a cajas
@@ -497,6 +500,7 @@ function _dcPapel(d){
       mh('Reparto:',d.reparto,'Fecha:',_dcF(d.fecha))+mh('Transporte:',d.transporte,'Placa:',d.placa)+mh('Hora Inicio:',_dcHms(d.horaInicio),'Hora Fin:',_dcHms(d.horaFin))+
       '<table><tr><th>Sku</th><th>Descripcion</th><th>ENT</th><th>DEV</th><th>DIFF</th></tr>';
     (d.lineas||[]).forEach(function(r){
+      r=_dcLinea(r);
       var c=r.cz?' cz-'+r.cz:'';
       t+='<tr><td class="'+c+'">'+r.sku+'</td><td class="'+c+'">'+esc(r.code)+'</td><td class="c">'+(r.ent||0)+'</td><td class="c">'+(r.dev||0)+'</td><td class="c">'+((r.ent||0)-(r.dev||0))+'</td></tr>';
     });
