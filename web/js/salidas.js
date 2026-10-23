@@ -64,6 +64,7 @@ function renderSalidas(r){
   DATA.salidas=r.data;
   _SAL_EST='';
   var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+  var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   document.getElementById('salidas-root').innerHTML=
     '<div class="sal2-sum">'+
       '<div class="sal2-card sal2-ped"><div class="sal2-pl"><div class="sal2-k">Pedidos</div><div class="sal2-v" id="sal-stat-total">0</div></div>'+
@@ -71,11 +72,13 @@ function renderSalidas(r){
       '<div class="sal2-card"><div class="sal2-k">Unidades salidas</div><div class="sal2-v"><span id="sal-stat-und">0</span><small>und.</small></div><div class="sal2-n" id="sal-prod"></div></div>'+
       '<div class="sal2-card"><div class="sal2-k">Envases</div><div class="sal2-env" id="sal-env"></div></div>'+
     '</div>'+
+    '<div class="sal2-pnl">'+
     '<div class="sal2-fl">'+
+      '<div class="sal2-seg" id="sal-est"></div>'+
       '<div class="sal2-srch">'+icoBuscar+'<input id="sal-busq" placeholder="Buscar pedido, SKU, producto o motorizado…" oninput="filterSalidas()"/></div>'+
       _fechaFiltroHTML('sal','filterSalidas','salRangoCambio')+
-      '<div class="sal2-seg" id="sal-est"></div>'+
       '<span class="sal2-cnt" id="sal-count"></span>'+
+      '<button id="btn-export-salidas" class="sal2-exp" onclick="exportSalidas()">'+icoExportar+'Exportar</button>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
       '<thead><tr>'+
@@ -86,7 +89,8 @@ function renderSalidas(r){
         '<th class="c col-hide-mobile" style="min-width:110px;width:110px"></th>'+
       '</tr></thead>'+
       '<tbody id="salidas-tbody"></tbody>'+
-    '</table></div>';
+    '</table></div>'+
+    '</div>';
 
   // Estado inicial: activar filtro "Hoy" por defecto
   _initFiltroFecha('sal','filterSalidas',{page:'salidas'});
@@ -164,8 +168,8 @@ function _salEstadoBadge(r){
   if(cancelado) return '—';
   var e=String(r.estado||'').trim();
   var eL=e.toLowerCase();
-  if(eL==='entregado') return '<span style="background:var(--teal-bg,#d1fae5);color:var(--teal,#065f46);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600">'+e+'</span>';
-  if(e) return '<span style="background:var(--warn-bg,#fef3c7);color:var(--warn,#92400e);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600">'+e+'</span>';
+  if(eL==='entregado') return '<span class="sal-est ok"><i></i>'+e+'</span>';
+  if(e) return '<span class="sal-est"><i></i>'+e+'</span>';
   return '<span style="color:var(--text3);font-size:12px">—</span>';
 }
 
@@ -195,7 +199,7 @@ function confirmarRecepcion(rowNum, btn){
           // col Estado = penúltima - 2, col Revisión = penúltima - 1
           var nCols=cells.length;
           if(nCols>=3){
-            cells[nCols-3].innerHTML='<span style="background:var(--teal-bg,#d1fae5);color:var(--teal,#065f46);font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600">Entregado</span>';
+            cells[nCols-3].innerHTML='<span class="sal-est ok"><i></i>Entregado</span>';
             cells[nCols-2].innerHTML='<span style="color:var(--teal,#065f46);font-size:16px;font-weight:600">'+ICO('check',16,'s')+'</span>';
           }
         }

@@ -388,7 +388,7 @@ function renderTopbarActions(name){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirSKUForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Nuevo SKU</span></button>'+btnExport+btnRefresh;
   } else if(name==='salidas'){
     var btnPedido=(S&&S.rol==='store')?'<button class="btn btn-primary btn-sm" onclick="abrirPedidoManual()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar pedido</span></button>':'';
-    el.innerHTML=btnPedido+btnExport+btnRefresh;
+    el.innerHTML=btnPedido+btnRefresh; // Exportar vive en el panel de filtros de Salidas
   } else if(name==='entradas'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirEntrada()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Registrar entrada</span></button>'+btnExport+btnRefresh;
   } else if(name==='mt'){
