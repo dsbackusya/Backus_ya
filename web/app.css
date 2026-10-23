@@ -1512,16 +1512,16 @@ tbody td{ padding:20px 24px!important; vertical-align:middle; }
    ══════════════════════════════════════════════════════════════ */
 :root, body{
   /* ── Superficies — azul noche (paleta de referencia) ── */
-  --bg:        #0B0E24;
-  --surface:   #141937;
-  --surface2:  #0F1330;
-  --surface3:  #1D2350;
-  --sb-bg:     #0A0D22;
+  --bg:        #0E1230;
+  --surface:   #181D45;
+  --surface2:  #11153A;
+  --surface3:  #232A5C;
+  --sb-bg:     #0C1030;
 
   /* ── Bordes sutiles sobre dark ── */
-  --border:        rgba(255,255,255,.075);
-  --border2:       rgba(255,255,255,.13);
-  --border-strong: rgba(255,255,255,.20);
+  --border:        rgba(255,255,255,.10);
+  --border2:       rgba(255,255,255,.17);
+  --border-strong: rgba(255,255,255,.26);
 
   /* ── Accent (violeta plano) ── */
   --accent:        #7B61EF;
@@ -1533,10 +1533,10 @@ tbody td{ padding:20px 24px!important; vertical-align:middle; }
   --accent-line:   rgba(138,116,246,.45);
 
   /* ── Texto sobre dark ── */
-  --text:    #EEF0FB;
-  --text2:   #AEB4D6;
-  --text3:   #7B82AB;
-  --text4:   #555C88;
+  --text:    #F6F7FF;
+  --text2:   #C3C8E8;
+  --text3:   #939AC4;
+  --text4:   #666E9C;
 
   /* ── Semánticos ── */
   --ok:          #4ADE9F;
@@ -3277,3 +3277,19 @@ body.evc-abierto{overflow:hidden}
 .ev-st.no{color:var(--text4);font-weight:500}
 @media(max-width:980px){.ev-wk{flex-wrap:wrap}.ev-days{flex:1 1 100%;order:3}}
 @media(max-width:560px){.ev-days{gap:5px}.ev-d{padding:8px 2px 6px;border-radius:11px}.ev-d b{font-size:15px}.ev-st{font-size:9px}}
+
+/* ── Estados activos en violeta pleno + fondo con degradado (paleta de referencia) ── */
+body{ background:linear-gradient(160deg,#161B48 0%,#0E1230 52%,#111437 100%) fixed !important; }
+.sb-item.active{ background:var(--accent) !important; color:#fff !important; font-weight:600 }
+.sb-item.active .ic{ color:#fff !important }
+.sb-item.active::before,.sb-item.active::after{ display:none !important }
+.sb-item.active:hover{ background:var(--accent-h) !important; color:#fff !important }
+.bn-item.active{ background:var(--accent) !important; color:#fff !important; box-shadow:none !important }
+.bn-item.active .ic,.bn-item.active .bn-item-label{ color:#fff !important }
+.sal2-seg button.on,.dash-seg button.on,.ent-seg button.on,.en2-seg button.on,.en2-modes button.on,.stk-sb.active,.fh-btn.on,.fh-btn.on:hover,
+.ev-vtab.on,.ev-seg button.on,.ev-d.on,.dc-tab.on,.dc-chp.on,.mt3-chip.on,.sku-chips button.on{
+  background:var(--accent) !important; border-color:var(--accent) !important; color:#fff !important; box-shadow:none }
+.stk-sb.active span,.ev-d.on b,.ev-d.on .dn,.ev-vtab.on b{ color:#fff !important }
+.ev-vtab.on b{ background:rgba(255,255,255,.2) !important }
+.ev-d.on .ev-st{ background:rgba(255,255,255,.18); color:#fff }
+.fh-btn.on:hover,.sal2-seg button.on:hover{ background:var(--accent-h) !important }
