@@ -1512,11 +1512,11 @@ tbody td{ padding:20px 24px!important; vertical-align:middle; }
    ══════════════════════════════════════════════════════════════ */
 :root, body{
   /* ── Superficies — azul noche (paleta de referencia) ── */
-  --bg:        #0E1230;
-  --surface:   #181D45;
-  --surface2:  #11153A;
-  --surface3:  #232A5C;
-  --sb-bg:     #0C1030;
+  --bg:        #0A0A0B;
+  --surface:   #141416;
+  --surface2:  #0F0F11;
+  --surface3:  #1D1D20;
+  --sb-bg:     #0A0A0B;
 
   /* ── Bordes sutiles sobre dark ── */
   --border:        rgba(255,255,255,.10);
@@ -1533,10 +1533,10 @@ tbody td{ padding:20px 24px!important; vertical-align:middle; }
   --accent-line:   rgba(138,116,246,.45);
 
   /* ── Texto sobre dark ── */
-  --text:    #F6F7FF;
-  --text2:   #C3C8E8;
-  --text3:   #939AC4;
-  --text4:   #666E9C;
+  --text:    #F3F3F4;
+  --text2:   #B0B0B7;
+  --text3:   #85858D;
+  --text4:   #5C5C64;
 
   /* ── Semánticos ── */
   --ok:          #4ADE9F;
@@ -1574,7 +1574,7 @@ tbody td{ padding:20px 24px!important; vertical-align:middle; }
 
 /* Topbar dark glass */
 .topbar{
-  background:rgba(11,14,36,.72) !important;
+  background:rgba(10,10,11,.80) !important;
   border-bottom:1px solid var(--border) !important;
 }
 @supports not (backdrop-filter:blur(1px)){.topbar{background:var(--bg) !important;}}
@@ -2055,7 +2055,7 @@ input.filter-inp:focus{
 /* Cámara en panel (poco menos de la mitad de la pantalla) */
 #fs-conteo .cnt-cam{
   position:relative;margin-top:12px;height:clamp(150px,30vh,240px);border-radius:18px;overflow:hidden;
-  background:#0D1130;border:1px solid var(--border2);
+  background:#0C0C0D;border:1px solid var(--border2);
 }
 #fs-conteo .cnt-cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
 #fs-conteo .cnt-cb{position:absolute;width:26px;height:26px;border:0 solid #B79CFF;pointer-events:none}
@@ -3279,20 +3279,26 @@ body.evc-abierto{overflow:hidden}
 @media(max-width:560px){.ev-days{gap:5px}.ev-d{padding:8px 2px 6px;border-radius:11px}.ev-d b{font-size:15px}.ev-st{font-size:9px}}
 
 /* ── Estados activos en violeta pleno + fondo con degradado (paleta de referencia) ── */
-body{ background:linear-gradient(160deg,#161B48 0%,#0E1230 52%,#111437 100%) fixed !important; }
-.sb-item.active{ background:var(--accent) !important; color:#fff !important; font-weight:600 }
+body{ background:
+  radial-gradient(760px 420px at 84% -8%,rgba(123,97,239,.34),transparent 72%),
+  radial-gradient(520px 360px at 100% 14%,rgba(96,70,214,.22),transparent 72%),
+  radial-gradient(520px 360px at 2% 104%,rgba(123,97,239,.12),transparent 70%),
+  #0A0A0B fixed !important; }
+.sb-item.active{ background:#26262A !important; color:#fff !important; font-weight:600 }
 .sb-item.active .ic{ color:#fff !important }
 .sb-item.active::before,.sb-item.active::after{ display:none !important }
-.sb-item.active:hover{ background:var(--accent-h) !important; color:#fff !important }
-.bn-item.active{ background:var(--accent) !important; color:#fff !important; box-shadow:none !important }
+.sb-item.active:hover{ background:#2E2E33 !important; color:#fff !important }
+.bn-item.active{ background:#26262A !important; color:#fff !important; box-shadow:none !important }
 .bn-item.active .ic,.bn-item.active .bn-item-label{ color:#fff !important }
+/* pestañas, segmentos y filtros activos: píldora blanca con letra oscura */
 .sal2-seg button.on,.dash-seg button.on,.ent-seg button.on,.en2-seg button.on,.en2-modes button.on,.stk-sb.active,.fh-btn.on,.fh-btn.on:hover,
 .ev-vtab.on,.ev-seg button.on,.ev-d.on,.dc-tab.on,.dc-chp.on,.mt3-chip.on,.sku-chips button.on{
-  background:var(--accent) !important; border-color:var(--accent) !important; color:#fff !important; box-shadow:none }
-.stk-sb.active span,.ev-d.on b,.ev-d.on .dn,.ev-vtab.on b{ color:#fff !important }
-.ev-vtab.on b{ background:rgba(255,255,255,.2) !important }
-.ev-d.on .ev-st{ background:rgba(255,255,255,.18); color:#fff }
-.fh-btn.on:hover,.sal2-seg button.on:hover{ background:var(--accent-h) !important }
+  background:#fff !important; border-color:#fff !important; color:#111 !important; box-shadow:none }
+.stk-sb.active span,.ev-d.on b,.ev-d.on .dn,.ev-vtab.on b,.ev-d.on .ev-st{ color:#111 !important }
+.ev-vtab.on b{ background:rgba(0,0,0,.12) !important }
+.ev-d.on .ev-st{ background:rgba(0,0,0,.08) !important }
+.dc-tab.on svg,.ev-vtab.on svg,.dc-chp.on svg{ stroke:#111 }
+.fh-btn.on:hover,.sal2-seg button.on:hover{ background:#E9E9EA !important }
 
 /* ══════════════════════════════════════════════════════════════
    ESTILO DE REFERENCIA — paneles de vidrio, botones con contorno,
@@ -3302,25 +3308,25 @@ body{ background:linear-gradient(160deg,#161B48 0%,#0E1230 52%,#111437 100%) fix
 /* 1) Paneles de vidrio: dentro del contenido las superficies son translúcidas.
       Las listas desplegables y los avisos mantienen su fondo sólido. */
 .main{
-  --surface:  rgba(66,80,158,.20);
-  --surface2: rgba(7,9,30,.38);
-  --surface3: rgba(98,112,196,.22);
+  --surface:  #141416;
+  --surface2: #0F0F11;
+  --surface3: #1B1B1E;
   --border:   rgba(255,255,255,.08);
   --border2:  rgba(255,255,255,.14);
 }
 .main .ac-list,.main .dc-ac,.main select,.main .toast{
-  --surface:#181D45; --surface2:#11153A; --surface3:#232A5C;
+  --surface:#141416; --surface2:#0F0F11; --surface3:#1B1B1E;
 }
-.main .ac-list,.main .dc-ac{ background:#181D45 !important }
+.main .ac-list,.main .dc-ac{ background:#141416 !important }
 
 /* 3) Botones secundarios con contorno violeta */
 .btn-ghost,.tb-btn,.tb-btn-icon{
-  background:transparent !important;
-  border:1px solid rgba(123,97,239,.55) !important;
-  color:var(--accent2) !important;
+  background:#1B1B1E !important;
+  border:1px solid var(--border) !important;
+  color:var(--text2) !important;
 }
 .btn-ghost:hover:not(:disabled),.tb-btn:hover,.tb-btn-icon:hover{
-  background:rgba(123,97,239,.16) !important; border-color:var(--accent) !important; color:#fff !important;
+  background:#242427 !important; border-color:var(--border2) !important; color:#fff !important;
 }
 
 /* 4) Escala más fina: esquinas de 10–14 px en tarjetas y botones */
@@ -3334,14 +3340,14 @@ body{ background:linear-gradient(160deg,#161B48 0%,#0E1230 52%,#111437 100%) fix
 .sb-logout{ background:transparent !important }
 .sb-footer{ border-top-color:rgba(255,255,255,.08) !important }
 .main{ background:transparent !important }
-.topbar{ background:rgba(14,18,48,.70) !important; border-bottom:1px solid var(--border) !important }
+.topbar{ background:rgba(10,10,11,.80) !important; border-bottom:1px solid var(--border) !important }
 .stk-t td:first-child .stk-pn{ min-width:220px }
 /* Encabezados y paneles fijos (sticky) siempre opacos: no deben dejar ver las filas que pasan por debajo */
-.main thead th{ background:#131840 !important }
-.main .mt3-res,.main .evc-l{ background:#181D45 }
+.main thead th{ background:#141416 !important }
+.main .mt3-res,.main .evc-l{ background:#141416 }
 /* Ventanas, avisos, pie de formularios y listas desplegables: siempre con fondo sólido (nada se transparenta) */
 .main [id^="modal-"],.main .toast,.main .fs-footer,.main #esku-busq-results,.main .evc-ft,.main .ac-list,.main .dc-ac{
-  --surface:#181D45; --surface2:#11153A; --surface3:#232A5C; --border:rgba(255,255,255,.10); --border2:rgba(255,255,255,.17);
+  --surface:#141416; --surface2:#0F0F11; --surface3:#1B1B1E; --border:rgba(255,255,255,.10); --border2:rgba(255,255,255,.17);
 }
 /* Cancelados: buscador sin el borde animado */
 #canc-busq,input#canc-busq.filter-inp{
@@ -3429,7 +3435,7 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .gx-cell.s{background:rgba(111,211,242,.14);color:#6FD3F2}
 .gx-cell.ok{background:rgba(74,222,159,.14);color:#4ADE9F}
 .gx-cell.dim{opacity:.45}
-#gx-tip{position:fixed;z-index:420;background:#0B0E24;border:1px solid var(--border2);border-radius:12px;padding:11px 13px;min-width:220px;box-shadow:0 18px 40px -12px rgba(0,0,0,.8);pointer-events:none;opacity:0;transition:opacity .12s}
+#gx-tip{position:fixed;z-index:420;background:#0A0A0B;border:1px solid var(--border2);border-radius:12px;padding:11px 13px;min-width:220px;box-shadow:0 18px 40px -12px rgba(0,0,0,.8);pointer-events:none;opacity:0;transition:opacity .12s}
 #gx-tip.on{opacity:1}
 #gx-tip h4{margin:0 0 8px;font:600 12.5px 'Inter',sans-serif;color:var(--text)}
 #gx-tip .t{display:grid;grid-template-columns:10px 1fr auto auto;gap:8px;align-items:center;font-size:12px;padding:3px 0;color:var(--text2)}
