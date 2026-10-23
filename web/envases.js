@@ -141,11 +141,13 @@ function _evRender(){
   var deudores=_evMotoLista().filter(function(x){ return x.debe>0; }).length;
   var sem='Semana del '+parseInt(a.slice(8),10)+(a.slice(5,7)!==z.slice(5,7)?' de '+ENV_MES[parseInt(a.slice(5,7),10)-1]:'')+' al '+parseInt(z.slice(8),10);
   root.innerHTML=
-    '<div class="ev-wrap">'+
-      '<div class="ev-top"><div class="ev-vtabs"><button class="ev-vtab'+(ENV.vista==='ctl'?' on':'')+'" onclick="envVista(\'ctl\')">Control semanal</button>'+
+    '<div class="ev-wrap"><div class="sal2-pnl ev-pnl">'+
+      '<div class="sal2-fl"><div class="sal2-seg ev-vtabs"><button class="ev-vtab'+(ENV.vista==='ctl'?' on':'')+'" onclick="envVista(\'ctl\')">Control semanal</button>'+
         '<button class="ev-vtab'+(ENV.vista==='mot'?' on':'')+'" onclick="envVista(\'mot\')">Motorizados'+(deudores?' <b>'+deudores+'</b>':'')+'</button>'+
         '<button class="ev-vtab'+(ENV.vista==='pfn'?' on':'')+'" onclick="envVista(\'pfn\')">PFN</button></div>'+
-        '<span class="ev-sp"></span><button class="btn btn-ghost btn-sm" onclick="envPrecios()">Precios</button></div>'+
+        '<span class="ev-acts"><button class="sal2-exp" onclick="envPrecios()">Precios</button>'+
+          '<button id="btn-export-envases" class="sal2-exp" onclick="exportEnvases()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar</button></span></div>'+
+      '<div class="ev-well">'+
       (ENV.vista==='ctl'
         ? '<div class="ev-wk"><button class="ev-nav" title="Semana anterior" onclick="envSemana(-1)">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>'+'</button><b>'+sem+'<small>de '+ENV_MES[parseInt(z.slice(5,7),10)-1]+' de '+z.slice(0,4)+'</small></b>'+
           '<button class="ev-nav" title="Semana siguiente" onclick="envSemana(1)">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>'+'</button>'+
@@ -156,7 +158,8 @@ function _evRender(){
             '<div class="ev-t" id="ev-t"></div>'+
             '<div class="ev-ft">Conteo = Palet + Cámara + PFN + lo que deben los motorizados (columnas PFN y Moto). Esperado = conteo inicial + entradas − devoluciones − ventas, de los días anteriores. Diferencia = conteo del día − esperado. Dentro de una familia, las diferencias de llenas y vacías se compensan. ENT y DEV de Marcaje se suman solos (aparecen como + debajo del número).</div></div>'
         : ENV.vista==='pfn' ? '<div id="ev-pfn"></div>' : '<div id="ev-mot"></div>')+
-    '</div>';
+      '</div>'+
+    '</div></div>';
   if(ENV.vista==='ctl'){ _evDias(); _evTabla(); _evResumen(); }
   else if(ENV.vista==='pfn') _evPfnPinta();
   else _evMotPinta();

@@ -3652,3 +3652,14 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .sal2-pnl .dc-well .dc-card:last-child{margin-bottom:0}
 .sal2-pnl .dc-well .dc-edit{border-radius:14px}
 @media (max-width:700px){ .sal2-pnl .dc-well{margin:0 8px 8px;padding:8px} .sal2-pnl .dc-tabs{overflow:auto} }
+
+/* Envases: pestañas, Precios y Exportar en el panel violeta; el contenido dentro de la caja oscura */
+.sal2-pnl .ev-vtabs{width:auto;max-width:100%;margin:0}
+.sal2-pnl .ev-vtab{border:0}
+.sal2-pnl .ev-vtab b{font:700 10.5px 'Inter',sans-serif;padding:1px 7px;border-radius:99px;background:rgba(123,97,239,.28);color:#cfc4ff}
+.sal2-pnl .ev-vtab.on b{background:#ECE8FF !important;color:#4a34b5}
+.sal2-pnl .ev-acts{margin-left:auto;display:flex;gap:8px}
+.sal2-pnl .ev-acts .sal2-exp{margin-left:0}
+.sal2-pnl .ev-well{background:#0A0A0B;border-radius:22px;margin:0 18px 18px;padding:14px}
+.sal2-pnl .ev-well .ev-card:last-child{margin-bottom:0}
+@media (max-width:700px){ .sal2-pnl .ev-well{margin:0 8px 8px;padding:8px} .sal2-pnl .ev-acts{margin-left:0} }
