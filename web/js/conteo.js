@@ -74,20 +74,23 @@ function renderConteo(r){
   var totalUnd=r.data.reduce(function(a,x){return a+x.total;},0);
   var skusU=new Set(r.data.map(function(x){ return x.sku; }));
 
+  var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   document.getElementById('conteo-root').innerHTML=
     '<div class="stats">'+
       '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg></div><div class="stat-label">Registros</div><div class="stat-val-row"><div class="stat-val" id="cnt-stat-total">'+r.data.length+'</div><span class="stat-unit-pill">filas</span></div></div>'+
       '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="stat-label">SKUs únicos</div><div class="stat-val-row"><div class="stat-val" id="cnt-stat-skus" style="color:var(--blue)">'+skusU.size+'</div><span class="stat-unit-pill">SKUs</span></div></div>'+
       '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="stat-label">Unidades contadas</div><div class="stat-val-row"><div class="stat-val" id="cnt-stat-und" style="color:var(--ok)">'+fmt(totalUnd)+'</div><span class="stat-unit-pill">und.</span></div></div>'+
     '</div>'+
-    '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
+    '<div class="sal2-pnl">'+
+    '<div class="sal2-fl">'+
       '<div style="display:flex;gap:6px;align-items:center">'+
-        '<input class="filter-inp" id="cnt-busq" placeholder="Buscar SKU, EAN, producto..." style="width:220px" oninput="filterConteo()"/>'+
+        '<div class="sal2-srch"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="cnt-busq" placeholder="Buscar SKU, EAN, producto..." oninput="filterConteo()"/></div>'+
         '<button class="cam-btn" title="Escanear" onclick="openScannerConteoFiltro()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="11"/></svg></button>'+
         '<button class="btn btn-danger btn-sm" id="btn-eliminar-ean-dia" style="display:none;white-space:nowrap" onclick="eliminarEANDia()">'+ICO('x',13)+'Eliminar EAN del día</button>'+
       '</div>'+
       _fechaFiltroHTML('cnt','filterConteo','cntRangoCambio')+
-      '<span class="result-count" id="cnt-count"></span>'+
+      '<span class="sal2-cnt" id="cnt-count"></span>'+
+      '<button id="btn-export-conteo" class="sal2-exp" onclick="exportConteo()">'+icoExportar+'Exportar</button>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
       '<thead><tr>'+
@@ -96,7 +99,8 @@ function renderConteo(r){
         '<th class="r col-hide-mobile">UND PACKS</th><th class="r col-hide-mobile">UNDS</th><th class="r">TOTAL</th><th class="c">Editar</th><th class="c">-</th>'+
       '</tr></thead>'+
       '<tbody id="conteo-tbody"></tbody>'+
-    '</table></div>';
+    '</table></div>'+
+    '</div>';
   _initFiltroFecha('cnt','filterConteo',{page:'conteo'});
   filterConteo();
 }
@@ -197,7 +201,7 @@ function _cntGrupo(g){
     '<td class="r col-hide-mobile" style="font-weight:700">'+fmt(g.totalUnd)+'</td>'+
     '<td class="r col-hide-mobile" style="font-weight:700;color:var(--text2)">'+fmt(g.totalUnds||0)+'</td>'+
     '<td class="r" style="font-weight:700;font-size:15px;color:var(--ok)">'+fmt(g.totalUnd+(g.totalUnds||0))+'</td>'+
-    '<td class="c" colspan="2"></td>'+
+    '<td class="c" colspan="'+(window.matchMedia('(max-width:900px)').matches?2:3)+'"></td>'+
   '</tr>';
   // Un solo registro: se muestra de una vez. Varios: se crean al abrir el producto.
   if(n===1) html+=_cntFila(g.filas[0],gid,'table-row');

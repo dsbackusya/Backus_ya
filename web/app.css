@@ -3498,7 +3498,7 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .sal2-pnl .sal2-seg button span{font:600 10.5px 'Inter',sans-serif;opacity:1;padding:1px 7px;border-radius:99px;background:rgba(255,255,255,.08);color:var(--text2)}
 .sal2-pnl .sal2-seg button.on span{background:#ECE8FF;color:#4a34b5}
 .sal2-pnl .sal2-srch{flex:0 1 300px;min-width:200px;margin-left:4px}
-.sal2-pnl #sal-busq,.sal2-pnl #ent-busq,.sal2-pnl #canc-busq,.sal2-pnl #stock-busq,.sal2-pnl #val-search{height:38px !important;border-radius:13px !important;background:rgba(0,0,0,.35) !important;border:1px solid rgba(255,255,255,.07) !important;font-size:12px}
+.sal2-pnl #sal-busq,.sal2-pnl #ent-busq,.sal2-pnl #canc-busq,.sal2-pnl #stock-busq,.sal2-pnl #val-search,.sal2-pnl #mt-busq,.sal2-pnl #mae-busq,.sal2-pnl #mc-busq,.sal2-pnl #cnt-busq{height:38px !important;border-radius:13px !important;background:rgba(0,0,0,.35) !important;border:1px solid rgba(255,255,255,.07) !important;font-size:12px}
 .sal2-pnl .fh-btn{height:38px;border-radius:13px;border:0 !important;background:#1A1A1D;color:var(--text2);box-shadow:0 6px 14px -8px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.04)}
 .sal2-pnl .fh-btn.on,.sal2-pnl .fh-btn.on:hover{background:rgba(123,97,239,.30) !important;color:#fff !important;box-shadow:inset 0 0 0 1px rgba(156,134,246,.55) !important}
 .sal2-pnl .fh-rng{border-radius:13px;border:0 !important;background:#1A1A1D}
@@ -3540,7 +3540,7 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 #salidas-root .sal2-sum{margin-bottom:30px}
 @media (max-width:700px){ #salidas-root .sal2-sum{margin-bottom:20px} }
 
-.sal2-pnl #sal-busq:focus,.sal2-pnl #ent-busq:focus,.sal2-pnl #canc-busq:focus,.sal2-pnl #stock-busq:focus,.sal2-pnl #val-search:focus{border-color:rgba(156,134,246,.6) !important}
+.sal2-pnl #sal-busq:focus,.sal2-pnl #ent-busq:focus,.sal2-pnl #canc-busq:focus,.sal2-pnl #stock-busq:focus,.sal2-pnl #val-search:focus,.sal2-pnl #mt-busq:focus,.sal2-pnl #mae-busq:focus,.sal2-pnl #mc-busq:focus,.sal2-pnl #cnt-busq:focus{border-color:rgba(156,134,246,.6) !important}
 .sal-est.cx i{background:#F0524F;box-shadow:0 0 0 3px rgba(240,82,79,.2)}
 .sal-est.cx{color:#ff8d8a}
 #entradas-root .ent-sum,#cancelados-root .stats{margin-bottom:30px}
@@ -3613,3 +3613,30 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .sal2-pnl #val-search-row>div{flex:0 0 240px !important;min-width:200px !important}
 #stock-root .stk-sum{margin-bottom:30px}
 @media (max-width:700px){ #stock-root .stk-sum{margin-bottom:20px} }
+
+/* M-T, Maestro, Maestro de conteo y Conteo en el mismo panel */
+#mt-root .sal2-sum,#maestro-root .stats,#mconteo-root .stats,#conteo-root .stats{margin-bottom:30px}
+@media (max-width:700px){ #mt-root .sal2-sum,#maestro-root .stats,#mconteo-root .stats,#conteo-root .stats{margin-bottom:20px} }
+.sal2-pnl .cam-btn{height:38px;width:42px;border-radius:13px;border:0;background:#1A1A1D;color:var(--text2);box-shadow:0 6px 14px -8px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.04);display:inline-flex;align-items:center;justify-content:center}
+.sal2-pnl .cam-btn:hover{background:#26262A;color:#fff}
+.sal2-pnl .cam-btn svg{width:18px;height:18px}
+.sal2-pnl .table-wrap .btn-ghost{background:#26262A;border:1px solid rgba(255,255,255,.08);border-radius:9px}
+.sal2-pnl .table-wrap .btn-ghost:hover{background:#34343A}
+.sal2-pnl .table-wrap .btn-danger{border-radius:9px}
+/* Conteo: producto agrupado y sus conteos */
+.sal2-pnl #conteo-tbody tr[id^="cgh-"]{background:#141416 !important}
+.sal2-pnl #conteo-tbody tr[class^="cg-rows-"]{background:#0F0F11 !important}
+.sal2-pnl #conteo-tbody tr[class^="cg-rows-"]:hover{background:#17171A !important}
+
+/* M-T: movimientos como filas redondeadas */
+.sal2-pnl .mt2-tw{background:#0A0A0B;border:0;border-radius:22px;margin:0 18px 18px;padding:6px 8px 4px;overflow:visible}
+.sal2-pnl .mt2-tr.mt2-h{background:none;border:0;padding:0 18px}
+.sal2-pnl .mt2-tr.mt2-row{background:#141416;border:0;border-radius:14px;margin-bottom:6px;padding:0 18px;min-height:62px}
+.sal2-pnl .mt2-row:hover{background:#1A1A1D}
+.sal2-pnl .mt2-grp{background:none;border:0;margin:12px 0 6px;padding:0 10px;min-height:0}
+.sal2-pnl .mt2-ib{background:#26262A;border-color:rgba(255,255,255,.08);border-radius:9px}
+.sal2-pnl .mt2-ib:hover{background:#34343A}
+.sal2-pnl .mt2-ib.d:hover{background:rgba(240,82,79,.18);border-color:rgba(240,82,79,.4)}
+.sal2-pnl .mt2-vacio-t{color:var(--text3)}
+
+.sal2-pnl #mt-est-seg button.on,.sal2-pnl #mt-est-seg button.on:hover{background:rgba(123,97,239,.30) !important;color:#fff !important;font-weight:600;box-shadow:inset 0 0 0 1px rgba(156,134,246,.55) !important}

@@ -88,16 +88,20 @@ function renderMT(r){
   DATA.mt=r.data;
   _MT_TIPO=''; _MT_EST='';
   var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+  var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   document.getElementById('mt-root').innerHTML=
     '<div class="sal2-sum mt2-sum" id="mt-kpis"></div>'+
+    '<div class="sal2-pnl">'+
     '<div class="sal2-fl">'+
-      '<div class="sal2-srch">'+icoBuscar+'<input id="mt-busq" placeholder="Buscar SKU, producto o motivo…" oninput="filterMT()"/></div>'+
-      _fechaFiltroHTML('mt','filterMT','mtRangoCambio')+
       '<div class="sal2-seg" id="mt-tipo-seg"></div>'+
       '<div class="sal2-seg" id="mt-est-seg"></div>'+
+      '<div class="sal2-srch">'+icoBuscar+'<input id="mt-busq" placeholder="Buscar SKU, producto o motivo…" oninput="filterMT()"/></div>'+
+      _fechaFiltroHTML('mt','filterMT','mtRangoCambio')+
       '<span class="sal2-cnt" id="mt-count"></span>'+
+      '<button id="btn-export-mt" class="sal2-exp" onclick="exportMT()">'+icoExportar+'Exportar</button>'+
     '</div>'+
-    '<div class="mt2-tw" id="mt-list"></div>';
+    '<div class="mt2-tw" id="mt-list"></div>'+
+    '</div>';
   _initFiltroFecha('mt','filterMT',{page:'mt'});
   filterMT();
 }

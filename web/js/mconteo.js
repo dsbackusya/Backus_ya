@@ -41,20 +41,24 @@ function renderMconteo(r){
   var skus={}; MCONTEO.data.forEach(function(m){ skus[m.sku]=true; });
   var nSku=Object.keys(skus).length;
   var sinProd=MCONTEO.data.filter(function(m){return !m.producto;}).length;
+  var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   document.getElementById('mconteo-root').innerHTML=
     '<div class="stats">'+
       '<div class="stat-card"><div class="stat-ico">'+ico+'</div><div class="stat-label">Códigos EAN</div><div class="stat-val-row"><div class="stat-val">'+fmt(MCONTEO.data.length)+'</div><span class="stat-unit-pill">filas</span></div></div>'+
       '<div class="stat-card"><div class="stat-ico">'+ico+'</div><div class="stat-label">SKU distintos</div><div class="stat-val-row"><div class="stat-val">'+fmt(nSku)+'</div><span class="stat-unit-pill">sku</span></div></div>'+
       '<div class="stat-card"><div class="stat-ico">'+ico+'</div><div class="stat-label">Sin nombre de producto</div><div class="stat-val-row"><div class="stat-val" style="color:'+(sinProd?'var(--warn)':'inherit')+'">'+fmt(sinProd)+'</div><span class="stat-unit-pill">filas</span></div></div>'+
     '</div>'+
-    '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
-      '<input class="filter-inp" id="mc-busq" placeholder="Buscar EAN, SKU, SAP o producto..." style="width:300px" oninput="filterMconteo()"/>'+
-      '<span class="result-count" id="mc-count"></span>'+
+    '<div class="sal2-pnl">'+
+    '<div class="sal2-fl">'+
+      '<div class="sal2-srch"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="mc-busq" placeholder="Buscar EAN, SKU, SAP o producto..." oninput="filterMconteo()"/></div>'+
+      '<span class="sal2-cnt" id="mc-count"></span>'+
+      '<button id="btn-export-mconteo" class="sal2-exp" onclick="exportMconteo()">'+icoExportar+'Exportar</button>'+
     '</div>'+
     '<div class="table-wrap"><table style="min-width:0">'+
       '<thead><tr><th>EAN</th><th>SKU</th><th class="col-hide-mobile">SAP</th><th>Producto</th><th class="r">Multiplicador</th><th class="c">Acciones</th></tr></thead>'+
       '<tbody id="mconteo-tbody"></tbody>'+
-    '</table></div>';
+    '</table></div>'+
+    '</div>';
   filterMconteo();
 }
 

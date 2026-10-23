@@ -60,6 +60,7 @@ function renderMaestro(r){
     '</div>';
   }
 
+  var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   document.getElementById('maestro-root').innerHTML=
     panel+
     '<div class="stats">'+
@@ -67,14 +68,17 @@ function renderMaestro(r){
       '<div class="stat-card"><div class="stat-ico">'+ico+'</div><div class="stat-label">Salidas SIN SKU</div><div class="stat-val-row"><div class="stat-val" style="color:'+(filasSin?'var(--warn)':'var(--ok,inherit)')+'">'+filasSin+'</div><span class="stat-unit-pill">filas</span></div></div>'+
       '<div class="stat-card"><div class="stat-ico">'+ico+'</div><div class="stat-label">SKU que no están en Stock</div><div class="stat-val-row"><div class="stat-val" style="color:'+(fueraStock?'var(--warn)':'inherit')+'">'+fueraStock+'</div><span class="stat-unit-pill">filas</span></div></div>'+
     '</div>'+
-    '<div class="filters" style="flex-wrap:wrap;gap:8px;align-items:center">'+
-      '<input class="filter-inp" id="mae-busq" placeholder="Buscar descripción o SKU..." style="width:280px" oninput="filterMaestro()"/>'+
-      '<span class="result-count" id="mae-count"></span>'+
+    '<div class="sal2-pnl">'+
+    '<div class="sal2-fl">'+
+      '<div class="sal2-srch"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="mae-busq" placeholder="Buscar descripción o SKU..." oninput="filterMaestro()"/></div>'+
+      '<span class="sal2-cnt" id="mae-count"></span>'+
+      '<button id="btn-export-maestro" class="sal2-exp" onclick="exportMaestro()">'+icoExportar+'Exportar</button>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
       '<thead><tr><th>Descripción del pedido</th><th>SKU</th><th>Producto del SKU (Stock)</th><th class="r">Und. por pack</th><th class="c">Acciones</th></tr></thead>'+
       '<tbody id="maestro-tbody"></tbody>'+
-    '</table></div>';
+    '</table></div>'+
+    '</div>';
   filterMaestro();
 }
 
