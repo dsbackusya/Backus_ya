@@ -19,7 +19,11 @@ var DCX_GR0 = [
     { sku:3500240, code:'CJPL330',       ref:'Caja 3xx',              cz:'b', caja:1 },
     { sku:3502226, code:'BOTAMB305R',    ref:'Botella 305',           cz:'',  main:1 },
     { sku:3501495, code:'BOTVRDPC310R',  ref:'Botellas Pilsen 3xx',   cz:'g' },
-    { sku:3501491, code:'BOTAMCUS310R',  ref:'Botellas Cusqueña 3xx', cz:'p' } ] }
+    { sku:3501491, code:'BOTAMCUS310R',  ref:'Botellas Cusqueña 3xx', cz:'p' } ] },
+  /* Barriles: se cuentan por unidad; no pasan al módulo Envases ni se valorizan (sin SKU ni precio por ahora). */
+  { g:'BARRILES · 50 L / 30 L', tam:0, mult:1, barril:1, rows:[
+    { sku:'', code:'BARRIL 50 L', ref:'Barriles de 50 L', cz:'' },
+    { sku:'', code:'BARRIL 30 L', ref:'Barriles de 30 L', cz:'' } ] }
 ];
 var DCX_PRECIO0 = { caja:3.8, bot630_1000:0.6, bot310:0.5 };
 var DCX_TIT = { marcaje:'Conciliación de envases', nc:'Orden para nota de crédito', traslado:'Cargo de despacho' };
@@ -61,7 +65,7 @@ function _dcMoney(n){ return 'S/ '+Number(n||0).toFixed(2); }
 function _dcHms(v){ v=String(v||''); return v.length===5 ? v+':00' : v; }
 function _dcSede(){ return String((DCX.d&&DCX.d.sede)||'').toUpperCase(); }
 function _dcGrNuevo(){
-  return DCX_GR0.map(function(g){ return { g:g.g, tam:g.tam, mult:g.mult, rows:g.rows.map(function(r){
+  return DCX_GR0.map(function(g){ return { g:g.g, tam:g.tam, mult:g.mult, barril:g.barril, rows:g.rows.map(function(r){
     return { sku:r.sku, code:r.code, ref:r.ref, cz:r.cz, caja:r.caja, main:r.main, ei:0, di:0, ck:0 }; }) }; });
 }
 /* Como en el Excel: se escribe en CAJAS (Entrega y Devolución) y las botellas se pasan a unidades (× botellas por caja).
@@ -158,7 +162,7 @@ function _dcMarcajeHtml(){
     g.rows.forEach(function(r,ri){
       var id=gi+'_'+ri, q=function(l,p){ return '<div class="dm-q"><span class="dm-lb">'+l+'</span><b id="'+p+id+'">—</b></div>'; };
       h+='<div class="dm-r" data-g="'+gi+'" data-r="'+ri+'">'+
-        '<div class="dm-n"><b>'+r.ref+(r.caja?' <em class="dm-x">× '+g.mult+'</em>':'')+'</b><small>'+r.sku+' · '+r.code+(r.caja?'':' · en cajas')+'</small></div>'+
+        '<div class="dm-n"><b>'+r.ref+(r.caja?' <em class="dm-x">× '+g.mult+'</em>':'')+'</b><small>'+(r.sku?r.sku+' · ':'')+r.code+(r.caja||g.barril?'':' · en cajas')+'</small></div>'+
         celda('Entrega','ei',r.ei)+celda('Devolución','di',r.di)+
         q('ENT','dm-e')+q('DEV','dm-v')+
         '<div class="dm-d" id="dm-d'+id+'">0</div><div class="dm-c" id="dm-c'+id+'">—</div></div>';
@@ -183,17 +187,18 @@ function dcMIn(el){
 function dcCalcM(){
   var tot=0, num=function(n){ return n?n.toLocaleString('es-PE'):'—'; };
   DCX.gr.forEach(function(g,gi){ g.rows.forEach(function(r,ri){
-    var e=_dcEnt(g,r), v=_dcDev(g,r), d=e-v, c=Math.abs(d)*_dcPrecio(g,r); tot+=c;
+    var e=_dcEnt(g,r), v=_dcDev(g,r), d=e-v, c=g.barril?0:Math.abs(d)*_dcPrecio(g,r); tot+=c;
     var id=gi+'_'+ri, ee=document.getElementById('dm-e'+id), ve=document.getElementById('dm-v'+id), de=document.getElementById('dm-d'+id), ce=document.getElementById('dm-c'+id);
     if(!de||!ce) return;
     if(ee) ee.textContent=num(e); if(ve) ve.textContent=num(v);
     de.textContent=d>0?'+'+d:d; de.className='dm-d '+(d===0?'zero':d>0?'neg':'pos');
-    ce.textContent=d===0?'—':_dcMoney(c);
+    ce.textContent=(d===0||g.barril)?'—':_dcMoney(c);
   }); });
   var te=document.getElementById('dm-tot');
   if(te){ te.textContent=_dcMoney(tot); te.className='v '+(tot===0?'zero':'neg'); }
   var h='';
   DCX.gr.forEach(function(g){
+    if(g.barril) return;
     var be=0,bd=0,ce=0,cd=0;
     g.rows.forEach(function(r){ if(r.caja){ ce=r.ei||0; cd=r.di||0; } else { be+=r.ei||0; bd+=r.di||0; } });
     if(!be&&!bd&&!ce&&!cd) return;
@@ -207,6 +212,7 @@ function dcCalcM(){
 function _dcMovs(){
   var out=[];
   DCX.gr.forEach(function(g){
+    if(g.barril) return;
     ['ent','dev'].forEach(function(k){
       var packs=0, und=0, caja=0;
       g.rows.forEach(function(r){
@@ -400,7 +406,7 @@ function dcEditar(id){
   if(d.tipo==='marcaje'){
     DCX.gr=_dcGrNuevo();
     d.lineas.forEach(function(l){ DCX.gr.forEach(function(g){ g.rows.forEach(function(r){
-      if(r.sku!==l.sku||l.suelta||l.sueltaB) return;
+      if(r.sku!==l.sku||r.code!==l.code||l.suelta||l.sueltaB) return;
       if(l.ei!==undefined){ r.ei=l.ei||0; r.di=(l.di||0)+(r.caja?(l.ck||0):0); }       // guardado con el formato nuevo (los cascos de cajas pasan a la devolución)
       else if(r.caja){ r.ei=l.ent||0; r.di=l.dev||0; }                                // documentos anteriores: se pasan a cajas
       else { r.ei=Math.floor((l.ent||0)/g.mult); r.di=Math.floor((l.dev||0)/g.mult); }
