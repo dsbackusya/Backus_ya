@@ -385,7 +385,7 @@ function renderTopbarActions(name){
       '<button class="btn btn-ghost btn-sm" id="btn-oc-validar" onclick="validarRecepcionOC()" style="border-color:var(--accent);color:var(--accent)">'+icoRefresh+'<span class="tb-btn-label"> Validar OC</span></button>':'')+
       '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Exportar órdenes de compra" onclick="exportOC()">'+icoExport+'<span class="tb-btn-label"> Exportar OC</span></button>'+btnRefresh;
   } else if(name==='stock'){
-    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirSKUForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Nuevo SKU</span></button>'+btnExport+btnRefresh;
+    el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirSKUForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Nuevo SKU</span></button>'+btnRefresh; // Exportar vive en el panel de filtros
   } else if(name==='salidas'){
     var btnPedido=(S&&S.rol==='store')?'<button class="btn btn-primary btn-sm" onclick="abrirPedidoManual()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar pedido</span></button>':'';
     el.innerHTML=btnPedido+btnRefresh; // Exportar vive en el panel de filtros de Salidas
@@ -407,8 +407,7 @@ function renderTopbarActions(name){
   } else if(name==='documentos'){
     el.innerHTML=btnRefresh;
   } else if(name==='validacion'){
-    el.innerHTML='<button class="btn btn-ghost btn-sm tb-btn-icon" title="Actualizar" onclick="correrValidacion(true)">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>'+
-      '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Exportar Excel" onclick="exportValidacion()">'+icoExport+'<span class="tb-btn-label"> Exportar Excel</span></button>';
+    el.innerHTML='<button class="btn btn-ghost btn-sm tb-btn-icon" title="Actualizar" onclick="correrValidacion(true)">'+icoRefresh+'<span class="tb-btn-label"> Actualizar</span></button>'; // Exportar vive en el panel de filtros
   } else { el.innerHTML=''; }
 }
 // Capitaliza nombres de página para construir el handler "export<Page>()".

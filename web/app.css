@@ -3498,7 +3498,7 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .sal2-pnl .sal2-seg button span{font:600 10.5px 'Inter',sans-serif;opacity:1;padding:1px 7px;border-radius:99px;background:rgba(255,255,255,.08);color:var(--text2)}
 .sal2-pnl .sal2-seg button.on span{background:#ECE8FF;color:#4a34b5}
 .sal2-pnl .sal2-srch{flex:0 1 300px;min-width:200px;margin-left:4px}
-.sal2-pnl #sal-busq,.sal2-pnl #ent-busq,.sal2-pnl #canc-busq{height:38px !important;border-radius:13px !important;background:rgba(0,0,0,.35) !important;border:1px solid rgba(255,255,255,.07) !important;font-size:12px}
+.sal2-pnl #sal-busq,.sal2-pnl #ent-busq,.sal2-pnl #canc-busq,.sal2-pnl #stock-busq,.sal2-pnl #val-search{height:38px !important;border-radius:13px !important;background:rgba(0,0,0,.35) !important;border:1px solid rgba(255,255,255,.07) !important;font-size:12px}
 .sal2-pnl .fh-btn{height:38px;border-radius:13px;border:0 !important;background:#1A1A1D;color:var(--text2);box-shadow:0 6px 14px -8px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.04)}
 .sal2-pnl .fh-btn.on,.sal2-pnl .fh-btn.on:hover{background:rgba(123,97,239,.30) !important;color:#fff !important;box-shadow:inset 0 0 0 1px rgba(156,134,246,.55) !important}
 .sal2-pnl .fh-rng{border-radius:13px;border:0 !important;background:#1A1A1D}
@@ -3540,7 +3540,7 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 #salidas-root .sal2-sum{margin-bottom:30px}
 @media (max-width:700px){ #salidas-root .sal2-sum{margin-bottom:20px} }
 
-.sal2-pnl #sal-busq:focus,.sal2-pnl #ent-busq:focus,.sal2-pnl #canc-busq:focus{border-color:rgba(156,134,246,.6) !important}
+.sal2-pnl #sal-busq:focus,.sal2-pnl #ent-busq:focus,.sal2-pnl #canc-busq:focus,.sal2-pnl #stock-busq:focus,.sal2-pnl #val-search:focus{border-color:rgba(156,134,246,.6) !important}
 .sal-est.cx i{background:#F0524F;box-shadow:0 0 0 3px rgba(240,82,79,.2)}
 .sal-est.cx{color:#ff8d8a}
 #entradas-root .ent-sum,#cancelados-root .stats{margin-bottom:30px}
@@ -3569,3 +3569,47 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
   .sal2-pnl .ent-cd{background:#141416;border:0;border-radius:14px}
   .sal2-pnl .ent-cd .ent-its{background:#0E0E10;border:0;margin:0 8px 8px;border-radius:10px}
 }
+
+/* Stock y Validación dentro del mismo panel */
+.sal2-pnl .sal2-seg button.active,.sal2-pnl .sal2-seg button.active:hover{background:#fff !important;color:#111 !important;font-weight:600;box-shadow:0 8px 20px -8px rgba(0,0,0,.7)}
+.sal2-pnl .sal2-seg button.active span{background:#ECE8FF;color:#4a34b5}
+.sal2-pnl .sal2-fl select,.sal2-pnl .sal2-fl .inp:not(#val-search){height:38px !important;border-radius:13px !important;background-color:#1A1A1D !important;border:0 !important;color:var(--text2);padding-top:0;padding-bottom:0;
+  box-shadow:0 6px 14px -8px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.04)}
+.sal2-pnl .sal2-fl .btn-primary{height:38px;border-radius:13px;padding:0 18px}
+.sal2-pnl .val-lbl{font:600 10.5px 'Inter',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-left:6px}
+.sal2-pnl .val-sub{padding-top:0;padding-bottom:14px;gap:10px}
+.sal2-pnl #val-filtros .btn{height:34px;border-radius:12px;border:0 !important;background:#1A1A1D;box-shadow:0 6px 14px -8px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.04)}
+.sal2-pnl #val-filtros .btn.active{background:#fff !important;color:#111 !important}
+#val-body.val-cat{padding:0 18px 18px}
+.val-kpis{display:flex;gap:10px;margin-bottom:30px;flex-wrap:wrap;align-items:stretch}
+#val-kpis .vc-kpi-row{margin-bottom:30px}
+.sal2-pnl tbody tr.val-nc{background:rgba(245,165,36,.08) !important}
+
+/* Stock: filas redondeadas, estado con punto */
+.sal2-pnl .stk-tw{background:#0A0A0B;border:0;border-radius:22px;margin:0 18px 18px;padding:10px 8px 4px;overflow:visible}
+.sal2-pnl .stk-t{border-collapse:separate;border-spacing:0 6px}
+.sal2-pnl .stk-t th{background:transparent !important;border:0 !important;padding:10px 14px 4px !important;color:var(--text4) !important}
+.sal2-pnl .stk-t tbody tr{background:#141416;border:0}
+.sal2-pnl .stk-t tbody tr:hover{background:#1A1A1D}
+.sal2-pnl .stk-t td{padding:12px 14px !important;border:0}
+.sal2-pnl .stk-t tbody tr>td:first-child{border-radius:14px 0 0 14px}
+.sal2-pnl .stk-t tbody tr>td:last-child{border-radius:0 14px 14px 0}
+.sal2-pnl .stk-pill{background:none !important;padding:0;display:inline-flex;align-items:center;gap:8px;font-weight:500;font-size:12px;color:var(--text2)}
+.sal2-pnl .stk-pill::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--text4);flex:0 0 auto}
+.sal2-pnl .stk-pill.ok{color:var(--text)}
+.sal2-pnl .stk-pill.ok::before{background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.12)}
+.sal2-pnl .stk-pill.ng{color:#ff8d8a}
+.sal2-pnl .stk-pill.ng::before{background:#F0524F;box-shadow:0 0 0 3px rgba(240,82,79,.2)}
+.sal2-pnl .stk-ed{background:#26262A;border-color:rgba(255,255,255,.08);border-radius:9px}
+.sal2-pnl .stk-ed:hover{background:#34343A}
+@media (max-width:820px){
+  .sal2-pnl .stk-cards{padding:0 12px 12px}
+  .sal2-pnl .stk-cd{background:#141416;border:0;border-radius:14px}
+}
+
+.sal2-pnl .sal2-srch{flex:1 1 150px;max-width:300px;min-width:140px}
+.sal2-pnl .sal2-seg button{padding:0 18px}
+.sal2-pnl #val-search-row{flex-wrap:nowrap !important;flex:0 1 auto}
+.sal2-pnl #val-search-row>div{flex:0 0 240px !important;min-width:200px !important}
+#stock-root .stk-sum{margin-bottom:30px}
+@media (max-width:700px){ #stock-root .stk-sum{margin-bottom:20px} }

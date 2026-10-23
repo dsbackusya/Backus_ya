@@ -298,6 +298,7 @@ function renderStock(r){
   var seg=function(id,val,txt,n){return '<button class="stk-sb'+(val===''?' active':'')+'" id="'+id+'" onclick="setStockFiltroEstado(\''+val+'\')">'+txt+'<span>'+n+'</span></button>';};
   var leg=function(val,color,n,txt){return '<span onclick="setStockFiltroEstado(\''+val+'\')"><em style="background:'+color+'"></em><b>'+n+'</b> '+txt+'</span>';};
 
+  var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   document.getElementById('stock-root').innerHTML=
     '<div class="stk-sum">'+
       '<div class="stk-card"><div class="stk-k">Salud del inventario</div>'+
@@ -307,18 +308,21 @@ function renderStock(r){
       '<div class="stk-card"><div class="stk-k">Unidades en stock</div><div class="stk-v">'+fmt(totalUnd)+'<small>und.</small></div><div class="stk-n">Solo stock positivo</div></div>'+
       '<div class="stk-card"><div class="stk-k">Costo total</div><div class="stk-v">S/ '+costoK+'</div><div class="stk-n">S/ '+fmt(Math.round(costoTotal*10)/10)+' en inventario</div></div>'+
     '</div>'+
-    '<div class="stk-fl">'+
-      '<div class="stk-srch">'+icoBuscar+'<input id="stock-busq" placeholder="Buscar SKU o producto…" oninput="filterStock()"/></div>'+
+    '<div class="sal2-pnl">'+
+    '<div class="sal2-fl">'+
+      '<div class="sal2-seg">'+seg('sbtn-todos','','Todos',rows.length)+seg('sbtn-con','con','Con stock',conStock)+seg('sbtn-sin','sin','Sin stock',sinStock)+seg('sbtn-neg','neg','Negativos',negativos)+'</div>'+
+      '<div class="sal2-srch">'+icoBuscar+'<input id="stock-busq" placeholder="Buscar SKU o producto…" oninput="filterStock()"/></div>'+
       '<select class="stk-sel" id="stock-cat" onchange="filterStock()"><option value="">Todas las categorías</option>'+catOpts+'</select>'+
       '<select class="stk-sel" id="stock-mar" onchange="filterStock()"><option value="">Todas las marcas</option>'+marOpts+'</select>'+
-      '<div class="stk-seg">'+seg('sbtn-todos','','Todos',rows.length)+seg('sbtn-con','con','Con stock',conStock)+seg('sbtn-sin','sin','Sin stock',sinStock)+seg('sbtn-neg','neg','Negativos',negativos)+'</div>'+
-      '<span class="stk-cnt" id="stock-count"></span>'+
+      '<span class="sal2-cnt" id="stock-count"></span>'+
+      '<button id="btn-export-stock" class="sal2-exp" onclick="exportStock()">'+icoExportar+'Exportar</button>'+
     '</div>'+
     '<div class="stk-tw"><table class="stk-t">'+
       '<thead><tr><th>Producto</th><th class="r">Movimientos</th><th class="r">Stock</th><th class="r">Pack</th><th class="r">Costo</th><th>Estado</th><th></th></tr></thead>'+
       '<tbody id="stock-tbody"></tbody>'+
     '</table></div>'+
-    '<div class="stk-cards" id="stock-cards"></div>';
+    '<div class="stk-cards" id="stock-cards"></div>'+
+    '</div>';
 
   if(!document.getElementById('stk-dr')){
     var dr=document.createElement('div'); dr.id='stk-dr';

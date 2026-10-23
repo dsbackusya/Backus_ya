@@ -30,22 +30,24 @@ function _valFechaHoy(){
 
 function renderValidacionShell(){
   var root=document.getElementById('validacion-root');
+  var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   root.innerHTML=
-    '<div>'+
-    // Selector de fecha + botón Validar
-    '<div style="display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap">'+
-      '<div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Fecha de conteo</div>'+
+    '<div id="val-kpis"></div>'+
+    '<div class="sal2-pnl">'+
+    '<div class="sal2-fl">'+
+      '<div class="sal2-seg">'+
+        '<button id="val-tab-sku" class="on" onclick="setValTab(\'sku\')">Por SKU</button>'+
+        '<button id="val-tab-cat" onclick="setValTab(\'categoria\')">Por Categoría</button>'+
+      '</div>'+
+      '<span class="val-lbl">Fecha de conteo</span>'+
       '<input type="date" id="val-fecha" class="inp" style="width:160px" value="'+VAL_FECHA+'"/>'+
       '<button class="btn btn-primary btn-sm" onclick="correrValidacion()">Validar</button>'+
       '<span id="val-status" style="font-size:12px;color:var(--text3);font-family:var(--font-mono)"></span>'+
+      '<button class="sal2-exp" onclick="exportValidacion()">'+icoExportar+'Exportar</button>'+
     '</div>'+
-    // Tabs
-    '<div style="display:flex;gap:2px;margin-bottom:16px;border-bottom:2px solid var(--border)">'+
-      '<button id="val-tab-sku" onclick="setValTab(\'sku\')" style="padding:8px 16px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;color:#fff;border-bottom:2px solid #fff;margin-bottom:-2px">Por SKU</button>'+
-      '<button id="val-tab-cat" onclick="setValTab(\'categoria\')" style="padding:8px 16px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-2px">Por Categoría</button>'+
-    '</div>'+
+    '<div class="sal2-fl val-sub" id="val-sub">'+
     // Barra de búsqueda + filtro por Marca (solo visible en tab SKU)
-    '<div id="val-search-row" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">'+
+    '<div id="val-search-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+
       '<div style="position:relative;flex:1;min-width:180px;max-width:340px">'+
         '<svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text4)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
         '<input class="inp" id="val-search" type="search" placeholder="Buscar SKU o descripción…" style="padding-left:32px;font-size:13px" oninput="setValSearch(this.value)"/>'+
@@ -55,12 +57,13 @@ function renderValidacionShell(){
       '</select>'+
     '</div>'+
     // Filtro rápido (solo visible en tab SKU)
-    '<div id="val-filtros" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">'+
+    '<div id="val-filtros" style="display:flex;gap:6px;flex-wrap:wrap">'+
       '<button class="btn btn-ghost btn-sm active" id="vf-all"  onclick="setValFiltro(\'\')">Todos</button>'+
       '<button class="btn btn-ghost btn-sm"         id="vf-diff" onclick="setValFiltro(\'diff\')" style="color:var(--danger);border-color:var(--danger-border)">Solo desvíos</button>'+
       '<button class="btn btn-ghost btn-sm"         id="vf-ok"   onclick="setValFiltro(\'ok\')" style="color:var(--ok);border-color:var(--ok-border)">Solo cuadran</button>'+
       '<button class="btn btn-ghost btn-sm"         id="vf-nc"   onclick="setValFiltro(\'nc\')" style="color:var(--warn);border-color:var(--warn-border)">Sin contar</button>'+
       '<button class="btn btn-ghost btn-sm"         id="vf-ns"   onclick="setValFiltro(\'nostock\')" style="color:var(--text3);border-color:var(--border)">Sin stock</button>'+
+    '</div>'+
     '</div>'+
     '<div id="val-body"></div>'+
     '</div>';
@@ -105,13 +108,12 @@ function correrValidacion(force){
 
 function setValTab(tab){
   VAL_TAB=tab;
-  document.getElementById('val-tab-sku').style.color=tab==='sku'?'#fff':'var(--text3)';
-  document.getElementById('val-tab-sku').style.borderBottomColor=tab==='sku'?'#fff':'transparent';
-  document.getElementById('val-tab-cat').style.color=tab==='categoria'?'#fff':'var(--text3)';
-  document.getElementById('val-tab-cat').style.borderBottomColor=tab==='categoria'?'#fff':'transparent';
+  document.getElementById('val-tab-sku').classList.toggle('on',tab==='sku');
+  document.getElementById('val-tab-cat').classList.toggle('on',tab==='categoria');
   var showSku=tab==='sku';
   document.getElementById('val-filtros').style.display=showSku?'flex':'none';
   document.getElementById('val-search-row').style.display=showSku?'flex':'none';
+  document.getElementById('val-sub').style.display=showSku?'flex':'none';
   renderValBody();
 }
 
@@ -154,6 +156,8 @@ function _poblarMarcas(){
 function renderValBody(){
   var body=document.getElementById('val-body');
   if(!body)return;
+  var kp=document.getElementById('val-kpis'); if(kp) kp.innerHTML='';
+  body.classList.toggle('val-cat',VAL_TAB!=='sku');
   if(!VAL_DATA.length){
     body.innerHTML='<div style="padding:60px;text-align:center;color:var(--text3);font-size:13px">Selecciona una fecha y presiona <strong>Validar</strong></div>';
     return;
@@ -194,8 +198,8 @@ function renderValSKU(body){
   var costoExacto = (costoTotal<0?'-':'')+'S/ '+Math.abs(costoTotal).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
 
   var kpiCardStyle = 'display:flex;flex-direction:column;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 20px;min-height:72px;min-width:110px;';
-  var html=
-    '<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:stretch">'+
+  var kpiHtml=
+    '<div class="val-kpis">'+
       // Cuadran
       '<div style="'+kpiCardStyle+'border-color:var(--ok-border);background:var(--ok-bg)">'+
         '<div style="font-size:24px;font-weight:700;color:var(--ok);line-height:1">'+cuadran+'</div>'+
@@ -241,7 +245,9 @@ function renderValSKU(body){
           '</div>'+
         '</div>'+
       '</div>'+
-    '</div>'+
+    '</div>';
+  var kp=document.getElementById('val-kpis'); if(kp) kp.innerHTML=kpiHtml;
+  var html=
     '<div class="table-wrap" style="overflow-x:auto"><table style="min-width:780px"><thead><tr>'+
       '<th style="min-width:100px">SKU</th><th style="min-width:180px">Descripción</th><th class="c" style="min-width:100px">Categoría</th>'+
       '<th class="r" style="min-width:90px" title="Conteo del día anterior">C. Anterior</th>'+
@@ -263,7 +269,7 @@ function renderValSKU(body){
       var estado, bc, diffTxt, rowStyle='';
       if(r.sinContar){
         estado=ICO('bolt',12)+'Sin contar'; bc='badge-warn'; diffTxt='—';
-        rowStyle=' style="background:var(--warn-bg)"';
+        rowStyle=' class="val-nc"';
       } else if(r.diff===null){
         estado='Sin conteo ant.'; bc='badge-neutral'; diffTxt='—';
       } else if(r.diff===0){
@@ -315,7 +321,9 @@ function renderValSKU(body){
   html+='</tbody></table></div>';
   body.innerHTML=html;
 
-  // Event delegation — evita onclick inline con datos de usuario (XSS)
+  // Event delegation — evita onclick inline con datos de usuario (XSS); se registra una sola vez
+  if(body._valDel) return;
+  body._valDel=true;
   body.addEventListener('click', function(e) {
     var cell = e.target.closest('.val-mov-cell');
     if (cell) { abrirModalMov(cell.dataset.tipo, cell.dataset.sku); return; }
@@ -328,7 +336,8 @@ function renderValSKU(body){
 /* ── Vista Árbol de Descomposición (Por Categoría) — única vista ── */
 function renderValCat(body){
   _vcInjectCss();
-  body.innerHTML='<div id="vc-kpi-row" class="vc-kpi-row"></div><div id="vc-tree-root"></div><div id="vc-stats" class="vc-stats"></div>';
+  body.innerHTML='<div id="vc-tree-root"></div><div id="vc-stats" class="vc-stats"></div>';
+  var kp=document.getElementById('val-kpis'); if(kp) kp.innerHTML='<div id="vc-kpi-row" class="vc-kpi-row"></div>';
   renderValKpis(true);
   renderValTree(document.getElementById('vc-tree-root'),true);
   renderValStats();
