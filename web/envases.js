@@ -137,7 +137,7 @@ function _evRender(){
   var root=document.getElementById('envases-root'); if(!root||!ENV.d) return;
   var m=ENV.m, a=m.days[0], z=m.days[6];
   var deudores=_evMotoLista().filter(function(x){ return x.debe>0; }).length;
-  var sem='Semana del '+parseInt(a.slice(8),10)+(a.slice(5,7)!==z.slice(5,7)?' de '+ENV_MES[parseInt(a.slice(5,7),10)-1]:'')+' al '+parseInt(z.slice(8),10)+' de '+ENV_MES[parseInt(z.slice(5,7),10)-1];
+  var sem='Semana del '+parseInt(a.slice(8),10)+(a.slice(5,7)!==z.slice(5,7)?' de '+ENV_MES[parseInt(a.slice(5,7),10)-1]:'')+' al '+parseInt(z.slice(8),10);
   root.innerHTML=
     '<div class="ev-wrap">'+
       '<div class="ev-top"><div class="ev-vtabs"><button class="ev-vtab'+(ENV.vista==='ctl'?' on':'')+'" onclick="envVista(\'ctl\')">Control semanal</button>'+
@@ -145,10 +145,10 @@ function _evRender(){
         '<button class="ev-vtab'+(ENV.vista==='pfn'?' on':'')+'" onclick="envVista(\'pfn\')">PFN</button></div>'+
         '<span class="ev-sp"></span><button class="btn btn-ghost btn-sm" onclick="envPrecios()">Precios</button></div>'+
       (ENV.vista==='ctl'
-        ? '<div class="ev-wk"><button class="ev-nav" title="Semana anterior" onclick="envSemana(-1)">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>'+'</button><b>'+sem+'</b>'+
-          '<button class="ev-nav" title="Semana siguiente" onclick="envSemana(1)">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>'+'</button></div>'+
-          '<div class="ev-days" id="ev-days"></div>'+
-          '<div class="ev-leg"><span><i></i>el día tiene conteo</span><span>El conteo de un día se hace al empezar el día y se compara con los movimientos de los días anteriores. El primer conteo de la semana es el inicial.</span></div>'+
+        ? '<div class="ev-wk"><button class="ev-nav" title="Semana anterior" onclick="envSemana(-1)">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>'+'</button><b>'+sem+'<small>de '+ENV_MES[parseInt(z.slice(5,7),10)-1]+' de '+z.slice(0,4)+'</small></b>'+
+          '<button class="ev-nav" title="Semana siguiente" onclick="envSemana(1)">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>'+'</button>'+
+          '<div class="ev-days" id="ev-days"></div></div>'+
+          '<div class="ev-leg"><span>El conteo de un día se hace al empezar el día y se compara con los movimientos de los días anteriores. El primer conteo de la semana es el inicial.</span></div>'+
           '<div class="evm2" id="ev-merge"></div>'+
           '<div class="ev-card"><div class="ev-k" style="margin-bottom:10px" id="ev-dk"></div><table class="ev-df"><thead><tr><th>Cierre</th><th class="r">Und.</th><th>Estado</th><th class="r">Precio</th></tr></thead><tbody id="ev-df"></tbody><tfoot><tr><td colspan="3">Total</td><td class="r" id="ev-dt"></td></tr></tfoot></table></div>'+
           '<div class="ev-card"><div class="ev-h"><span class="t">Movimientos y conteo</span><span class="s" id="ev-hd"></span><span class="ev-sp"></span><button class="btn btn-primary" id="ev-bc" onclick="envContar()"></button></div>'+
@@ -167,7 +167,14 @@ function envMet(x){ ENV.met=x; _evMerge(); }
 function _evDias(){
   var m=ENV.m, el=document.getElementById('ev-days'); if(!el) return;
   el.innerHTML=m.days.map(function(dia,i){
-    return '<div class="ev-d'+(i===ENV.sel?' on':'')+(dia===_evHoy()?' hoy':'')+'" onclick="envSel('+i+')">'+(m.C[i].has?'<i></i>':'')+ENV_DN[i]+'<b>'+parseInt(dia.slice(8),10)+'</b>'+(i===m.b?'<small>inicial</small>':'')+'</div>';
+    var est;
+    if(i===m.b) est='<span class="ev-st ini">Inicial</span>';
+    else if(m.b>=0&&i>m.b&&m.C[i].has){
+      var o=_evDifs(i), hay=false, k; for(k in o) if(o[k]) hay=true;
+      if(!hay) est='<span class="ev-st ok">Cuadra</span>';
+      else { var v=_evTotDif(o).v; est=v?'<span class="ev-st '+(v<0?'f':'s')+'">'+(v>0?'+':'')+_evMoney(v)+'</span>':'<span class="ev-st w">Revisar</span>'; }
+    } else est='<span class="ev-st no">sin conteo</span>';
+    return '<div class="ev-d'+(i===ENV.sel?' on':'')+(dia===_evHoy()?' hoy':'')+'" onclick="envSel('+i+')"><span class="dn">'+ENV_DN[i]+'</span><b>'+parseInt(dia.slice(8),10)+'</b>'+est+'</div>';
   }).join('');
   var s=ENV.sel; document.getElementById('ev-hd').textContent=ENV_DL[s].charAt(0).toUpperCase()+ENV_DL[s].slice(1)+' '+parseInt(m.days[s].slice(8),10)+' de '+ENV_MES[parseInt(m.days[s].slice(5,7),10)-1]+(s===m.b?' · conteo inicial':'');
   document.getElementById('ev-bc').textContent=m.C[s].has?'Editar conteo del día':'Contar este día';

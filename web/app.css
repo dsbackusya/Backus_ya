@@ -3253,3 +3253,27 @@ body.evc-abierto{overflow:hidden}
 
 .dc-cp{display:flex;flex-direction:column;gap:3px;align-items:stretch}
 .dc-cp small{font:500 10px var(--font-mono);color:var(--text3);text-align:center;white-space:nowrap}
+
+/* Semana: una sola tarjeta con los 7 días y el estado de cada conteo */
+.ev-wk{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:12px 14px;gap:12px;flex-wrap:nowrap;margin-bottom:14px}
+.ev-wk>b{font:600 14px 'DM Sans';white-space:nowrap}
+.ev-wk>b small{display:block;font:500 11px 'DM Sans';color:var(--text3);margin-top:1px}
+.ev-nav{flex:0 0 auto;background:var(--surface2)}
+.ev-days{flex:1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.ev-d{min-width:0;padding:9px 6px 8px;border-radius:14px;background:var(--surface2);text-align:center;transition:.15s}
+.ev-d:hover{border-color:var(--accent-line)}
+.ev-d .dn{font:500 10.5px var(--font-mono);color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.ev-d b{font:700 18px 'DM Sans';margin:1px 0 6px}
+.ev-d.on{border-color:var(--accent);box-shadow:var(--shadow-glow)}
+.ev-d.on .dn{color:var(--accent2)}
+.ev-d.hoy{outline:0}
+.ev-d.hoy::after{content:"hoy";position:absolute;top:-8px;left:50%;transform:translateX(-50%);font:700 9px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;background:var(--accent);color:#fff;padding:1px 7px;border-radius:999px}
+.ev-st{display:block;width:100%;font:600 10.5px 'DM Sans';padding:3px 0;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-st.ini{background:rgba(143,220,235,.12);color:#8FDCEB}
+.ev-st.ok{background:rgba(122,219,179,.13);color:#7ADBB3}
+.ev-st.f{background:rgba(240,163,170,.14);color:#F0A3AA}
+.ev-st.s{background:rgba(143,220,235,.14);color:#8FDCEB}
+.ev-st.w{background:rgba(227,165,58,.14);color:#E3A53A}
+.ev-st.no{color:var(--text4);font-weight:500}
+@media(max-width:980px){.ev-wk{flex-wrap:wrap}.ev-days{flex:1 1 100%;order:3}}
+@media(max-width:560px){.ev-days{gap:5px}.ev-d{padding:8px 2px 6px;border-radius:11px}.ev-d b{font-size:15px}.ev-st{font-size:9px}}
