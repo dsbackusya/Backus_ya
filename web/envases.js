@@ -152,7 +152,6 @@ function _evRender(){
           '<div class="ev-days" id="ev-days"></div></div>'+
           '<div class="ev-leg"><span>El conteo de un día se hace al empezar el día y se compara con los movimientos de los días anteriores. El primer conteo de la semana es el inicial.</span></div>'+
           '<div class="evm2" id="ev-merge"></div>'+
-          '<div class="ev-card"><div class="ev-k" style="margin-bottom:10px" id="ev-dk"></div><table class="ev-df"><thead><tr><th>Cierre</th><th class="r">Und.</th><th>Estado</th><th class="r">Precio</th></tr></thead><tbody id="ev-df"></tbody><tfoot><tr><td colspan="3">Total</td><td class="r" id="ev-dt"></td></tr></tfoot></table></div>'+
           '<div class="ev-card"><div class="ev-h"><span class="t">Movimientos y conteo</span><span class="s" id="ev-hd"></span><span class="ev-sp"></span><button class="btn btn-primary" id="ev-bc" onclick="envContar()"></button></div>'+
             '<div class="ev-t" id="ev-t"></div>'+
             '<div class="ev-ft">Conteo = Palet + Cámara + PFN + lo que deben los motorizados (columnas PFN y Moto). Esperado = conteo inicial + entradas − devoluciones − ventas, de los días anteriores. Diferencia = conteo del día − esperado. Dentro de una familia, las diferencias de llenas y vacías se compensan. ENT y DEV de Marcaje se suman solos (aparecen como + debajo del número).</div></div>'
@@ -230,18 +229,7 @@ function _evRefrescar(){
   _evDias(); _evResumen();
 }
 
-function _evResumen(){
-  var m=ENV.m, s=ENV.sel, cont=m.b>=0&&s>m.b&&m.C[s].has, o=cont?_evDifs(s):{C6:0,B6:0,C3:0,B3:0}, td=_evTotDif(o), h='';
-  Object.keys(ENV_FAM).forEach(function(f){
-    var u=o[f], v=u*_evPrecio(ENV_FAM[f].g);
-    h+='<tr><td>'+ENV_FAM[f].n+'</td><td class="r">'+(cont?u:'—')+'</td><td>'+(cont?'<span class="ev-bd '+(u<0?'f':u>0?'s':'c')+'">'+(u<0?'Faltante':u>0?'Sobrante':'Cuadra')+'</span>':'<span class="ev-bd c" style="opacity:.5">—</span>')+'</td><td class="r '+(v<0?'ev-neg':v>0?'ev-pos':'')+'">'+(!cont||v===0?'—':_evMoney(v))+'</td></tr>';
-  });
-  document.getElementById('ev-df').innerHTML=h;
-  var nom=ENV_DL[s]+' '+parseInt(m.days[s].slice(8),10);
-  document.getElementById('ev-dk').textContent=s===m.b||!cont?'Diferencia por familia':'Diferencia por familia · '+nom;
-  var dt=document.getElementById('ev-dt'); dt.textContent=cont?_evMoney(td.v):'—'; dt.className='r '+(!cont?'':td.v<0?'ev-neg':td.v>0?'ev-pos':'ev-zero');
-  _evMerge();
-}
+function _evResumen(){ _evMerge(); }
 
 /* tarjeta única: resultado del día elegido (izquierda) + faltantes y sobrantes de la semana (derecha) */
 var ENV_FCOL = { C6:'#9480E8', B6:'#F2B04B', C3:'#6FD3F2', B3:'#4ADE9F' };
