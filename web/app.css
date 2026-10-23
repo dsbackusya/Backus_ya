@@ -3350,3 +3350,11 @@ body{ background:linear-gradient(160deg,#161B48 0%,#0E1230 52%,#111437 100%) fix
   border:1px solid var(--border2) !important;
 }
 #canc-busq:focus{ border-color:var(--accent) !important; box-shadow:var(--shadow-glow) !important }
+/* Todos los buscadores: borde fijo, sin animación */
+.filter-inp,input.filter-inp{
+  animation:none !important;
+  background:var(--surface2) !important;
+  border:1px solid var(--border2) !important;
+}
+.filter-inp:hover,input.filter-inp:hover{ background:var(--surface2) !important; border:1px solid var(--accent-line) !important }
+.filter-inp:focus,input.filter-inp:focus{ background:var(--surface2) !important; border:1px solid var(--accent) !important; box-shadow:var(--shadow-glow) !important }
