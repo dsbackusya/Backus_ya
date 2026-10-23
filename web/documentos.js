@@ -108,11 +108,15 @@ function renderDocumentos(){
     '<div class="dc-wrap">'+
       '<div class="dc-top"><span class="dc-chip"><i></i>'+esc(DCX.d.sede)+'</span></div>'+
       _dcBannerEdit()+
-      (DCX.tab==='his'?'':_dcCabecera())+
-      '<div class="dc-tabs">'+tabs.map(function(t){
-        return '<button class="dc-tab'+(DCX.tab===t[0]?' on':'')+'" onclick="dcTab(\''+t[0]+'\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg>'+t[1]+'</button>';
-      }).join('')+'</div>'+
-      '<div id="dc-body"></div>'+
+      '<div class="sal2-pnl dc-pnl">'+
+        '<div class="sal2-fl"><div class="sal2-seg dc-tabs">'+tabs.map(function(t){
+          return '<button class="dc-tab'+(DCX.tab===t[0]?' on':'')+'" onclick="dcTab(\''+t[0]+'\')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+t[2]+'</svg>'+t[1]+'</button>';
+        }).join('')+'</div></div>'+
+        '<div class="dc-well">'+
+          (DCX.tab==='his'?'':_dcCabecera())+
+          '<div id="dc-body"></div>'+
+        '</div>'+
+      '</div>'+
     '</div>';
   _dcCuerpo();
 }

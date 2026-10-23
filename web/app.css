@@ -3640,3 +3640,15 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .sal2-pnl .mt2-vacio-t{color:var(--text3)}
 
 .sal2-pnl #mt-est-seg button.on,.sal2-pnl #mt-est-seg button.on:hover{background:rgba(123,97,239,.30) !important;color:#fff !important;font-weight:600;box-shadow:inset 0 0 0 1px rgba(156,134,246,.55) !important}
+
+/* Documentos: pestañas en el panel violeta y el contenido en la caja oscura */
+#documentos-root .dc-top{margin-bottom:18px}
+.sal2-pnl .dc-tabs{width:auto;max-width:100%;overflow:visible;margin:0}
+.sal2-pnl .dc-tab{border:0;gap:8px}
+.sal2-pnl .dc-tab svg{width:15px;height:15px}
+.sal2-pnl .dc-tab.on svg{stroke:#111}
+.sal2-pnl .dc-well{background:#0A0A0B;border-radius:22px;margin:0 18px 18px;padding:14px}
+.sal2-pnl .dc-well .dc-card{background:#141416;border:0;border-radius:16px}
+.sal2-pnl .dc-well .dc-card:last-child{margin-bottom:0}
+.sal2-pnl .dc-well .dc-edit{border-radius:14px}
+@media (max-width:700px){ .sal2-pnl .dc-well{margin:0 8px 8px;padding:8px} .sal2-pnl .dc-tabs{overflow:auto} }
