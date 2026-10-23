@@ -2793,7 +2793,7 @@ input.filter-inp:focus{
 .dc-bar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin:6px 0 4px}
 .dc-empty{padding:22px 0 8px;text-align:center;color:var(--text3);font-size:12.5px}
 /* marcaje */
-.dm-h,.dm-r{display:grid;grid-template-columns:minmax(0,1fr) 84px 84px 84px 66px 66px 60px 78px;gap:8px;align-items:center}
+.dm-h,.dm-r{display:grid;grid-template-columns:minmax(0,1fr) 92px 92px 74px 74px 64px 82px;gap:10px;align-items:center}
 .dm-h{padding:0 0 8px;font:600 10px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text3)}
 .dm-h span:nth-child(n+2){text-align:center}
 .dm-r{padding:9px 0;border-top:1px solid var(--border)}
