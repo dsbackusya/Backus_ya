@@ -2772,7 +2772,7 @@ input.filter-inp:focus{
 .sidebar.collapsed .sb-chev{display:none}
 
 /* ══ Documentos de despacho (Marcaje, Orden de NC, Traslado) ══ */
-.dc-wrap{max-width:1100px;margin:0 auto}
+.dc-wrap{max-width:none;margin:0}
 .dc-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .dc-sub{color:var(--text3);font-size:12.5px}
 .dc-chip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;background:var(--surface);border:1px solid var(--border2);color:var(--text2);font-size:12px}
@@ -3373,3 +3373,9 @@ body{ background:linear-gradient(160deg,#161B48 0%,#0E1230 52%,#111437 100%) fix
 }
 #stock-busq::placeholder,#ent-busq::placeholder,#sal-busq::placeholder,#mt-busq::placeholder,#canc-busq::placeholder,#mae-busq::placeholder,#mc-busq::placeholder,#cnt-busq::placeholder,#val-search::placeholder{ color:var(--text4) !important }
 #val-search{ padding-left:36px !important }
+
+/* Campos y botones: mismas esquinas, borde y alto que los buscadores */
+.btn,.fh-btn,select,.inp,textarea.inp{ border-radius:10px }
+select,.stk-sel{ height:38px !important; border-color:var(--border2) !important }
+.inp,textarea.inp,input.inp{ border-color:var(--border2) }
+.inp:focus,select:focus{ border-color:var(--accent) !important; box-shadow:var(--shadow-glow) !important; outline:none }
