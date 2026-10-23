@@ -58,11 +58,11 @@ function renderValidacionShell(){
     '</div>'+
     // Filtro rápido (solo visible en tab SKU)
     '<div id="val-filtros" style="display:flex;gap:6px;flex-wrap:wrap">'+
-      '<button class="btn btn-ghost btn-sm active" id="vf-all"  onclick="setValFiltro(\'\')">Todos</button>'+
-      '<button class="btn btn-ghost btn-sm"         id="vf-diff" onclick="setValFiltro(\'diff\')" style="color:var(--danger);border-color:var(--danger-border)">Solo desvíos</button>'+
-      '<button class="btn btn-ghost btn-sm"         id="vf-ok"   onclick="setValFiltro(\'ok\')" style="color:var(--ok);border-color:var(--ok-border)">Solo cuadran</button>'+
-      '<button class="btn btn-ghost btn-sm"         id="vf-nc"   onclick="setValFiltro(\'nc\')" style="color:var(--warn);border-color:var(--warn-border)">Sin contar</button>'+
-      '<button class="btn btn-ghost btn-sm"         id="vf-ns"   onclick="setValFiltro(\'nostock\')" style="color:var(--text3);border-color:var(--border)">Sin stock</button>'+
+      '<button class="btn btn-ghost btn-sm active" id="vf-all" onclick="setValFiltro(\'\')">Todos</button>'+
+      '<button class="btn btn-ghost btn-sm" id="vf-diff" onclick="setValFiltro(\'diff\')">Solo desvíos</button>'+
+      '<button class="btn btn-ghost btn-sm" id="vf-ok" onclick="setValFiltro(\'ok\')">Solo cuadran</button>'+
+      '<button class="btn btn-ghost btn-sm" id="vf-nc" onclick="setValFiltro(\'nc\')">Sin contar</button>'+
+      '<button class="btn btn-ghost btn-sm" id="vf-ns" onclick="setValFiltro(\'nostock\')">Sin stock</button>'+
     '</div>'+
     '</div>'+
     '<div id="val-body"></div>'+
@@ -166,155 +166,151 @@ function renderValBody(){
   else                renderValCat(body);
 }
 
+/* Estado de cada fila (excluyentes): ok, f (faltante), s (sobrante), nc (sin contar), ns (sin stock), na (sin conteo anterior) */
+function _valEst(r){
+  if(r.sinContar) return (r.real!==null&&r.real===0)?'ns':'nc';
+  if(r.diff===null) return 'na';
+  if(r.diff!==0) return r.diff<0?'f':'s';
+  return (r.real!==null&&r.real===0)?'ns':'ok';
+}
+var _VAL_LAB={ ok:'Cuadra', f:'Faltante', s:'Sobrante', nc:'Sin contar', ns:'Sin stock', na:'Sin conteo ant.' };
+function _valIni(d){ return String(d||'').split(/\s+/).filter(Boolean).slice(0,2).map(function(w){return w.charAt(0);}).join('').toUpperCase(); }
+function _valMoney(n){ return (n<0?'−':'')+'S/ '+Math.abs(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
 function renderValSKU(body){
+  var est=function(r){ return _valEst(r); };
   var rows=VAL_DATA;
-  if(VAL_FILTRO==='diff')    rows=rows.filter(function(r){return !r.sinContar && r.diff!==0 && r.diff!==null;});
-  if(VAL_FILTRO==='ok')      rows=rows.filter(function(r){return !r.sinContar && r.diff===0;});
-  if(VAL_FILTRO==='nc')      rows=rows.filter(function(r){return r.sinContar && !(r.real!==null && r.real===0);});
-  if(VAL_FILTRO==='nostock') rows=rows.filter(function(r){return r.real!==null && r.real===0;});
+  if(VAL_FILTRO==='diff')    rows=rows.filter(function(r){var e=est(r);return e==='f'||e==='s';});
+  if(VAL_FILTRO==='ok')      rows=rows.filter(function(r){return est(r)==='ok';});
+  if(VAL_FILTRO==='nc')      rows=rows.filter(function(r){return est(r)==='nc';});
+  if(VAL_FILTRO==='nostock') rows=rows.filter(function(r){return est(r)==='ns';});
   if(VAL_MARCA)   rows=rows.filter(function(r){return (r.marca||'').trim()===VAL_MARCA;});
   if(VAL_SEARCH)  rows=rows.filter(function(r){
     return (r.sku||'').toLowerCase().indexOf(VAL_SEARCH)!==-1 ||
            (r.desc||'').toLowerCase().indexOf(VAL_SEARCH)!==-1;
   });
 
-  var cuadran   = VAL_DATA.filter(function(r){return !r.sinContar && r.diff===0;}).length;
-  var desvios   = VAL_DATA.filter(function(r){return !r.sinContar && r.diff!==0 && r.diff!==null;}).length;
-  var sinContar = VAL_DATA.filter(function(r){return r.sinContar && !(r.real!==null && r.real===0);}).length;
-  var sinStock  = VAL_DATA.filter(function(r){return r.real!==null && r.real===0;}).length;
-
-  // Calcular costo total de desvíos
-  var costoTotal = VAL_DATA.filter(function(r){return !r.sinContar && r.diff!==0 && r.diff!==null;})
-    .reduce(function(acc,r){ return acc + (r.diff||0)*(VAL_MAESTRO[r.sku]||0); }, 0);
-  var skusSinPrecio = VAL_DATA.filter(function(r){
-    return !r.sinContar && r.diff!==0 && r.diff!==null && !Object.prototype.hasOwnProperty.call(VAL_MAESTRO,r.sku);
-  }).length;
-  var costoFmt = (function(v){
-    var abs=Math.abs(v), sign=v<0?'-':'';
+  // Conteos por estado (excluyentes) y costo del desvío
+  var c={ok:0,f:0,s:0,nc:0,ns:0,na:0};
+  VAL_DATA.forEach(function(r){ c[est(r)]++; });
+  var desv=c.f+c.s, tot=VAL_DATA.length||1;
+  var costo=function(r){ return (r.diff||0)*(VAL_MAESTRO[r.sku]||0); };
+  var falt=0, sob=0, skusSinPrecio=0;
+  VAL_DATA.forEach(function(r){
+    var e=est(r); if(e!=='f'&&e!=='s') return;
+    var v=costo(r); if(v<0) falt+=v; else sob+=v;
+    if(!Object.prototype.hasOwnProperty.call(VAL_MAESTRO,r.sku)) skusSinPrecio++;
+  });
+  var neto=falt+sob;
+  var costoFmt=(function(v){
+    var abs=Math.abs(v), sign=v<0?'−':'';
     if(abs>=1000000) return sign+'S/ '+(abs/1000000).toFixed(1)+'M';
     if(abs>=1000)    return sign+'S/ '+(abs/1000).toFixed(1)+'K';
     return sign+'S/ '+abs.toFixed(2);
-  })(costoTotal);
-  var costoExacto = (costoTotal<0?'-':'')+'S/ '+Math.abs(costoTotal).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+  })(neto);
+  var pct=Math.round(c.ok/Math.max(1,c.ok+desv)*1000)/10;
 
-  var kpiCardStyle = 'display:flex;flex-direction:column;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 20px;min-height:72px;min-width:110px;';
+  // anillo
+  var col={ok:'#FFFFFF',s:'#7B61EF',f:'#CC7A83',nc:'#D9A85A',ns:'#5C5C64',na:'#8A8A93'};
+  var lab={ok:'Cuadran',s:'Sobrante',f:'Faltante',nc:'Sin contar',ns:'Sin stock',na:'Sin conteo ant.'};
+  var fil={ok:'ok',s:'diff',f:'diff',nc:'nc',ns:'nostock',na:''};
+  var orden=['ok','s','f','nc','ns','na'];
+  var C=2*Math.PI*46, off=0, svg='<circle cx="60" cy="60" r="46" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="12"/>';
+  orden.forEach(function(k){ if(!c[k]) return; var len=c[k]/tot*C, seg=Math.max(1,len-2);
+    svg+='<circle cx="60" cy="60" r="46" fill="none" stroke="'+col[k]+'" stroke-width="12" stroke-dasharray="'+seg+' '+(C-seg)+'" stroke-dashoffset="'+(-off)+'"/>'; off+=len; });
+  var leyenda=orden.filter(function(k){ return c[k]||k!=='na'; }).map(function(k){
+    return '<div class="vk-li" data-f="'+fil[k]+'"><em class="vk-dot" style="background:'+col[k]+'"></em><span>'+lab[k]+'</span><b>'+c[k]+'</b>'+
+      '<div class="vk-lb"><i style="width:'+(c[k]/tot*100)+'%;background:'+col[k]+'"></i></div></div>';
+  }).join('');
+
+  // mayores desvíos
+  var top=VAL_DATA.filter(function(r){var e=est(r);return e==='f'||e==='s';})
+    .sort(function(a,b){ return Math.abs(costo(b))-Math.abs(costo(a)) || Math.abs(b.diff)-Math.abs(a.diff); }).slice(0,3);
+  var topHtml=top.length?top.map(function(r){
+    return '<div class="vk-ti" data-sku="'+esc(r.sku)+'"><i>'+esc(_valIni(r.desc))+'</i><div style="min-width:0"><b title="'+esc(r.desc)+'">'+esc(r.desc)+'</b><small>'+esc(r.sku)+(r.categoria?' · '+esc(r.categoria):'')+'</small></div>'+
+      '<div class="vk-rt"><span class="'+(r.diff<0?'f':'s')+'">'+(r.diff>0?'+':'−')+fmt(Math.abs(r.diff))+' und.</span><small>'+_valMoney(costo(r))+'</small></div></div>';
+  }).join(''):'<div class="vk-none">Todo cuadra, no hay desvíos</div>';
+
+  var fch=String(VAL_FECHA||''); fch=fch.length>=10?fch.slice(8,10)+'/'+fch.slice(5,7):'';
   var kpiHtml=
-    '<div class="val-kpis">'+
-      // Cuadran
-      '<div style="'+kpiCardStyle+'border-color:var(--ok-border);background:var(--ok-bg)">'+
-        '<div style="font-size:24px;font-weight:700;color:var(--ok);line-height:1">'+cuadran+'</div>'+
-        '<div style="font-size:12px;color:var(--ok);margin-top:4px">cuadran</div>'+
+    '<div class="vk-sum">'+
+      '<div class="vk-c"><div class="vk-k">Resultado de la validación'+(fch?' · conteo del '+fch:'')+'</div>'+
+        '<div class="vk-rg"><div class="vk-dn"><svg viewBox="0 0 120 120">'+svg+'</svg><div class="vk-mid"><b>'+pct+'%</b><span>cuadra</span></div></div>'+
+        '<div class="vk-lg">'+leyenda+'</div></div></div>'+
+      '<div class="vk-c"><div class="vk-k">Costo total del desvío</div>'+
+        '<div class="vk-big '+(neto<0?'neg':neto>0?'pos':'')+'">'+costoFmt+'<small>pen</small></div>'+
+        '<div class="vk-sub">'+(desv?'Neto de '+desv+(desv===1?' producto con desvío':' productos con desvío')+' · '+_valMoney(neto):'Sin desvíos en este conteo')+'</div>'+
+        '<div class="vk-dv"><i style="flex:'+(Math.abs(falt)||(!sob?1:0))+';background:#CC7A83"></i><i style="flex:'+Math.abs(sob)+';background:#7B61EF"></i></div>'+
+        '<div class="vk-two"><div><span><em class="vk-dot" style="background:#CC7A83"></em>Faltante</span><b style="color:#CC7A83">'+_valMoney(falt)+'</b></div>'+
+          '<div><span><em class="vk-dot" style="background:#7B61EF"></em>Sobrante</span><b style="color:#C4B8FA">'+_valMoney(sob)+'</b></div></div>'+
+        (skusSinPrecio>0?'<div class="vk-warn" title="Estos SKUs no aparecen en la hoja MAESTRO (Cod_Lovis) o no tienen columna Precio — su costo se muestra como S/ 0.00 pero no está calculado">'+ICO('warn',12)+skusSinPrecio+' SKU sin precio en MAESTRO</div>':'')+
       '</div>'+
-      // Con desvío
-      '<div style="'+kpiCardStyle+'border-color:var(--danger-border);background:var(--danger-bg)">'+
-        '<div style="font-size:24px;font-weight:700;color:var(--danger);line-height:1">'+desvios+'</div>'+
-        '<div style="font-size:12px;color:var(--danger);margin-top:4px">con desvío</div>'+
-      '</div>'+
-      // Sin contar (condicional)
-      (sinContar?
-        '<div style="'+kpiCardStyle+'border-color:var(--warn-border);background:var(--warn-bg)">'+
-          '<div style="font-size:24px;font-weight:700;color:var(--warn);line-height:1">'+sinContar+'</div>'+
-          '<div style="font-size:12px;color:var(--warn);margin-top:4px">sin contar</div>'+
-        '</div>'
-      :'')+
-      // Sin stock
-      '<div style="'+kpiCardStyle+'" onclick="setValFiltro(\'nostock\')" style="cursor:pointer">'+
-        '<div style="font-size:24px;font-weight:700;color:var(--text2);line-height:1">'+sinStock+'</div>'+
-        '<div style="font-size:12px;color:var(--text3);margin-top:4px">sin stock</div>'+
-      '</div>'+
-      // Contados
-      '<div style="'+kpiCardStyle+'">'+
-        '<div style="font-size:24px;font-weight:700;color:var(--text);line-height:1">'+(VAL_DATA.length-sinContar)+'</div>'+
-        '<div style="font-size:12px;color:var(--text3);margin-top:4px">contados</div>'+
-      '</div>'+
-      // KPI Costo Total Desvío — más ancho, mismo alto
-      '<div style="'+kpiCardStyle+'border-color:var(--border2);min-width:220px;flex:1;max-width:320px">'+
-        '<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Costo Total Desvío</div>'+
-        '<div style="display:flex;align-items:center;gap:10px">'+
-          '<div style="width:32px;height:32px;background:var(--p600);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
-            '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'+
-          '</div>'+
-          '<div>'+
-            '<div style="font-size:26px;font-weight:800;letter-spacing:-.5px;color:var(--text);line-height:1">'+costoFmt+
-              '<span style="margin-left:6px;font-size:10px;font-weight:600;color:var(--text3);background:var(--surface3,var(--border));padding:2px 7px;border-radius:20px;vertical-align:middle">pen</span>'+
-            '</div>'+
-            '<div style="font-size:11px;color:var(--text3);margin-top:3px">'+costoExacto+' total</div>'+
-            (skusSinPrecio>0
-              ? '<div style="font-size:10px;color:var(--warn);margin-top:4px" title="Estos SKUs no aparecen en la hoja MAESTRO (Cod_Lovis) o no tienen columna Precio — su costo se muestra como S/ 0.00 pero no está calculado">'+ICO('warn',12)+skusSinPrecio+' SKU sin precio en MAESTRO</div>'
-              : '')+
-          '</div>'+
-        '</div>'+
-      '</div>'+
+      '<div class="vk-c"><div class="vk-hd"><div class="vk-k">Mayores desvíos</div>'+(desv?'<a class="vk-ver" data-f="diff">Ver todos</a>':'')+'</div>'+topHtml+'</div>'+
     '</div>';
-  var kp=document.getElementById('val-kpis'); if(kp) kp.innerHTML=kpiHtml;
+  var kp=document.getElementById('val-kpis');
+  if(kp){
+    kp.innerHTML=kpiHtml;
+    if(!kp._valDel){
+      kp._valDel=true;
+      kp.addEventListener('click',function(e){
+        var li=e.target.closest('.vk-li,.vk-ver'); if(li){ setValFiltro(li.dataset.f); return; }
+        var ti=e.target.closest('.vk-ti'); if(ti){ valIrSku(ti.dataset.sku); }
+      });
+    }
+  }
+
+  // contadores en los filtros rápidos
+  var cnt={ 'vf-all':['Todos',VAL_DATA.length], 'vf-diff':['Solo desvíos',desv], 'vf-ok':['Solo cuadran',c.ok], 'vf-nc':['Sin contar',c.nc], 'vf-ns':['Sin stock',c.ns] };
+  Object.keys(cnt).forEach(function(id){ var b=document.getElementById(id); if(b) b.innerHTML=cnt[id][0]+'<span>'+cnt[id][1]+'</span>'; });
+
   var html=
-    '<div class="table-wrap" style="overflow-x:auto"><table style="min-width:780px"><thead><tr>'+
-      '<th style="min-width:100px">SKU</th><th style="min-width:180px">Descripción</th><th class="c" style="min-width:100px">Categoría</th>'+
+    '<div class="table-wrap" style="overflow-x:auto"><table style="min-width:900px"><thead><tr>'+
+      '<th style="min-width:230px">Producto</th>'+
       '<th class="r" style="min-width:90px" title="Conteo del día anterior">C. Anterior</th>'+
       '<th class="r" style="min-width:80px">− Salidas</th>'+
       '<th class="r" style="min-width:70px">− M-T</th>'+
       '<th class="r" style="min-width:90px">+ Entradas</th>'+
-      '<th class="r" style="min-width:90px" title="Conteo real del día seleccionado">C. Actual</th>'+
-      '<th class="r" style="min-width:90px">Stock Real</th>'+
+      '<th class="r" style="min-width:90px">= Stock Real</th>'+
+      '<th class="r" style="min-width:80px" title="Conteo real del día seleccionado">C. Actual</th>'+
       '<th class="r" style="min-width:90px">Diferencia</th>'+
       '<th class="r" style="min-width:90px">Costo Dif.</th>'+
-      '<th class="c" style="min-width:110px">Estado</th>'+
-      '<th class="c" style="min-width:80px"></th>'+
+      '<th style="min-width:120px;padding-left:16px !important">Estado</th>'+
+      '<th style="min-width:80px"></th>'+
     '</tr></thead><tbody>';
 
   if(!rows.length){
-    html+='<tr><td colspan="13" style="text-align:center;color:var(--text3);padding:32px">Sin resultados con ese filtro</td></tr>';
+    html+='<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:32px">Sin resultados con ese filtro</td></tr>';
   } else {
     rows.forEach(function(r){
-      var estado, bc, diffTxt, rowStyle='';
-      if(r.sinContar){
-        estado=ICO('bolt',12)+'Sin contar'; bc='badge-warn'; diffTxt='—';
-        rowStyle=' class="val-nc"';
-      } else if(r.diff===null){
-        estado='Sin conteo ant.'; bc='badge-neutral'; diffTxt='—';
-      } else if(r.diff===0){
-        estado=ICO('check',12)+'Cuadra'; bc='badge-ok'; diffTxt='0';
-      } else {
-        estado=ICO('warn',12)+'Desvío'; bc='badge-danger';
-        diffTxt=(r.diff>0?'+':'')+fmt(r.diff);
-      }
-      var btnAccion = r.sinContar
-        ? '<button class="btn btn-ghost btn-sm val-ir-contar" style="font-size:11px;color:var(--warn);border-color:var(--warn-border)">Ir a contar</button>'
-        : (r.diff!==0 && r.diff!==null
-            ? '<button class="btn btn-ghost btn-sm val-recontar" data-sku="'+esc(r.sku)+'" style="font-size:11px;color:var(--danger);border-color:var(--danger-border)">Recontar</button>'
-            : '');
-      html+='<tr'+rowStyle+'>'+
-        '<td class="mono">'+esc(r.sku)+'</td>'+
-        '<td class="td-desc" title="'+esc(r.desc)+'">'+esc(r.desc)+'</td>'+
-        '<td class="muted" style="font-size:11px">'+esc(r.categoria)+'</td>'+
-        '<td class="r">'+(r.cAnterior!==null?fmt(r.cAnterior):'—')+'</td>'+
-        (r.salidas>0
-          ? '<td class="r val-mov-cell" data-tipo="sal" data-sku="'+esc(r.sku)+'" style="color:var(--danger);cursor:pointer;text-decoration:underline dotted">'+fmt(r.salidas)+'</td>'
-          : '<td class="r" style="color:var(--danger)">'+(r.salidas!==null?fmt(r.salidas):'—')+'</td>')+
-        (r.mt>0
-          ? '<td class="r val-mov-cell" data-tipo="mt" data-sku="'+esc(r.sku)+'" style="color:var(--warn);cursor:pointer;text-decoration:underline dotted">'+fmt(r.mt)+'</td>'
-          : '<td class="r" style="color:var(--warn)">'+(r.mt!==null?fmt(r.mt):'—')+'</td>')+
-        (r.entradas>0
-          ? '<td class="r val-mov-cell" data-tipo="ent" data-sku="'+esc(r.sku)+'" style="color:var(--ok);cursor:pointer;text-decoration:underline dotted">'+fmt(r.entradas)+'</td>'
-          : '<td class="r" style="color:var(--ok)">'+(r.entradas!==null?fmt(r.entradas):'—')+'</td>')+
-        '<td class="r" style="font-weight:700">'+(r.cActual!==null?fmt(r.cActual):'—')+'</td>'+
-        '<td class="r" style="color:var(--text2)">'+(r.real!==null?fmt(r.real):'—')+'</td>'+
-        '<td class="r" style="font-weight:700;color:'+(r.sinContar?'var(--warn)':r.diff===0?'var(--ok)':r.diff!==null?'var(--danger)':'var(--text3)')+'">'+diffTxt+'</td>'+
-        (function(){
-          if(r.diff && r.diff!==0 && r.diff!==null && !r.sinContar){
-            var tieneMaestro=Object.prototype.hasOwnProperty.call(VAL_MAESTRO,r.sku);
-            var precio=VAL_MAESTRO[r.sku]||0;
-            var costo=r.diff*precio;
-            var costoStr='S/ '+costo.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
-            if(!tieneMaestro){
-              return '<td class="r" style="font-weight:600;color:var(--warn)" title="SKU no encontrado en la hoja MAESTRO (Cod_Lovis) — costo no calculado">'+ICO('warn',12)+costoStr+'</td>';
-            }
-            return '<td class="r" style="font-weight:600;color:'+(costo<0?'var(--danger)':'var(--ok)')+'">'+costoStr+'</td>';
-          }
-          return '<td class="r" style="color:var(--text4)">—</td>';
-        })()+
-        '<td class="c"><span class="badge '+bc+'">'+estado+'</span></td>'+
-        '<td class="c">'+btnAccion+'</td>'+
+      var e=est(r), rowCls=(e==='nc')?' class="val-nc"':'';
+      var dif;
+      if(e==='f'||e==='s') dif='<span class="vk-chip '+(r.diff<0?'f':'s')+'">'+(r.diff>0?'+':'−')+fmt(Math.abs(r.diff))+'</span>';
+      else if(r.diff===0)  dif='<span class="vk-chip">0</span>';
+      else                 dif='<span class="vk-chip">—</span>';
+      var costoTd;
+      if(e==='f'||e==='s'){
+        var tieneMaestro=Object.prototype.hasOwnProperty.call(VAL_MAESTRO,r.sku), cs=costo(r);
+        costoTd=tieneMaestro
+          ? '<td class="r vk-cost '+(cs<0?'f':'s')+'">'+_valMoney(cs)+'</td>'
+          : '<td class="r vk-cost" style="color:var(--warn)" title="SKU no encontrado en la hoja MAESTRO (Cod_Lovis) — costo no calculado">'+ICO('warn',12)+_valMoney(cs)+'</td>';
+      } else costoTd='<td class="r vk-cost">—</td>';
+      var mov=function(tipo,v){
+        return v>0 ? '<td class="r val-mov-cell vk-mov" data-tipo="'+tipo+'" data-sku="'+esc(r.sku)+'">'+fmt(v)+'</td>'
+                   : '<td class="r vk-mut">'+(v!==null?fmt(v):'—')+'</td>';
+      };
+      var accion = e==='nc'
+        ? '<button class="btn btn-ghost btn-sm val-ir-contar">Ir a contar</button>'
+        : ((e==='f'||e==='s') ? '<button class="btn btn-ghost btn-sm val-recontar" data-sku="'+esc(r.sku)+'">Recontar</button>' : '');
+      html+='<tr'+rowCls+'>'+
+        '<td><div class="vk-pr"><i>'+esc(_valIni(r.desc))+'</i><div><b title="'+esc(r.desc)+'">'+esc(r.desc)+'</b><small>'+esc(r.sku)+(r.categoria?' · '+esc(r.categoria):'')+'</small></div></div></td>'+
+        '<td class="r vk-n">'+(r.cAnterior!==null?fmt(r.cAnterior):'—')+'</td>'+
+        mov('sal',r.salidas)+mov('mt',r.mt)+mov('ent',r.entradas)+
+        '<td class="r vk-n vk-em">'+(r.real!==null?fmt(r.real):'—')+'</td>'+
+        '<td class="r vk-n"><b>'+(r.cActual!==null?fmt(r.cActual):'—')+'</b></td>'+
+        '<td class="r">'+dif+'</td>'+
+        costoTd+
+        '<td style="padding-left:16px !important"><span class="sal-est '+e+'"><i></i>'+_VAL_LAB[e]+'</span></td>'+
+        '<td class="c vk-act">'+accion+'</td>'+
       '</tr>';
     });
   }
@@ -331,6 +327,12 @@ function renderValSKU(body){
     if (btn) { recontar(btn.dataset.sku); return; }
     if (e.target.closest('.val-ir-contar')) { navTo('conteo', document.getElementById('nav-conteo')); }
   });
+}
+// Al tocar un desvío del resumen: se busca ese SKU en la tabla (se quita el filtro de estado)
+function valIrSku(sku){
+  var inp=document.getElementById('val-search'); if(inp) inp.value=sku;
+  VAL_SEARCH=String(sku||'').trim().toLowerCase();
+  setValFiltro('');
 }
 
 /* ── Vista Árbol de Descomposición (Por Categoría) — única vista ── */
