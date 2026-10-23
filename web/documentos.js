@@ -22,12 +22,12 @@ var DCX_GR0 = [
     { sku:3501491, code:'BOTAMCUS310R',  ref:'Botellas Cusqueña 3xx', cz:'p' } ] },
   /* Barriles: se cuentan por unidad; no pasan al módulo Envases ni se valorizan (sin precio por ahora). */
   { g:'BARRILES · 50 L / 30 L', tam:0, mult:1, barril:1, rows:[
-    { sku:10000201, code:'PILSEN CALLAO 50LT BARRIL',       ref:'Barriles de 50 L', cz:'' },
-    { sku:10000160, code:'CUSQUEÑA 30LT DORADA BARRIL',     ref:'Barriles de 30 L', cz:'' } ] }
+    { sku:3500323, code:'Barril de 50Lt', ref:'Barriles de 50 L', cz:'' },
+    { sku:3500054, code:'Barril de 30Lt', ref:'Barriles de 30 L', cz:'' } ] }
 ];
-/* Los primeros documentos con barriles se guardaron sin SKU (BARRIL 50 L / BARRIL 30 L): al verlos o editarlos se completan con el SKU actual. */
-var DCX_BARRIL_ANT = { 'BARRIL 50 L':{ sku:10000201, code:'PILSEN CALLAO 50LT BARRIL' }, 'BARRIL 30 L':{ sku:10000160, code:'CUSQUEÑA 30LT DORADA BARRIL' } };
-function _dcLinea(l){ var a=DCX_BARRIL_ANT[l.code]; return (a&&!l.sku) ? Object.assign({},l,a) : l; }
+/* Documentos guardados antes con otro SKU de barril (sin SKU, o 10000201 / 10000160): al verlos o editarlos se pasan al SKU actual. */
+var DCX_BARRIL_ANT = { 'BARRIL 50 L':50, 'PILSEN CALLAO 50LT BARRIL':50, 'BARRIL 30 L':30, 'CUSQUEÑA 30LT DORADA BARRIL':30 };
+function _dcLinea(l){ var k=DCX_BARRIL_ANT[l.code]; return !k ? l : Object.assign({},l,k===50?{ sku:3500323, code:'Barril de 50Lt' }:{ sku:3500054, code:'Barril de 30Lt' }); }
 var DCX_PRECIO0 ={ caja:3.8, bot630_1000:0.6, bot310:0.5 };
 var DCX_TIT = { marcaje:'Conciliación de envases', nc:'Orden para nota de crédito', traslado:'Cargo de despacho' };
 var DCX_DESTINOS = ['TADA EVENTOS','ATE','CHORRILLOS','SAN MIGUEL'];
