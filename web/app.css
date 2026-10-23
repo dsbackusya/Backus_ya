@@ -3336,3 +3336,6 @@ body{ background:linear-gradient(160deg,#161B48 0%,#0E1230 52%,#111437 100%) fix
 .main{ background:transparent !important }
 .topbar{ background:rgba(14,18,48,.70) !important; border-bottom:1px solid var(--border) !important }
 .stk-t td:first-child .stk-pn{ min-width:220px }
+/* Encabezados y paneles fijos (sticky) siempre opacos: no deben dejar ver las filas que pasan por debajo */
+.main thead th{ background:#131840 !important }
+.main .mt3-res,.main .evc-l{ background:#181D45 }
