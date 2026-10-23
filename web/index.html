@@ -188,14 +188,7 @@ window.addEventListener('load', function(){
         <button class="tb-mobile-menu" id="tb-mobile-menu" onclick="toggleMobileMenu()" title="Menú">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <button class="tb-back" id="tb-back" onclick="navTo('dashboard',document.getElementById('nav-dashboard'))" title="Ir al inicio" aria-label="Ir al inicio"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-        <div class="tb-crumb"><a onclick="navTo('dashboard',document.getElementById('nav-dashboard'))">Inicio</a><i>›</i><b id="pg-crumb">Stock actual</b></div>
         <span class="tb-module-tag" id="tb-module-tag" style="display:none"></span>
-      </div>
-      <div class="tb-right">
-        <label class="tb-find"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input id="gsearch" type="search" placeholder="Buscar SKU, producto o marca…" autocomplete="off" onkeydown="if(event.key==='Enter')gSearch(this.value)"></label>
-        <button class="tb-ic" onclick="navTo('dashboard',document.getElementById('nav-dashboard'))" title="Alertas" aria-label="Alertas"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></button>
-        <div class="tb-av" id="tb-avatar">—</div>
       </div>
     </div>
     <div class="content">

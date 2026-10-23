@@ -254,16 +254,6 @@ function _pgSub(){
   sede=String(sede).replace(/^DS\s+/i,'');
   el.textContent=(sede&&sede!=='—'?sede+' · ':'')+f.charAt(0).toUpperCase()+f.slice(1);
 }
-/* buscador global del encabezado: abre Stock con la búsqueda aplicada */
-function gSearch(q){
-  q=String(q||'').trim(); if(!q) return;
-  navTo('stock',document.getElementById('nav-stock'));
-  var n=0, t=setInterval(function(){
-    var i=document.getElementById('stock-busq'); n++;
-    if(i){ clearInterval(t); i.value=q; if(typeof filterStock==='function') filterStock(); }
-    else if(n>40) clearInterval(t);
-  },150);
-}
 function toggleSidebar(){
   var sb=document.getElementById('sidebar');
   sb.classList.toggle('collapsed');
@@ -328,7 +318,6 @@ function initApp(){
   document.getElementById('sb-sede').textContent=sede;
   document.getElementById('sb-user-name').textContent=sede;
   var mk=document.getElementById('sb-logomark'); if(mk) mk.textContent=_sedeIniciales(sede);
-  var tav=document.getElementById('tb-avatar'); if(tav){ tav.textContent=_sedeIniciales(sede); tav.title=sede; }
   _pgSub();
   var av=document.getElementById('sb-avatar');
   if(av)av.textContent=sede.charAt(0).toUpperCase();
@@ -368,8 +357,6 @@ function navTo(name,btn){
     if(enMaestro) _setSbGrp(true);
   }
   document.getElementById('pg-title').textContent=PAGE_TITLES[name]||name;
-  var cr=document.getElementById('pg-crumb'); if(cr) cr.textContent=PAGE_TITLES[name]||name;
-  var tbk=document.getElementById('tb-back'); if(tbk) tbk.style.visibility=name==='dashboard'?'hidden':'';
   _pgSub();
   renderTopbarActions(name);
   if(name==='cancelados'){PAGE_LOADED[name]=false;} // siempre fresco al entrar

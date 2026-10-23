@@ -3461,20 +3461,6 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 /* ══ Estructura como la maqueta: barra de iconos, migas de pan, buscador global y encabezado de página ══ */
 .topbar{ height:60px; padding:0 24px !important }
 .tb-left{ display:flex; align-items:center; gap:12px }
-.tb-back{ width:32px; height:32px; border-radius:9px; border:0; background:var(--surface3); color:var(--text2); display:grid; place-items:center; cursor:pointer }
-.tb-back:hover{ color:#fff }
-.tb-crumb{ font-size:11.5px; color:var(--text3); display:flex; gap:8px; align-items:center; white-space:nowrap }
-.tb-crumb a{ cursor:pointer } .tb-crumb a:hover{ color:var(--text) }
-.tb-crumb i{ font-style:normal }
-.tb-crumb b{ color:var(--text); font-weight:500 }
-.tb-right{ display:flex; align-items:center; gap:10px }
-.tb-find{ width:300px; height:36px; border-radius:10px; border:1px solid var(--border2); background:var(--surface2); display:flex; align-items:center; gap:9px; padding:0 12px; color:var(--text3); cursor:text }
-.tb-find:focus-within{ border-color:var(--accent); box-shadow:var(--shadow-glow) }
-.tb-find input{ flex:1; min-width:0; background:none !important; border:0 !important; outline:0; box-shadow:none !important; color:var(--text); font:400 12.5px 'Inter',sans-serif; padding:0 !important; height:auto !important }
-.tb-find input::placeholder{ color:var(--text4) }
-.tb-ic{ width:32px; height:32px; border-radius:9px; border:0; background:var(--surface3); color:var(--text2); display:grid; place-items:center; cursor:pointer }
-.tb-ic:hover{ color:#fff }
-.tb-av{ width:32px; height:32px; border-radius:9px; background:linear-gradient(135deg,#9a85f5,#5b3fd1); color:#fff; display:grid; place-items:center; font:700 11px 'Inter',sans-serif }
 .pghd{ display:flex; align-items:flex-start; gap:16px; margin-bottom:20px; flex-wrap:wrap }
 .pghd-t{ flex:1; min-width:200px }
 .pghd .page-title{ font-size:22px !important; font-weight:600 !important; letter-spacing:-.01em; margin:0 }
@@ -3482,8 +3468,6 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .pghd .topbar-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end }
 /* barra de iconos: el recuadro de la sede es blanco con las iniciales en oscuro */
 .sidebar .sb2-mark,#sb-logomark{ background:#fff !important; color:#111 !important; border:0 !important; border-radius:10px !important }
-@media (max-width:900px){ .tb-find{ display:none } .tb-crumb{ display:none } .tb-back{ display:none } .topbar{ padding:0 14px !important } .tb-right{ margin-left:auto } .pghd{ margin-bottom:14px } }
-@media (max-width:1100px) and (min-width:901px){ .tb-find{ width:200px } }
 
 /* barra de iconos más compacta para que quepan todas las opciones en pantallas bajas */
 @media (min-width:901px){
@@ -3497,3 +3481,5 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 /* más etiquetas en gris carbón */
 .ent-oc,.stat-unit-pill{ background:#1B1B1E !important; border:1px solid var(--border2) !important; color:var(--text2) !important }
 .ent-oc{ color:var(--text) !important }
+/* sin barra superior en computadora (el título y los botones van en el encabezado de cada pantalla) */
+@media (min-width:901px){ .topbar{ display:none !important } }
