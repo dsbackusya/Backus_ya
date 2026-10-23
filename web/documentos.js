@@ -61,13 +61,16 @@ function _dcMoney(n){ return 'S/ '+Number(n||0).toFixed(2); }
 function _dcHms(v){ v=String(v||''); return v.length===5 ? v+':00' : v; }
 function _dcSede(){ return String((DCX.d&&DCX.d.sede)||'').toUpperCase(); }
 function _dcGrNuevo(){
-  return DCX_GR0.map(function(g){ return { g:g.g, tam:g.tam, mult:g.mult, rows:g.rows.map(function(r){
-    return { sku:r.sku, code:r.code, ref:r.ref, cz:r.cz, caja:r.caja, main:r.main, ent:0, dev:0 }; }) }; });
+  return DCX_GR0.map(function(g){ var rows=[]; g.rows.forEach(function(r){
+    rows.push({ sku:r.sku, code:r.code, ref:r.ref, cz:r.cz, caja:r.caja, main:r.main, ent:0, dev:0 });
+    // cajas plásticas sueltas (sin botellas): van aparte para no multiplicar botellas
+    if(r.caja) rows.push({ sku:r.sku, code:r.code+' (sueltas)', ref:'Cajas sueltas', cz:r.cz, suelta:1, ent:0, dev:0 });
+  }); return { g:g.g, tam:g.tam, mult:g.mult, rows:rows }; });
 }
 function _dcPrecio(g,r){
   var p=(DCX.d&&DCX.d.precios)||{};
-  var v=r.caja ? p.caja : (g.tam===310 ? p.bot310 : p.bot630_1000);
-  if(v==null||isNaN(v)) v=r.caja ? DCX_PRECIO0.caja : (g.tam===310 ? DCX_PRECIO0.bot310 : DCX_PRECIO0.bot630_1000);
+  var v=(r.caja||r.suelta) ? p.caja : (g.tam===310 ? p.bot310 : p.bot630_1000);
+  if(v==null||isNaN(v)) v=(r.caja||r.suelta) ? DCX_PRECIO0.caja : (g.tam===310 ? DCX_PRECIO0.bot310 : DCX_PRECIO0.bot630_1000);
   return v;
 }
 
@@ -148,7 +151,7 @@ function _dcMarcajeHtml(){
     h+='<div class="dm-grp">'+g.g+'</div>';
     g.rows.forEach(function(r,ri){
       h+='<div class="dm-r" data-g="'+gi+'" data-r="'+ri+'">'+
-        '<div class="dm-n"><b>'+r.ref+(r.caja?' <em class="dm-x">× '+g.mult+'</em>':'')+(r.main?' <em class="dm-a">auto</em>':'')+'</b><small>'+r.sku+' · '+r.code+'</small></div>'+
+        '<div class="dm-n"><b>'+r.ref+(r.caja?' <em class="dm-x">× '+g.mult+'</em>':'')+(r.suelta?' <em class="dm-x">sin botellas</em>':'')+(r.main?' <em class="dm-a">auto</em>':'')+'</b><small>'+r.sku+' · '+r.code+'</small></div>'+
         '<input class="inp" inputmode="numeric" value="'+(r.ent||'')+'" placeholder="0" data-k="ent" oninput="dcMIn(this)">'+
         '<input class="inp" inputmode="numeric" value="'+(r.dev||'')+'" placeholder="0" data-k="dev" oninput="dcMIn(this)">'+
         '<div class="dm-d" id="dm-d'+gi+'_'+ri+'">0</div><div class="dm-c" id="dm-c'+gi+'_'+ri+'">—</div></div>';
@@ -192,7 +195,7 @@ function dcCalcM(){
   var h='';
   DCX.gr.forEach(function(g){
     var be=0,bd=0,ce=0,cd=0;
-    g.rows.forEach(function(r){ if(r.caja){ ce=r.ent||0; cd=r.dev||0; } else { be+=r.ent||0; bd+=r.dev||0; } });
+    g.rows.forEach(function(r){ if(r.suelta) return; if(r.caja){ ce=r.ent||0; cd=r.dev||0; } else { be+=r.ent||0; bd+=r.dev||0; } });
     if(!be&&!bd&&!ce&&!cd) return;
     var qe=Math.floor(be/g.mult), qd=Math.floor(bd/g.mult), okE=qe===ce, okD=qd===cd;
     h+='<div class="dm-cv"><b>'+g.g.split(' · ')[0]+'</b>Entrega: '+be+' bot. ÷ '+g.mult+' = <span class="'+(okE?'ok':'bad')+'">'+qe+' cajas'+(okE?' ✓':' · contadas '+ce)+'</span><br>'+
@@ -205,10 +208,10 @@ function _dcMovs(){
   var out=[];
   DCX.gr.forEach(function(g){
     ['ent','dev'].forEach(function(k){
-      var caj=0, bot=0;
-      g.rows.forEach(function(r){ if(r.caja) caj=r[k]||0; else bot+=r[k]||0; });
+      var caj=0, bot=0, cs=0;
+      g.rows.forEach(function(r){ if(r.suelta) cs+=r[k]||0; else if(r.caja) caj=r[k]||0; else bot+=r[k]||0; });
       var und=Math.max(0,bot-caj*g.mult);
-      if(caj||und) out.push({ tipo:k==='ent'?'entrada':'devolucion', tamano:g.tam, estado:k==='ent'?'llena':'vacia', packs:caj, unidades:und });
+      if(caj||und||cs) out.push({ tipo:k==='ent'?'entrada':'devolucion', tamano:g.tam, estado:k==='ent'?'llena':'vacia', packs:caj, unidades:und, cajas:cs });
     });
   });
   return out;
@@ -299,7 +302,7 @@ function dcGuardar(tipo,imprimir){
     var hay=false;
     DCX.gr.forEach(function(g){ g.rows.forEach(function(r){
       if(r.ent||r.dev) hay=true;
-      d.lineas.push({ sku:r.sku, code:r.code, ref:r.ref, cz:r.cz, ent:r.ent||0, dev:r.dev||0 });
+      d.lineas.push({ sku:r.sku, code:r.code, ref:r.ref, cz:r.cz, ent:r.ent||0, dev:r.dev||0, suelta:r.suelta?1:0 });
     }); });
     if(!hay){ showToast('Escribe al menos una cantidad en ENT o DEV','err'); return; }
     d.reparto=DCX.h.reparto; d.transporte=DCX.h.transporte; d.horaInicio=DCX.hi; d.horaFin=DCX.hf;
@@ -393,7 +396,7 @@ function dcEditar(id){
   DCX.h={ reparto:d.reparto, transporte:d.transporte, placa:d.placa, fecha:d.fecha };
   if(d.tipo==='marcaje'){
     DCX.gr=_dcGrNuevo();
-    d.lineas.forEach(function(l){ DCX.gr.forEach(function(g){ g.rows.forEach(function(r){ if(r.sku===l.sku){ r.ent=l.ent||0; r.dev=l.dev||0; } }); }); });
+    d.lineas.forEach(function(l){ DCX.gr.forEach(function(g){ g.rows.forEach(function(r){ if(r.sku===l.sku&&!!r.suelta===!!l.suelta){ r.ent=l.ent||0; r.dev=l.dev||0; } }); }); });
     DCX.hi=d.horaInicio; DCX.hf=d.horaFin; DCX.env=!!(DCX.d.conEnv&&DCX.d.conEnv[d.id]);
   } else if(d.tipo==='nc'){
     DCX.nc={ fac:d.nroFactura, lineas:d.lineas.map(function(l){ return { sku:l.sku, sap:l.sap, desc:l.desc, und:l.und }; }) };

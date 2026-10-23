@@ -118,6 +118,8 @@ function _evCalc(){
     else if(m.tipo==='venta'){ j=_evFilaIdx(m.tamano,'lle'); if(j>=0) M[di][j]['ven'+f]+=bot; }
     // las cajas que vienen en un Marcaje (packs) entran o salen junto con las botellas
     if(m.packs&&(m.tipo==='entrada'||m.tipo==='devolucion')){ j=_evFilaIdx(m.tamano,'caja'); if(j>=0) M[di][j][(m.tipo==='entrada'?'ent':'dev')+f]+=m.packs; }
+    // cajas plásticas sueltas (sin botellas): solo suman a la fila de la caja
+    if(m.cajas&&(m.tipo==='entrada'||m.tipo==='devolucion')){ j=_evFilaIdx(m.tamano,'caja'); if(j>=0) M[di][j][(m.tipo==='entrada'?'ent':'dev')+f]+=m.cajas; }
   });
   var b=-1, last=-1;
   C.forEach(function(c,di){ if(c.has){ if(b<0) b=di; last=di; } });

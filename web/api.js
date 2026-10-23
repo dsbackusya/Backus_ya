@@ -1273,7 +1273,7 @@
   }
   function mapEnvMov(r) {
     return { id: r.id, fecha: r.fecha, tipo: r.tipo, tamano: r.tamano, estado: r.estado,
-      packs: num(r.packs), unidades: num(r.unidades), nota: str(r.nota) };
+      packs: num(r.packs), unidades: num(r.unidades), cajas: num(r.cajas), nota: str(r.nota) };
   }
   function enteroNoNeg(v) { var n = entero(v === '' || v === null || v === undefined ? 0 : v); return n === null || n < 0 ? null : n; }
 
