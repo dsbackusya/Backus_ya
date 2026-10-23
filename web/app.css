@@ -3691,3 +3691,16 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .gx-cell.f{background:rgba(204,122,131,.14);color:var(--ev-f)}
 .gx-cell.s{background:rgba(123,97,239,.22);color:var(--ev-s)}
 .gx-cell.ok{background:rgba(255,255,255,.06);color:var(--ev-ok)}
+
+/* Botones del encabezado de cada pantalla: mismo estilo que los del panel (altos de 38, esquinas suaves, violeta con brillo suave) */
+.pghd .topbar-actions .btn{height:38px;min-height:38px;border-radius:13px !important;font:500 12px 'Inter',sans-serif;gap:8px;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,box-shadow .15s,transform .15s}
+.pghd .topbar-actions .btn svg{width:14px;height:14px}
+.pghd .topbar-actions .btn-primary{border:0 !important;color:#fff !important;background:linear-gradient(180deg,#8C76F7,#6A50E3) !important;
+  box-shadow:0 10px 22px -10px rgba(123,97,239,.85),inset 0 1px 0 rgba(255,255,255,.22) !important}
+.pghd .topbar-actions .btn-primary:hover:not(:disabled){background:linear-gradient(180deg,#9A86F9,#7459EA) !important;transform:translateY(-1px)}
+.pghd .topbar-actions .btn-ghost{background:rgba(255,255,255,.08) !important;border:1px solid rgba(255,255,255,.09) !important;color:var(--text) !important;box-shadow:none !important}
+.pghd .topbar-actions .btn-ghost:hover:not(:disabled){background:rgba(255,255,255,.14) !important}
+@media (min-width:701px){
+  .pghd .topbar-actions .btn{padding:0 18px !important}
+}
+.pghd .topbar-actions .btn-primary .tb-btn-plus{font-size:16px;font-weight:600;margin-top:-1px}
