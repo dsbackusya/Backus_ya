@@ -3448,3 +3448,8 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
   .gx-bar{width:22px;margin-left:-11px}
   .gx-ht{grid-template-columns:96px repeat(7,1fr);gap:3px}.gx-cell{height:26px;font-size:10px}.gx-nm{font-size:10.5px}
 }
+/* Etiquetas de pedido y de marca en gris carbón (el violeta queda para lo importante) */
+.sal-ped,.brand-pill{ background:#1B1B1E !important; border:1px solid var(--border2) !important; color:var(--text2) !important }
+.sal-ped{ color:var(--text) !important }
+/* Filtros activos de Validación: píldora blanca */
+.btn-ghost.active,.btn.btn-ghost.btn-sm.active{ background:#fff !important; border-color:#fff !important; color:#111 !important }

@@ -41,7 +41,7 @@ function renderValidacionShell(){
     '</div>'+
     // Tabs
     '<div style="display:flex;gap:2px;margin-bottom:16px;border-bottom:2px solid var(--border)">'+
-      '<button id="val-tab-sku" onclick="setValTab(\'sku\')" style="padding:8px 16px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--p500);border-bottom:2px solid var(--p500);margin-bottom:-2px">Por SKU</button>'+
+      '<button id="val-tab-sku" onclick="setValTab(\'sku\')" style="padding:8px 16px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;color:#fff;border-bottom:2px solid #fff;margin-bottom:-2px">Por SKU</button>'+
       '<button id="val-tab-cat" onclick="setValTab(\'categoria\')" style="padding:8px 16px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;margin-bottom:-2px">Por Categoría</button>'+
     '</div>'+
     // Barra de búsqueda + filtro por Marca (solo visible en tab SKU)
@@ -105,10 +105,10 @@ function correrValidacion(force){
 
 function setValTab(tab){
   VAL_TAB=tab;
-  document.getElementById('val-tab-sku').style.color=tab==='sku'?'var(--p500)':'var(--text3)';
-  document.getElementById('val-tab-sku').style.borderBottomColor=tab==='sku'?'var(--p500)':'transparent';
-  document.getElementById('val-tab-cat').style.color=tab==='categoria'?'var(--p500)':'var(--text3)';
-  document.getElementById('val-tab-cat').style.borderBottomColor=tab==='categoria'?'var(--p500)':'transparent';
+  document.getElementById('val-tab-sku').style.color=tab==='sku'?'#fff':'var(--text3)';
+  document.getElementById('val-tab-sku').style.borderBottomColor=tab==='sku'?'#fff':'transparent';
+  document.getElementById('val-tab-cat').style.color=tab==='categoria'?'#fff':'var(--text3)';
+  document.getElementById('val-tab-cat').style.borderBottomColor=tab==='categoria'?'#fff':'transparent';
   var showSku=tab==='sku';
   document.getElementById('val-filtros').style.display=showSku?'flex':'none';
   document.getElementById('val-search-row').style.display=showSku?'flex':'none';
