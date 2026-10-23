@@ -490,7 +490,8 @@ function dcVerId(id){ var d=DCX.hist.filter(function(x){ return x.id===id; })[0]
 function _dcFirmas(a,b){ return '<div class="dp-sig"><div><b>'+a+'</b>NOMBRE:<br>DNI:</div><div><b>'+b+'</b>NOMBRE:<br>DNI:</div></div>'; }
 function _dcCab(d){
   return '<div class="dp-hd"><div><span>Reparto.</span><b>'+esc(d.reparto)+'</b></div><div><span>Fecha</span><b>'+_dcF(d.fecha)+'</b></div>'+
-    '<div><span>Transporte</span><b>'+esc(d.transporte)+'</b></div><div><span>Placa</span><b>'+esc(d.placa)+'</b></div></div>';
+    '<div><span>Transporte</span><b>'+esc(d.transporte)+'</b></div><div><span>Placa</span><b>'+esc(d.placa)+'</b></div>'+
+    (d.tipo==='nc'?'<div><span>Factura</span><b>'+esc(d.nroFactura)+'</b></div>':'')+'</div>';
 }
 function _dcPapel(d){
   var sede=_dcSede(), t, i, x;
