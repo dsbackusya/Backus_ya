@@ -3293,3 +3293,70 @@ body{ background:linear-gradient(160deg,#161B48 0%,#0E1230 52%,#111437 100%) fix
 .ev-vtab.on b{ background:rgba(255,255,255,.2) !important }
 .ev-d.on .ev-st{ background:rgba(255,255,255,.18); color:#fff }
 .fh-btn.on:hover,.sal2-seg button.on:hover{ background:var(--accent-h) !important }
+
+/* ══════════════════════════════════════════════════════════════
+   ESTILO DE REFERENCIA — paneles de vidrio, botones con contorno,
+   barra lateral integrada y ventana flotante (solo computadora)
+   ══════════════════════════════════════════════════════════════ */
+
+/* 1) Paneles de vidrio: dentro del contenido las superficies son translúcidas.
+      Las listas desplegables y los avisos mantienen su fondo sólido. */
+.main{
+  --surface:  rgba(66,80,158,.20);
+  --surface2: rgba(7,9,30,.38);
+  --surface3: rgba(98,112,196,.22);
+  --border:   rgba(255,255,255,.08);
+  --border2:  rgba(255,255,255,.14);
+}
+.main .ac-list,.main .dc-ac,.main select,.main .toast{
+  --surface:#181D45; --surface2:#11153A; --surface3:#232A5C;
+}
+.main .ac-list,.main .dc-ac{ background:#181D45 !important }
+
+/* 3) Botones secundarios con contorno violeta */
+.btn-ghost,.tb-btn,.tb-btn-icon{
+  background:transparent !important;
+  border:1px solid rgba(123,97,239,.55) !important;
+  color:var(--accent2) !important;
+}
+.btn-ghost:hover:not(:disabled),.tb-btn:hover,.tb-btn-icon:hover{
+  background:rgba(123,97,239,.16) !important; border-color:var(--accent) !important; color:#fff !important;
+}
+
+/* 4) Escala más fina: esquinas de 10–14 px en tarjetas y botones */
+.ev-card,.stk-card,.stk-tw,.evm2-l,.evm2-r,.dc-card,.dash-card,.evc-card{ border-radius:14px }
+.btn,.tb-btn,.tb-btn-icon,.ev-vtab,.ev-seg button,.inp,select{ border-radius:9px }
+.ev-seg,.ev-vtabs{ border-radius:11px }
+
+/* 2 y 5) Computadora: ventana flotante y barra lateral integrada */
+@media (min-width:1100px){
+  html{ background:#04050D }
+  body{
+    padding:24px;
+    background:
+      radial-gradient(60% 55% at 4% 100%,rgba(172,44,140,.40),transparent 70%),
+      radial-gradient(55% 60% at 100% 92%,rgba(78,62,238,.48),transparent 72%),
+      radial-gradient(40% 35% at 96% 6%,rgba(60,50,170,.20),transparent 70%),
+      #04050D !important;
+    background-attachment:fixed !important;
+  }
+  #s-app.active{
+    width:100%; min-height:calc(100vh - 48px);
+    border-radius:26px; border:1px solid rgba(255,255,255,.14);
+    background:linear-gradient(160deg,rgba(27,33,76,.92) 0%,rgba(13,17,43,.94) 55%,rgba(17,20,54,.93) 100%);
+    box-shadow:0 50px 110px -34px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.07);
+    overflow:clip;
+  }
+  .sidebar{
+    position:sticky !important; top:24px; bottom:auto; left:auto;
+    height:calc(100vh - 48px); align-self:flex-start;
+    background:transparent !important; border-right:0 !important;
+  }
+  .sidebar.collapsed{ overflow:visible }
+  .main,.sidebar.collapsed~.main{ margin-left:0 !important; background:transparent !important; min-height:calc(100vh - 48px) }
+  .topbar{ background:rgba(18,22,58,.86) !important; border-bottom:1px solid var(--border) !important; height:60px }
+  .sb2-sede{ background:rgba(255,255,255,.04) !important; border-color:rgba(255,255,255,.10) !important }
+  .sb-logout{ background:transparent !important }
+  .sb-footer{ border-top-color:rgba(255,255,255,.08) !important }
+}
+.stk-t td:first-child .stk-pn{ min-width:220px }
