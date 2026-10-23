@@ -242,7 +242,7 @@ function _evResumen(){
 }
 
 /* tarjeta única: resultado del día elegido (izquierda) + faltantes y sobrantes de la semana (derecha) */
-var ENV_FCOL = { C6:'#F0A3AA', B6:'#E3A53A', C3:'#8FDCEB', B3:'#9480E8' };
+var ENV_FCOL = { C6:'#FF9CAE', B6:'#F2B04B', C3:'#8FDCEB', B3:'#7B61EF' };
 function _evSumFilas(di,k){ // contado y esperado de un tipo de fila ('caja' | 'vac' | 'lle') en el día
   var c=0, e=0, hay=false; ENV_FILAS.forEach(function(r,j){ if(r.k!==k) return; var t=ENV.m.tot[di]; if(t&&t[j]!=null) c+=t[j]; var x=_evEsp(di,j); if(x!=null){ e+=x; hay=true; } });
   return { c:c, e:hay?e:null };
@@ -269,7 +269,7 @@ function _evMerge(){
   else if(!d){ c='#80799A'; v='Sin conteo'; st='Pendiente'; seg=['','','','']; sub=[m.b<0?'Primero cuenta el primer día de la semana':'Toca «Contar este día»','']; }
   else {
     var t=_evTotDif(_evDifs(s)), nf=0, ns=0; Object.keys(ENV_FAM).forEach(function(k){ if(d.o[k]<0) nf++; else if(d.o[k]>0) ns++; });
-    c=t.v<0?'#F0A3AA':t.v>0?'#8FDCEB':(nf||ns)?'#E3A53A':'#7ADBB3';
+    c=t.v<0?'#FF9CAE':t.v>0?'#8FDCEB':(nf||ns)?'#F2B04B':'#4ADE9F';
     v=(t.v===0&&!nf&&!ns)?'Cuadra':_evMoney(t.v);
     st=nf&&ns?'Faltante y sobrante':nf?'Faltante':ns?'Sobrante':'Todo en orden';
     seg=Object.keys(ENV_FAM).map(function(k){ return d.o[k]<0?'f':d.o[k]>0?'s':'c'; });
@@ -299,7 +299,7 @@ function _evMerge(){
     '<div class="ev-seg"><button class="'+(val?'on':'')+'" onclick="envMet(\'val\')">S/</button><button class="'+(!val?'on':'')+'" onclick="envMet(\'und\')">Unidades</button></div></div>'+
     '<div class="evm2-wk"><span>Faltante<b class="ev-neg">'+(val?_evMoney(-f):(f?'−'+f:'0'))+'</b></span><span>Sobrante<b class="ev-pos">'+(val?_evMoney(sob):'+'+sob)+'</b></span><span>Neto<b class="'+_evCls(net)+'">'+fm(net)+'</b></span></div>'+
     (acum?'<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px">'+acum+': cada día se compara con el conteo inicial, por eso no se suman los días.</div>':'')+'<div class="evm2-cols">'+cols+'</div>'+
-    '<div class="evm2-lg">'+Object.keys(ENV_FAM).map(function(k){ return '<span><i style="background:'+ENV_FCOL[k]+'"></i>'+ENV_FAM[k].n+'</span>'; }).join('')+'<span><i style="background:#7ADBB3"></i>Cuadra</span></div></div>';
+    '<div class="evm2-lg">'+Object.keys(ENV_FAM).map(function(k){ return '<span><i style="background:'+ENV_FCOL[k]+'"></i>'+ENV_FAM[k].n+'</span>'; }).join('')+'<span><i style="background:#4ADE9F"></i>Cuadra</span></div></div>';
   el.innerHTML=L+R;
 }
 

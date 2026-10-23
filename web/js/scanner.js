@@ -100,7 +100,7 @@ function _scannerNativo(targetId, title){
     '</div>'+
     '<div style="position:relative;flex:1;min-height:0">'+
       '<video id="scan-nativo-v" playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>'+
-      '<div style="position:absolute;left:50%;top:50%;width:78%;max-width:420px;height:34%;transform:translate(-50%,-50%);border:3px solid #C0B3F5;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none"></div>'+
+      '<div style="position:absolute;left:50%;top:50%;width:78%;max-width:420px;height:34%;transform:translate(-50%,-50%);border:3px solid #B9AEFF;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none"></div>'+
       '<div id="scan-nativo-msg" style="position:absolute;left:0;right:0;bottom:14px;text-align:center;color:#fff;font:500 13px DM Sans,sans-serif;padding:0 16px">Apunta al código de barras</div>'+
     '</div>'+
     '<form id="scan-nativo-form" style="display:flex;gap:8px;padding:10px 12px;background:#111">'+
@@ -142,7 +142,7 @@ function _scannerNativo(targetId, title){
         if (caps.torch) {
           var luz = document.getElementById('scan-nativo-luz'), on = false;
           luz.style.display = '';
-          luz.onclick = function(){ on = !on; track.applyConstraints({ advanced: [{ torch: on }] }).catch(function(){}); luz.style.background = on ? '#C0B3F5' : '#333'; };
+          luz.onclick = function(){ on = !on; track.applyConstraints({ advanced: [{ torch: on }] }).catch(function(){}); luz.style.background = on ? '#B9AEFF' : '#333'; };
         }
       } catch(e){}
 
