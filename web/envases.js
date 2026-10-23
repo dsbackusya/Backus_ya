@@ -244,7 +244,21 @@ function _evResumen(){
 }
 
 /* tarjeta única: resultado del día elegido (izquierda) + faltantes y sobrantes de la semana (derecha) */
-var ENV_FCOL = { C6:'#FF9CAE', B6:'#F2B04B', C3:'#8FDCEB', B3:'#7B61EF' };
+var ENV_FCOL = { C6:'#9480E8', B6:'#F2B04B', C3:'#6FD3F2', B3:'#4ADE9F' };
+/* tarjeta con el detalle del día al pasar el mouse por la gráfica */
+function gxTip(col,i){
+  var x=ENV._gx&&ENV._gx[i], t=document.getElementById('gx-tip');
+  if(!t){ t=document.createElement('div'); t.id='gx-tip'; document.body.appendChild(t); }
+  if(!x){ t.classList.remove('on'); return; }
+  var dia=ENV.m.days[i], tot=0, h='<h4>'+ENV_DL[i].charAt(0).toUpperCase()+ENV_DL[i].slice(1)+' '+parseInt(dia.slice(8),10)+'</h4>';
+  Object.keys(ENV_FAM).forEach(function(k){
+    var u=x.o[k], v=u*_evPrecio(ENV_FAM[k].g); tot+=v;
+    h+='<div class="t"><i style="background:'+ENV_FCOL[k]+'"></i><span>'+ENV_FAM[k].n+'</span><b class="'+_evCls(u)+'">'+(u===0?'—':(u>0?'+':'−')+Math.abs(u))+'</b><b class="m">'+(u===0?'':_evMoney(v))+'</b></div>';
+  });
+  t.innerHTML=h+'<div class="tot"><span>Total</span><span class="'+_evCls(tot)+'">'+_evMoney(tot)+'</span></div>'; t.classList.add('on');
+}
+function gxMueve(e){ var t=document.getElementById('gx-tip'); if(!t) return; var w=t.offsetWidth, x=e.clientX+16; if(x+w>innerWidth-12) x=e.clientX-w-16; t.style.left=x+'px'; t.style.top=(e.clientY-10)+'px'; }
+function gxFuera(){ var t=document.getElementById('gx-tip'); if(t) t.classList.remove('on'); }
 function _evSumFilas(di,k){ // contado y esperado de un tipo de fila ('caja' | 'vac' | 'lle') en el día
   var c=0, e=0, hay=false; ENV_FILAS.forEach(function(r,j){ if(r.k!==k) return; var t=ENV.m.tot[di]; if(t&&t[j]!=null) c+=t[j]; var x=_evEsp(di,j); if(x!=null){ e+=x; hay=true; } });
   return { c:c, e:hay?e:null };
@@ -283,25 +297,42 @@ function _evMerge(){
   var L='<div class="evm2-l" style="--c:'+c+'"><div class="ev-k">Resultado del conteo · '+nom+'</div><div class="evm2-v">'+v+'</div><span class="evm2-st"><i></i>'+st+'</span>'+
     '<div class="evm2-sg">'+seg.map(function(x){ return '<span class="'+x+'"></span>'; }).join('')+'</div><div class="evm2-sb"><b>'+sub[0]+'</b><span>'+sub[1]+'</span></div>'+
     (ct?'<div class="evm2-ct">'+ct+'</div>':'')+'</div>';
-  // panel derecho: semana
-  var cols=m.days.map(function(dia,i){
-    var x=dias[i], pl, vv='';
-    if(i===m.b) pl='<div class="evm2-no">punto de partida</div>';
-    else if(!x) pl='<div class="evm2-no">sin conteo</div>';
+  // panel derecho: barras con eje + detalle por familia (mapa de calor)
+  var fams=Object.keys(ENV_FAM), tots=dias.map(function(x){ return x?x.tot:null; });
+  var mxv=Math.max.apply(null,tots.filter(function(v){ return v!==null; }).map(Math.abs).concat([0]));
+  var paso=val?(mxv>12?5:mxv>6?2:1):(mxv>20?10:mxv>10?5:2); if(!mxv) mxv=paso;
+  var top=Math.ceil(mxv/paso)*paso, nl=Math.round(top/paso);
+  var fv=function(n){ return val?(n>0?'+':'')+_evMoney(n):(n>0?'+':n<0?'−':'')+Math.abs(Math.round(n)); };
+  var gl='';
+  for(var gi=-nl;gi<=nl;gi++){ gl+='<div class="gx-gl'+(gi===0?' z':'')+'" style="top:'+(50-(gi/nl)*50)+'%"><em>'+(gi===0?'0':(val?'S/ ':'')+(gi>0?'+':'−')+Math.abs(gi*paso))+'</em></div>'; }
+  ENV._gx=dias;
+  var cs=m.days.map(function(dia,i){
+    var x=dias[i], inner='';
+    if(i===m.b) inner='<span class="gx-tg ini">Inicial</span>';
+    else if(!x) inner='<span class="gx-tg">sin<br>conteo</span>';
+    else if(fams.every(function(k){ return !x.o[k]; })) inner='<span class="gx-tg ok">Cuadra</span>';
+    else if(!x.tot) inner='<span class="gx-tg w">Se compensa</span>';
     else {
-      var up='', dn='';
-      Object.keys(ENV_FAM).forEach(function(k){ var y=x.v[k]; if(!y) return; var hh=Math.max(4,Math.abs(y)/mx*H);
-        var sg='<div class="evm2-sg2" style="height:'+hh+'px;background:'+ENV_FCOL[k]+'" title="'+ENV_FAM[k].n+'"></div>'; if(y>0) up+=sg; else dn+=sg; });
-      pl='<div class="evm2-pl"><div class="up">'+up+'</div><div class="z"></div><div class="dn">'+(up||dn?dn:'<div class="ok"></div>')+'</div></div>';
-      vv='<div class="evm2-dv '+_evCls(x.tot)+'">'+(x.tot===0?'Cuadra':fm(x.tot))+'</div>';
+      var hh=Math.max(1.5,Math.abs(x.tot)/top*50);
+      inner=x.tot<0?'<div class="gx-bar f" style="top:50%;height:'+hh+'%"></div><div class="gx-val ev-neg" style="top:calc('+(50+hh)+'% + 4px)">'+fv(x.tot)+'</div>'
+                   :'<div class="gx-bar s" style="bottom:50%;height:'+hh+'%"></div><div class="gx-val ev-pos" style="bottom:calc('+(50+hh)+'% + 4px)">'+fv(x.tot)+'</div>';
     }
-    return '<div class="evm2-d'+(i===s?' on':'')+'" onclick="envSel('+i+')">'+(vv||'<div class="evm2-dv"></div>')+pl+'<div class="evm2-dl">'+ENV_DN[i]+'<b>'+parseInt(dia.slice(8),10)+'</b></div></div>';
+    return '<div class="gx-col'+(i===s?' on':'')+'" onclick="envSel('+i+')" onmouseenter="gxTip(this,'+i+')" onmousemove="gxMueve(event)" onmouseleave="gxFuera()">'+inner+'</div>';
   }).join('');
-  var R='<div class="evm2-r"><div class="evm2-rh"><h3>Faltantes y sobrantes de la semana</h3><span class="ev-sp"></span>'+
+  var dn=m.days.map(function(dia,i){ return '<div class="'+(i===s?'on':'')+(dia===_evHoy()?' hoy':'')+'" onclick="envSel('+i+')">'+ENV_DN[i]+'<b>'+parseInt(dia.slice(8),10)+'</b></div>'; }).join('');
+  var ht='<div></div>'+m.days.map(function(dia,i){ return '<div class="gx-hd">'+ENV_DN[i]+' '+parseInt(dia.slice(8),10)+'</div>'; }).join('');
+  fams.forEach(function(k){
+    ht+='<div class="gx-nm"><i style="background:'+ENV_FCOL[k]+'"></i>'+ENV_FAM[k].n+'</div>'+dias.map(function(x,i){
+      if(!x) return '<div class="gx-cell dim">'+(i===m.b?'·':'—')+'</div>';
+      var u=x.o[k];
+      return '<div class="gx-cell '+(u<0?'f':u>0?'s':'ok')+'" title="'+_evMoney(u*_evPrecio(ENV_FAM[k].g))+'">'+(u===0?'0':(u>0?'+':'−')+Math.abs(u))+'</div>'; }).join('');
+  });
+  var R='<div class="evm2-r gx"><div class="evm2-rh"><h3>Faltantes y sobrantes de la semana</h3><span class="ev-sp"></span>'+
     '<div class="ev-seg"><button class="'+(val?'on':'')+'" onclick="envMet(\'val\')">S/</button><button class="'+(!val?'on':'')+'" onclick="envMet(\'und\')">Unidades</button></div></div>'+
-    '<div class="evm2-wk"><span>Faltante<b class="ev-neg">'+(val?_evMoney(-f):(f?'−'+f:'0'))+'</b></span><span>Sobrante<b class="ev-pos">'+(val?_evMoney(sob):'+'+sob)+'</b></span><span>Neto<b class="'+_evCls(net)+'">'+fm(net)+'</b></span></div>'+
-    (acum?'<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px">'+acum+': cada día se compara con el conteo inicial, por eso no se suman los días.</div>':'')+'<div class="evm2-cols">'+cols+'</div>'+
-    '<div class="evm2-lg">'+Object.keys(ENV_FAM).map(function(k){ return '<span><i style="background:'+ENV_FCOL[k]+'"></i>'+ENV_FAM[k].n+'</span>'; }).join('')+'<span><i style="background:#4ADE9F"></i>Cuadra</span></div></div>';
+    '<div class="gx-kp"><div><span>Faltante</span><b class="ev-neg">'+(val?_evMoney(-f):(f?'−'+f:'0'))+'</b></div><div><span>Sobrante</span><b class="ev-pos">'+(val?_evMoney(sob):'+'+sob)+'</b></div><div><span>Neto</span><b class="'+_evCls(net)+'">'+fm(net)+'</b></div>'+
+      (acum?'<div class="gx-nt"><span>'+acum+'</span>Cada día se compara con el conteo inicial, por eso no se suman los días.</div>':'')+'</div>'+
+    '<div class="gx-plot">'+gl+'<div class="gx-cols">'+cs+'</div></div><div class="gx-days">'+dn+'</div>'+
+    '<div class="gx-heat"><h4>Detalle por familia</h4><div class="gx-ht">'+ht+'</div></div></div>';
   el.innerHTML=L+R;
 }
 
