@@ -1039,10 +1039,20 @@
     if (packs + solas + und === 0) return { ok: false, error: 'Ingresa al menos una cantidad' };
     var ubi = str(d.ubicacion) || 'Palet';
     if (ubi.toLowerCase() === 'pfn') return { ok: false, error: 'El PFN se registra en su pestaña' };
+    if (ubi.toLowerCase() === 'moto') return { ok: false, error: 'Ese nombre está reservado para los motorizados' };
+    // al empezar el conteo del día se guarda lo que deben los motorizados en ese momento (si el día ya tiene su foto, no se toca)
+    var foto = await sb.rpc('fijar_envases_moto', { p_sede: sede, p_fecha: fecha, p_usuario: p.usuario });
+    if (foto.error) throw foto.error;
     var r = await sb.from('envases_conteo').insert({ sede_id: sede, fecha: fecha, estado: d.estado, tamano: Number(d.tamano),
       ubicacion: ubi, packs: packs, cajas_solas: solas, unidades: und, created_by: p.usuario }).select('*').single();
     if (r.error) throw r.error;
-    return { ok: true, fila: mapEnvConteo(r.data) };
+    var moto = [];
+    if (foto.data > 0) {
+      var fm = await sb.from('envases_conteo').select('*').eq('sede_id', sede).eq('fecha', fecha).ilike('ubicacion', 'moto');
+      if (fm.error) throw fm.error;
+      moto = fm.data.map(mapEnvConteo);
+    }
+    return { ok: true, fila: mapEnvConteo(r.data), moto: moto };
   });
   // Cambia una línea ya guardada del conteo (estado, envase, ubicación y cantidades)
   API.editarEnvConteoLinea = guard(async function (p, id, d) {
@@ -1053,6 +1063,7 @@
     if (packs + solas + und === 0) return { ok: false, error: 'Ingresa al menos una cantidad' };
     var ubi = str(d.ubicacion) || 'Palet';
     if (ubi.toLowerCase() === 'pfn') return { ok: false, error: 'El PFN se registra en su pestaña' };
+    if (ubi.toLowerCase() === 'moto') return { ok: false, error: 'Ese nombre está reservado para los motorizados' };
     var r = await sb.from('envases_conteo').update({ estado: d.estado, tamano: Number(d.tamano), ubicacion: ubi,
       packs: packs, cajas_solas: solas, unidades: und }).eq('id', Number(id)).select('*');
     if (r.error) throw r.error;
@@ -1060,9 +1071,18 @@
     return { ok: true, fila: mapEnvConteo(r.data[0]) };
   });
   API.quitarEnvConteoLinea = guard(async function (p, id) {
-    var r = await sb.from('envases_conteo').delete().eq('id', Number(id)).select('id');
+    var r = await sb.from('envases_conteo').delete().eq('id', Number(id)).select('id,sede_id,fecha');
     if (r.error) throw r.error;
     if (!r.data.length) return { ok: false, error: 'La línea ya no existe. Actualiza la pantalla.' };
+    // si ya no queda ninguna línea del día, se quita también la foto de motorizados (se vuelve a tomar al empezar de nuevo)
+    var x = r.data[0];
+    var resto = await sb.from('envases_conteo').select('id', { count: 'exact', head: true }).eq('sede_id', x.sede_id).eq('fecha', x.fecha).not('ubicacion', 'ilike', 'moto').not('ubicacion', 'ilike', 'pfn');
+    if (resto.error) throw resto.error;
+    if (!resto.count) {
+      var lim = await sb.from('envases_conteo').delete().eq('sede_id', x.sede_id).eq('fecha', x.fecha).ilike('ubicacion', 'moto');
+      if (lim.error) throw lim.error;
+      return { ok: true, sinFoto: x.fecha };
+    }
     return { ok: true };
   });
   // Ubicación extra del conteo (solo para esta sede). Palet y Cámara de frío no se guardan: son fijas.
@@ -1070,7 +1090,7 @@
     var sede = exigirSede(p, null), n = str(nombre);
     if (!n) return { ok: false, error: 'Escribe el nombre de la ubicación' };
     if (n.length > 30) return { ok: false, error: 'Máximo 30 letras' };
-    if (['pfn', 'palet', 'cámara', 'camara', 'cámara de frío', 'camara de frio'].indexOf(n.toLowerCase()) >= 0) return { ok: false, error: 'Esa ubicación ya existe' };
+    if (['pfn', 'moto', 'palet', 'cámara', 'camara', 'cámara de frío', 'camara de frio'].indexOf(n.toLowerCase()) >= 0) return { ok: false, error: 'Esa ubicación ya existe' };
     var r = await sb.from('envases_ubicacion').insert({ sede_id: sede, nombre: n, created_by: p.usuario });
     if (r.error) { if (String(r.error.code) === '23505') return { ok: false, error: 'Esa ubicación ya existe' }; throw r.error; }
     return { ok: true, nombre: n };

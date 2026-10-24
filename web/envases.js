@@ -42,7 +42,7 @@ function _evNum(v){
 }
 function _evMoney(n){ return (n<0?'−':'')+'S/ '+Math.abs(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function _evPrecio(g){ var p=ENV.d&&ENV.d.precios&&ENV.d.precios[g]; return (p===undefined||p===null)?ENV_PRECIO0[g]:p; }
-function _evSec(u){ u=String(u||'').trim().toLowerCase(); return u==='pfn'?'PFN':(u==='cámara'||u==='camara')?'Cámara':'Palet'; }
+function _evSec(u){ u=String(u||'').trim().toLowerCase(); return u==='pfn'?'PFN':u==='moto'?'Moto':(u==='cámara'||u==='camara')?'Cámara':'Palet'; }
 function _evSg(n){ return n>0?'+'+n:String(n); }
 function _evCls(n){ return n<0?'ev-neg':n>0?'ev-pos':'ev-zero'; }
 function _evFilaIdx(tam,k){ for(var i=0;i<ENV_FILAS.length;i++){ if(ENV_FILAS[i].tam===tam&&ENV_FILAS[i].k===k) return i; } return -1; }
@@ -85,7 +85,7 @@ function envSemana(n){ ENV.lunes=_evSumar(ENV.lunes,7*n); ENV._reselDia=true; EN
 function _evCalc(){
   var d=ENV.d, days=[], i, k;
   for(k=0;k<7;k++) days.push(_evSumar(d.desde,k));
-  var C=days.map(function(){ return { pal:_evCeros(), cam:_evCeros(), has:false }; });
+  var C=days.map(function(){ return { pal:_evCeros(), cam:_evCeros(), mo:null, has:false }; });
   var snaps={};
   function sumar(l,dest){
     var bot=l.packs*ENV_MULT[l.tamano]+l.unidades, caj=l.packs+l.solas, bi, ci;
@@ -96,12 +96,15 @@ function _evCalc(){
     var sec=_evSec(l.ubicacion);
     if(sec==='PFN'){ if(!snaps[l.fecha]) snaps[l.fecha]=_evCeros(); sumar(l,snaps[l.fecha]); return; }
     var di=days.indexOf(l.fecha); if(di<0) return;
+    // foto de lo que debían los motorizados al empezar el conteo de ese día: no cambia aunque después se registren entregas
+    if(sec==='Moto'){ if(!C[di].mo) C[di].mo=_evCeros(); sumar(l,C[di].mo); return; }
     C[di].has=true; sumar(l,sec==='Cámara'?C[di].cam:C[di].pal);
   });
   var sd=Object.keys(snaps).sort();
   var pfn=days.map(function(dia){ var f=null; sd.forEach(function(x){ if(x<=dia) f=x; }); return f?snaps[f].slice():_evCeros(); });
   // lo que los motorizados deben al cierre de cada día (botellas vacías y cajas): cuenta como parte del conteo
-  var PEND=days.map(function(dia){
+  var PEND=days.map(function(dia,di){
+    if(C[di].mo) return C[di].mo.slice();   // día con foto guardada
     var bal={}, o=ENV_FILAS.map(function(){ return 0; });
     d.moto.forEach(function(x){ if(x.fecha>dia) return; var k=x.motorizado.toLowerCase()+'|'+x.tamano+'|'+(x.caja?1:0); bal[k]=(bal[k]||0)+(x.tipo==='debe'?x.cantidad:-x.cantidad); });
     d.moto.forEach(function(x){ var k=x.motorizado.toLowerCase()+'|'+x.tamano+'|'+(x.caja?1:0); if(bal[k]===undefined) return; var j=_evFilaIdx(x.tamano,x.caja?'caja':'vac'); if(j>=0&&bal[k]>0) o[j]+=bal[k]; delete bal[k]; });
@@ -156,7 +159,7 @@ function _evRender(){
           '<div class="evm2" id="ev-merge"></div>'+
           '<div class="ev-card"><div class="ev-h"><span class="t">Movimientos y conteo</span><span class="s" id="ev-hd"></span><span class="ev-sp"></span><button class="btn btn-primary" id="ev-bc" onclick="envContar()"></button></div>'+
             '<div class="ev-t" id="ev-t"></div>'+
-            '<div class="ev-ft">Conteo = Palet + Cámara + PFN + lo que deben los motorizados (columnas PFN y Moto). Esperado = conteo inicial + entradas − devoluciones − ventas, de los días anteriores. Diferencia = conteo del día − esperado. Dentro de una familia, las diferencias de llenas y vacías se compensan. ENT y DEV de Marcaje se suman solos (aparecen como + debajo del número).</div></div>'
+            '<div class="ev-ft">Conteo = Palet + Cámara + PFN + lo que deben los motorizados (columnas PFN y Moto). Lo de los motorizados queda fijo al empezar el conteo del día: entregas o cambios posteriores no lo modifican. Esperado = conteo inicial + entradas − devoluciones − ventas, de los días anteriores. Diferencia = conteo del día − esperado. Dentro de una familia, las diferencias de llenas y vacías se compensan. ENT y DEV de Marcaje se suman solos (aparecen como + debajo del número).</div></div>'
         : ENV.vista==='pfn' ? '<div id="ev-pfn"></div>' : '<div id="ev-mot"></div>')+
       '</div>'+
     '</div></div>';
@@ -337,7 +340,7 @@ function _evUbiLista(){
   ((ENV.d&&ENV.d.ubicaciones)||[]).forEach(function(n){ if(!o.some(function(x){ return x[0].toLowerCase()===String(n).toLowerCase(); })) o.push([n,n]); });
   return o;
 }
-function _evcLineas(){ var s=ENV.ses; return ENV.d.conteo.filter(function(l){ return l.fecha===s.fecha&&_evSec(l.ubicacion)!=='PFN'; }); }
+function _evcLineas(){ var s=ENV.ses; return ENV.d.conteo.filter(function(l){ var sc=_evSec(l.ubicacion); return l.fecha===s.fecha&&sc!=='PFN'&&sc!=='Moto'; }); }
 function envContar(){
   if(!ENV.d||!ENV.m){ showToast('Espera a que cargue la semana','err'); return; }
   if(ENV.vista!=='ctl'){ ENV.vista='ctl'; _evRender(); }
@@ -384,7 +387,7 @@ function envAgregar(){
     google.script.run.withSuccessHandler(function(r){
       s.guardando=false;
       if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo guardar la línea','err'); _evcPinta(); return; }
-      ENV.d.conteo.push(r.fila); _evCalc();
+      ENV.d.conteo.push(r.fila); if(r.moto&&r.moto.length) ENV.d.conteo=ENV.d.conteo.concat(r.moto); _evCalc();
       s.f.tam=null; s.f.packs=''; s.f.solas=''; s.f.und=''; s.ult=etq+' — '+_evNLin(r.fila).bot+' botellas, '+_evNLin(r.fila).cajas+' cajas';
       showToast('Guardado: '+etq,'ok'); _evcPinta();
     }).withFailureHandler(function(e){ s.guardando=false; showToast(e.message,'err'); _evcPinta(); }).agregarEnvConteoLinea(S.token,dato);
@@ -420,7 +423,7 @@ function _evcGuardarEdicion(){
 function _evcQuitar(id,fin){
   google.script.run.withSuccessHandler(function(r){
     if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo quitar la línea','err'); return; }
-    ENV.d.conteo=ENV.d.conteo.filter(function(x){ return x.id!==id; }); _evCalc(); fin();
+    ENV.d.conteo=ENV.d.conteo.filter(function(x){ return x.id!==id&&!(r.sinFoto&&_evSec(x.ubicacion)==='Moto'&&x.fecha===r.sinFoto); }); _evCalc(); fin();
   }).withFailureHandler(function(e){ showToast(e.message,'err'); }).quitarEnvConteoLinea(S.token,id);
 }
 function envDeshacer(){
@@ -594,7 +597,7 @@ function envMotoMov(n){
     function(){ ENV.mAb[n]=''; _evRender(); });
 }
 function envMotoQuitar(id){
-  _confirmDialog('Quitar movimiento','Se quitará esta línea del historial del motorizado y cambiará su saldo.',function(){
+  _confirmDialog('Quitar movimiento','Se quitará esta línea del historial del motorizado y cambiará su saldo. Los conteos que ya hiciste no se modifican.',function(){
     google.script.run.withSuccessHandler(function(r){
       if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo quitar','err'); return; }
       ENV.d.moto=ENV.d.moto.filter(function(x){ return x.id!==id; }); _evCalc(); _evRender(); showToast('Quitado','ok');
