@@ -200,10 +200,16 @@
 
   API.pingSession = async function () {
     try {
+      // Al abrir la app el perfil y las sedes se piden a la vez que se valida el usuario
+      // (antes eran tres viajes seguidos al servidor antes de poder pedir el primer dato).
+      var local = await sb.auth.getSession();
+      var uid = local.data && local.data.session && local.data.session.user.id;
+      var previo = uid ? Promise.allSettled([_perfil ? null : cargarPerfil(uid), cargarSedes()]) : null;
       var r = await sb.auth.getUser();
       // Sin red (o servidor caído) no es sesión vencida: se propaga para que la app no cierre la sesión
       if (r.error && (r.error.name === 'AuthRetryableFetchError' || !r.error.status || r.error.status >= 500)) throw r.error;
       if (r.error || !r.data.user) return { ok: false, expired: true };
+      if (previo) await previo; // los fallos se ignoran aquí: contexto() los vuelve a intentar y los informa
       var p = await contexto();
       if (!p) return { ok: false, expired: true };
       return { ok: true, usuario: p.usuario, rol: p.rol };
