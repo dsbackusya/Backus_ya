@@ -3292,11 +3292,6 @@ body::before{ content:""; position:fixed; inset:0; z-index:-1; pointer-events:no
     radial-gradient(620px 420px at 100% 16%,rgba(96,70,214,.30),transparent 72%),
     radial-gradient(620px 420px at 0% 100%,rgba(123,97,239,.16),transparent 70%);
   background-repeat:no-repeat; background-size:100% 100%; }
-/* granulado estático sobre el fondo y los degradados: una imagen pequeña repetida en una capa fija, sin animación ni mezcla (casi no cuesta rendimiento).
-   Intensidad: cambia --grano (0 = sin grano, 1 = máximo) */
-:root{ --grano:.55 }
-body::after{ content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
-  background:url(vendor/grano.png) 0 0/160px 160px repeat; opacity:var(--grano); }
 .sb-item.active{ background:#26262A !important; color:#fff !important; font-weight:600 }
 .sb-item.active .ic{ color:#fff !important }
 .sb-item.active::before,.sb-item.active::after{ display:none !important }
@@ -3495,8 +3490,7 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 
 /* ══ Salidas: panel de filtros violeta con tabla hundida y filas redondeadas (maqueta aprobada) ══ */
 .sal2-pnl{position:relative;border-radius:28px;overflow:hidden;
-  background:url(vendor/grano.png) 0 0/160px 160px repeat,
-             radial-gradient(640px 150px at 100% 0%,rgba(150,120,255,.55),transparent 72%),
+  background:radial-gradient(640px 150px at 100% 0%,rgba(150,120,255,.55),transparent 72%),
              radial-gradient(420px 120px at 70% -10%,rgba(123,97,239,.22),transparent 72%),#0E0E10;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
 .sal2-pnl .sal2-fl{padding:20px 32px 18px;margin:0;gap:10px;align-items:center}

@@ -3,9 +3,9 @@
    - Archivos propios: red primero, con copia de respaldo si no hay internet.
    - Supabase (datos, login, tiempo real) nunca se guarda: siempre va a la red.
    Al cambiar la lista de archivos, sube el número de CACHE. */
-const CACHE = 'tada-v21';
+const CACHE = 'tada-v22';
 const BASE = ['./', 'index.html', 'app.css', 'js/core.js', 'js/stock.js', 'js/salidas.js', 'js/entradas.js', 'js/mt.js', 'js/comun.js', 'js/cancelados.js', 'js/maestro.js', 'js/mconteo.js', 'js/scanner.js', 'js/conteo.js', 'js/shell.js', 'js/validacion.js', 'js/oc.js', 'js/editar-sku.js', 'js/arranque.js', 'js/splash.js', 'envases.js', 'documentos.js', 'api.js', 'config.js', 'manifest.webmanifest',
-  'vendor/supabase.js', 'vendor/grano.png', 'vendor/fonts/inter-latin.woff2', 'vendor/fonts/anton-latin.woff2', 'vendor/fonts/dmmono-400-latin.woff2', 'vendor/fonts/dmmono-500-latin.woff2',
+  'vendor/supabase.js', 'vendor/fonts/inter-latin.woff2', 'vendor/fonts/anton-latin.woff2', 'vendor/fonts/dmmono-400-latin.woff2', 'vendor/fonts/dmmono-500-latin.woff2',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
