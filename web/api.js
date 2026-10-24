@@ -347,6 +347,17 @@
     return { ok: true, data: filas.map(mapSalida), hoyStr: fmtFecha(hoy), rango: rg };
   });
 
+  // Cuántas líneas de hoy están "por confirmar" (mismo criterio que _salEstadoLinea: con estado, que no sea cancelado y sin revisión "entregado").
+  // Devuelve solo el número: así el contador del menú no descarga todas las filas del día.
+  API.contarSalidasPorConfirmar = guard(async function (p) {
+    var hoy = hoyISO();
+    var r = await filtroSede(sb.from('v_salidas').select('id', { count: 'exact', head: true }), p)
+      .eq('fecha', hoy).not('estado', 'is', null).neq('estado', '').not('estado', 'ilike', 'cancelado')
+      .or('revision.is.null,revision.not.ilike.entregado');
+    if (r.error) throw r.error;
+    return { ok: true, n: r.count || 0 };
+  });
+
   API.registrarSalida = guard(async function (p, fila) {
     var pack = entero(fila.pack), unidad = entero(fila.unidad), sku = str(fila.sku);
     if (!sku) return { ok: false, error: 'SKU es obligatorio' };

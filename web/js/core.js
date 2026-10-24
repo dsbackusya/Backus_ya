@@ -297,7 +297,7 @@ function _sbSalidasRefrescar(){
     google.script.run
       .withSuccessHandler(function(r){
         if(t!==_sbSalReq||!r||!r.ok) return;
-        var n=(r.data||[]).filter(function(x){return _salEstadoLinea(x)==='pen';}).length;
+        var n=r.n;
         var b=document.getElementById('sb-badge-salidas');
         if(!b) return;
         b.textContent=n>99?'99+':n;
@@ -305,7 +305,7 @@ function _sbSalidasRefrescar(){
         var it=document.getElementById('nav-salidas'); if(it) it.classList.toggle('con-badge',n>0);
       })
       .withFailureHandler(function(){})
-      .getSalidas(S.token,true,null);
+      .contarSalidasPorConfirmar(S.token);
   },1200);
 }
 setInterval(function(){ if(document.visibilityState==='visible') _sbSalidasRefrescar(); },300000);
