@@ -3803,72 +3803,58 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 #validacion-root .vk-pr{max-width:330px}
 
 /* ══════════════════════════════════════════════════════════════
-   SPLASH de arranque — aura violeta con DINET / TADA que se llena mientras carga la app
+   SPLASH de arranque — la reja de la tienda sube, se ve la bodega, entran DINET / TADA y la mascota.
+   Todo se anima con transform y opacity (no pesa); la bodega ya viene teñida y oscurecida en la imagen.
    ══════════════════════════════════════════════════════════════ */
-#tsplash{position:fixed;inset:0;z-index:100000;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0A0112;
-  transition:opacity .9s cubic-bezier(.4,0,.2,1),transform .9s cubic-bezier(.4,0,.2,1),visibility .9s}
-#tsplash.out{opacity:0;transform:scale(1.08);visibility:hidden;pointer-events:none}
+#tsplash{position:fixed;inset:0;z-index:100000;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0A0A0B;
+  transition:opacity .7s cubic-bezier(.4,0,.2,1),visibility .7s}
+#tsplash.out{opacity:0;visibility:hidden;pointer-events:none}
 .ts-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-
-/* el aura: masas de luz violeta que se mueven despacio */
-.ts-aura{position:absolute;inset:0;overflow:hidden;background:#0A0112}
-.ts-bl{position:absolute;will-change:transform,border-radius}
-.ts-mid{width:150vmax;height:120vmax;left:50%;top:46%;margin:-60vmax 0 0 -75vmax;border-radius:50%;
-  background:radial-gradient(closest-side,#A678FF 0%,#7C3AED 32%,#4A1C9E 60%,rgba(40,10,100,0) 100%);animation:tsMid 16s ease-in-out infinite alternate}
-.ts-core{--cw:max(min(86vmin,760px),min(54vw,980px));--ch:min(112vmin,980px);width:var(--cw);height:var(--ch);left:50%;top:46%;margin-left:calc(var(--cw)/-2);margin-top:calc(var(--ch)/-2);
-  background:radial-gradient(closest-side,#FFFFFF 0%,#FDF3FF 18%,#EAD9FF 38%,rgba(190,160,255,.6) 60%,rgba(170,130,255,.22) 80%,rgba(170,130,255,0) 100%);
-  animation:tsCore 11s ease-in-out infinite alternate,tsCoreIn 2.2s cubic-bezier(.2,.8,.2,1) backwards}
-.ts-dk{border-radius:50%;background:radial-gradient(closest-side,#06000D 30%,rgba(6,0,13,.75) 55%,rgba(6,0,13,.3) 78%,rgba(6,0,13,0) 100%)}
-.ts-d1{width:78vmax;height:56vmax;right:-30vmax;top:-30vmax;animation:tsD1 18s ease-in-out infinite alternate}
-.ts-d2{width:84vmax;height:58vmax;left:-38vmax;bottom:-32vmax;animation:tsD2 21s ease-in-out infinite alternate}
-.ts-d3{width:50vmax;height:60vmax;right:-30vmax;bottom:-8vmax;animation:tsD3 17s ease-in-out infinite alternate}
-@keyframes tsMid{to{transform:translate(4vmax,-3vmax) rotate(14deg) scale(1.08)}}
-@keyframes tsCore{
-  0%{transform:rotate(-8deg) scale(1)}
-  50%{transform:rotate(6deg) scale(1.07) translate(1.5vmax,-1vmax)}
-  100%{transform:rotate(-2deg) scale(.97) translate(-1.5vmax,1vmax)}}
-@keyframes tsCoreIn{from{opacity:0;transform:scale(.4)}}
-@keyframes tsD1{to{transform:translate(-7vmax,6vmax) rotate(18deg) scale(1.12)}}
-@keyframes tsD2{to{transform:translate(8vmax,-5vmax) rotate(-14deg) scale(1.1)}}
-@keyframes tsD3{to{transform:translate(-6vmax,-7vmax) rotate(12deg) scale(1.15)}}
-
-/* granulado: la capa que se mezcla no se anima; solo se mueve el ruido de dentro */
-.ts-grain,.ts-grain2{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-.ts-grain{mix-blend-mode:overlay;opacity:.55}
-.ts-grain2{opacity:.15}
-.ts-grain i,.ts-grain2 i{position:absolute;inset:-60px;background-size:220px 220px;animation:tsGrain .8s steps(1) infinite}
-.ts-grain i{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='matrix' values='1.5 0 0 0 -.25  1.5 0 0 0 -.25  1.5 0 0 0 -.25  0 0 0 0 1'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
-.ts-grain2 i{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='m' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  5 0 0 0 -2.7'/></filter><rect width='100%' height='100%' filter='url(%23m)'/></svg>");animation-duration:1.1s}
-@keyframes tsGrain{0%{transform:translate(0,0)}20%{transform:translate(-38px,22px)}40%{transform:translate(26px,-34px)}60%{transform:translate(-18px,-12px)}80%{transform:translate(34px,30px)}100%{transform:translate(0,0)}}
-
-/* título: contorno que se va llenando de abajo hacia arriba, como un líquido */
-.ts-stage{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 20px;opacity:0}
-#tsplash.go .ts-stage{opacity:1;animation:tsStageIn 1.2s .15s cubic-bezier(.2,.9,.3,1) backwards}
-@keyframes tsStageIn{from{opacity:0;transform:translateY(22px);filter:blur(12px)}}
-.ts-ttl{position:relative;font:400 clamp(84px,min(21vw,27vh),214px)/.94 'Anton','Bebas Neue',Impact,sans-serif;letter-spacing:.012em;text-transform:uppercase;user-select:none}
+.ts-bg{position:absolute;inset:0;background:#0A0A0B url(img/splash-bodega.webp) center 70%/cover no-repeat;opacity:.35}
+#tsplash.go .ts-bg{animation:tsBg 3s .15s ease-out forwards}
+@keyframes tsBg{to{opacity:1}}
+/* reja metálica gris */
+.ts-door{position:absolute;inset:0;z-index:5;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,#9a9da4 0 20px,#6d7077 20px 23px,#2b2c30 23px 27px);box-shadow:0 20px 44px rgba(0,0,0,.65)}
+.ts-door::before{content:"";position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,.28),transparent 18%,transparent 82%,rgba(0,0,0,.28))}
+.ts-door::after{content:"";position:absolute;left:0;right:0;bottom:-14px;height:14px;background:linear-gradient(#8a8d94,#4a4c52);border-radius:0 0 5px 5px}
+#tsplash.go .ts-door{animation:tsUp 3s .15s cubic-bezier(.55,0,.3,1) forwards}
+@keyframes tsUp{to{transform:translateY(-104%)}}
+/* letras */
+.ts-stage{position:relative;top:-10vh;z-index:3;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 20px;opacity:0}
+#tsplash.go .ts-stage{animation:tsIn 1.1s 2.7s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes tsIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.ts-ttl{font:400 clamp(84px,min(21vw,27vh),214px)/.94 'Anton','Bebas Neue',Impact,sans-serif;letter-spacing:.012em;text-transform:uppercase;color:#fff;user-select:none;text-shadow:0 4px 34px rgba(20,10,60,.7)}
 /* la regla global *{font-family:Inter!important} (más arriba) pisaba la fuente del título */
 #tsplash .ts-ttl,#tsplash .ts-ttl *{font-family:'Anton','Bebas Neue',Impact,sans-serif!important;font-weight:400!important}
-.ts-t{display:flex;flex-direction:column;align-items:center}
-.ts-t.base{color:transparent;-webkit-text-stroke:1.4px rgba(58,16,140,.62)}
-.ts-t.fill{position:absolute;inset:0;
-  background:linear-gradient(180deg,#2A0A62 0%,#4C1D95 40%,#7C3AED 78%,#9F7BFF 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
-  clip-path:inset(calc(100% - var(--p,0%)) 0 0 0);transition:clip-path .3s linear}
+.ts-ttl span{display:block}
+/* mascota con movimientos sutiles */
+.ts-mascot{position:absolute;left:50%;bottom:1.5%;height:30vh;aspect-ratio:220/280;transform:translateX(-50%);z-index:2;opacity:0;pointer-events:none}
+.ts-mascot svg{width:100%;height:100%;overflow:visible}
+#tsplash.go .ts-mascot{animation:tsMIn 1s 3.2s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes tsMIn{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%)}}
+.tsm-all{transform-box:fill-box;transform-origin:50% 100%;animation:tsmBr 3.6s ease-in-out infinite}
+@keyframes tsmBr{50%{transform:scale(1.012,1.026)}}
+.tsm-head{transform-origin:110px 120px;animation:tsmHd 6s ease-in-out infinite}
+@keyframes tsmHd{0%,100%{transform:rotate(-1.6deg) translateY(0)}50%{transform:rotate(1.8deg) translateY(-1.5px)}}
+.tsm-tab{transform-origin:150px 130px;animation:tsmTb 4.4s ease-in-out infinite}
+@keyframes tsmTb{0%,100%{transform:rotate(0)}50%{transform:rotate(-3deg) translateY(-1.5px)}}
+.tsm-eye{transform-box:fill-box;transform-origin:50% 50%;animation:tsmBl 5.2s infinite}
+@keyframes tsmBl{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.08)}}
+.tsm-sh{transform-origin:110px 262px;animation:tsmSh 3.6s ease-in-out infinite}
+@keyframes tsmSh{50%{transform:scaleX(.96);opacity:.8}}
 
-/* listo */
-#tsplash.ready .ts-t.fill{clip-path:inset(0 0 0 0)}
-#tsplash.ready .ts-core{animation:tsCore 11s ease-in-out infinite alternate,tsFlare 1s cubic-bezier(.3,0,.2,1) forwards}
-@keyframes tsFlare{50%{transform:scale(1.3)}}
-#tsplash.ready .ts-ttl{animation:tsPop .8s cubic-bezier(.2,.9,.3,1.3)}
-@keyframes tsPop{40%{transform:scale(1.04)}}
+/* otras veces en la misma sesión: sin reja, entra directo */
+#tsplash.rep .ts-door{display:none}
+#tsplash.rep .ts-bg{opacity:1;animation:none}
+#tsplash.rep.go .ts-stage{animation-delay:.05s;animation-duration:.6s}
+#tsplash.rep.go .ts-mascot{animation-delay:.25s;animation-duration:.6s}
 
 /* error */
 .ts-err{display:none;flex-direction:column;align-items:center;margin-top:22px;padding:20px 24px 22px;border-radius:22px;max-width:360px;
-  background:rgba(10,2,22,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 60px -20px rgba(0,0,0,.8);color:#fff;animation:tsRise .5s cubic-bezier(.2,.9,.3,1) backwards}
+  background:rgba(10,2,22,.82);border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 60px -20px rgba(0,0,0,.8);color:#fff;animation:tsRise .5s cubic-bezier(.2,.9,.3,1) backwards}
 @keyframes tsRise{from{opacity:0;transform:translateY(14px)}}
 #tsplash.failed .ts-err{display:flex}
-#tsplash.failed .ts-core{opacity:.28;transition:opacity .8s}
-#tsplash.failed .ts-t.base{-webkit-text-stroke-color:rgba(230,220,255,.55)}
-#tsplash.failed .ts-t.fill{clip-path:inset(100% 0 0 0)}
 .ts-err h3{margin:0;font:600 16px 'Inter',sans-serif}
 .ts-err p{margin:6px 0 16px;font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.6);text-align:center}
 .ts-bt{display:flex;gap:8px}
@@ -3877,12 +3863,8 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .ts-b1{color:#fff;background:linear-gradient(180deg,#8B5CF6,#6D28D9);box-shadow:0 8px 22px -6px rgba(124,58,237,.7),inset 0 1px 0 rgba(255,255,255,.25)}
 .ts-b2{color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
 
-/* en celulares el grano no se anima (ahorra batería) */
-@media (max-width:700px){ .ts-grain i,.ts-grain2 i{animation:none} }
 @media (prefers-reduced-motion:reduce){
-  .ts-bl,.ts-core,.ts-grain i,.ts-grain2 i{animation:none!important}
-  #tsplash.go .ts-stage{animation:none}
-  .ts-t.fill{transition:none}
+  .tsm-all,.tsm-head,.tsm-tab,.tsm-eye,.tsm-sh{animation:none!important}
+  #tsplash.go .ts-stage,#tsplash.go .ts-mascot,#tsplash.go .ts-bg{animation-duration:.01s!important;animation-delay:0s!important}
   #tsplash{transition:opacity .4s,visibility .4s}
-  #tsplash.out{transform:none}
 }

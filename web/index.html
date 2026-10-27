@@ -15,6 +15,7 @@
 <!-- Tipografías propias (sin pedir nada a Google): menos conexiones y la app también carga bien sin internet -->
 <link rel="preload" href="vendor/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin/>
 <link rel="preload" href="vendor/fonts/anton-latin.woff2" as="font" type="font/woff2" crossorigin/>
+<link rel="preload" href="img/splash-bodega.webp" as="image" type="image/webp"/>
 <script src="vendor/supabase.js"></script>
 <script src="config.js"></script>
 <script src="api.js"></script>
@@ -45,23 +46,18 @@ window.addEventListener('load', function(){
 
 <!-- ══ SPLASH de arranque (se quita solo cuando la app está lista; ver js/splash.js) ══ -->
 <div id="tsplash" role="status" aria-live="polite">
-  <div class="ts-aura" aria-hidden="true">
-    <div class="ts-bl ts-mid"></div><div class="ts-bl ts-core"></div>
-    <div class="ts-bl ts-dk ts-d1"></div><div class="ts-bl ts-dk ts-d2"></div><div class="ts-bl ts-dk ts-d3"></div>
-    <div class="ts-grain"><i></i></div><div class="ts-grain2"><i></i></div>
-  </div>
+  <div class="ts-bg" aria-hidden="true"></div>
   <h1 class="ts-sr" id="ts-sr">Dinet TaDa. Cargando la aplicación.</h1>
+  <div class="ts-mascot" id="ts-mascot" aria-hidden="true"></div>
   <div class="ts-stage">
-    <div class="ts-ttl" id="ts-ttl" aria-hidden="true">
-      <div class="ts-t base"><span>Dinet</span><span>TaDa</span></div>
-      <div class="ts-t fill"><span>Dinet</span><span>TaDa</span></div>
-    </div>
+    <div class="ts-ttl" id="ts-ttl" aria-hidden="true"><span>Dinet</span><span>TaDa</span></div>
     <div class="ts-err">
       <h3>No pudimos cargar la app</h3>
       <p>Revisa tu conexión a internet e inténtalo otra vez.</p>
       <div class="ts-bt"><button class="ts-b1" id="ts-retry" type="button">Reintentar</button><button class="ts-b2" id="ts-wait" type="button">Seguir esperando</button></div>
     </div>
   </div>
+  <div class="ts-door" aria-hidden="true"></div>
 </div>
 <script src="js/splash.js"></script>
 
