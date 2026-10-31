@@ -232,28 +232,42 @@ function renderValSKU(body){
   }).join(''):'<div class="vk-none">Todo cuadra, no hay desvíos</div>';
 
   var fch=String(VAL_FECHA||''); fch=fch.length>=10?fch.slice(8,10)+'/'+fch.slice(5,7):'';
+  var base=c.ok+desv, nivel=pct>=99?'ok':pct>=95?'casi':'bajo';
+  var vTxt={ok:'Todo cuadra',casi:'Casi perfecto',bajo:'Hay que revisar'}[nivel];
+  var vSub=desv?(desv===1?'Solo 1 producto con diferencia.':desv+' productos con diferencia.'):'No hay diferencias en este conteo.';
+  var nota=[]; if(c.ns) nota.push(c.ns+' sin stock no entran en el cálculo'); if(c.nc) nota.push(c.nc+' sin contar');
+  var R=46, CI=2*Math.PI*R, arco=Math.max(0,Math.min(1,pct/100))*CI;
+  var gr=nivel==='bajo'?['#E39AA2','#CC7A83','#7B61EF']:['#E4DEFC','#7B61EF','#CC7A83'];
+  var arc='cx="60" cy="60" r="'+R+'" fill="none" stroke-linecap="round" stroke-dasharray="'+arco+' '+CI+'"';
+  var anillo='<svg viewBox="0 0 120 120"><defs><linearGradient id="vkAu" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+gr[0]+'"/><stop offset=".55" stop-color="'+gr[1]+'"/><stop offset="1" stop-color="'+gr[2]+'"/></linearGradient></defs>'+
+    '<circle cx="60" cy="60" r="'+R+'" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="9"/>'+
+    '<circle '+arc+' stroke="url(#vkAu)" stroke-width="16" opacity=".45" class="vk-aur"/>'+
+    '<circle '+arc+' stroke="url(#vkAu)" stroke-width="9"/></svg>';
+  var tile=function(k,f){ return '<div class="vk-t'+(c[k]?'':' z')+'" data-f="'+f+'"><span><em class="vk-dot" style="background:'+col[k]+'"></em>'+lab[k]+'</span><b>'+c[k]+'</b></div>'; };
+  var fch=String(VAL_FECHA||''); fch=fch.length>=10?fch.slice(8,10)+'/'+fch.slice(5,7):'';
   var kpiHtml=
-    '<div class="vk-sum">'+
-      '<div class="vk-c"><div class="vk-k">Resultado de la validación'+(fch?' · conteo del '+fch:'')+'</div>'+
-        '<div class="vk-rg"><div class="vk-dn"><svg viewBox="0 0 120 120">'+svg+'</svg><div class="vk-mid"><b>'+pct+'%</b><span>cuadra</span></div></div>'+
-        '<div class="vk-lg">'+leyenda+'</div></div></div>'+
-      '<div class="vk-c"><div class="vk-k">Costo total del desvío</div>'+
+    '<div class="vk-sum2">'+
+      '<div class="vk-c vk-hero"><div class="vk-dn">'+anillo+'<div class="vk-mid"><b>'+pct+'%</b><span>exactitud</span></div></div>'+
+        '<div class="vk-hb"><span class="vk-v '+nivel+'"><em class="vk-dot"></em>'+vTxt+'</span>'+
+        '<div class="vk-ht"><b>'+c.ok+'</b><span>/ '+base+'</span></div>'+
+        '<div class="vk-hl">productos cuadran</div>'+
+        '<div class="vk-hf">'+(c.ns?'<span title="Los productos sin stock no entran en el porcentaje">'+c.ns+' sin stock excluidos</span>':'')+(c.nc?'<span class="d">'+c.nc+' sin contar</span>':'')+'</div></div></div>'+
+      '<div class="vk-c"><div class="vk-k">Costo del desvío</div>'+
         '<div class="vk-big '+(neto<0?'neg':neto>0?'pos':'')+'">'+costoFmt+'<small>pen</small></div>'+
-        '<div class="vk-sub">'+(desv?'Neto de '+desv+(desv===1?' producto con desvío':' productos con desvío')+' · '+_valMoney(neto):'Sin desvíos en este conteo')+'</div>'+
+        '<div class="vk-sub">'+(desv?desv+(desv===1?' producto con desvío':' productos con desvío'):'Sin desvíos en este conteo')+'</div>'+
         '<div class="vk-dv"><i style="flex:'+(Math.abs(falt)||(!sob?1:0))+';background:#CC7A83"></i><i style="flex:'+Math.abs(sob)+';background:#7B61EF"></i></div>'+
-        '<div class="vk-two"><div><span><em class="vk-dot" style="background:#CC7A83"></em>Faltante</span><b style="color:#CC7A83">'+_valMoney(falt)+'</b></div>'+
-          '<div><span><em class="vk-dot" style="background:#7B61EF"></em>Sobrante</span><b style="color:#C4B8FA">'+_valMoney(sob)+'</b></div></div>'+
+        '<div class="vk-lr"><span style="color:#CC7A83">Faltante '+_valMoney(falt)+'</span><span style="color:#C4B8FA">Sobrante '+_valMoney(sob)+'</span></div>'+
         (skusSinPrecio>0?'<div class="vk-warn" title="Estos SKUs no aparecen en la hoja MAESTRO (Cod_Lovis) o no tienen columna Precio — su costo se muestra como S/ 0.00 pero no está calculado">'+ICO('warn',12)+skusSinPrecio+' SKU sin precio en MAESTRO</div>':'')+
       '</div>'+
-      '<div class="vk-c"><div class="vk-hd"><div class="vk-k">Mayores desvíos</div>'+(desv?'<a class="vk-ver" data-f="diff">Ver todos</a>':'')+'</div>'+topHtml+'</div>'+
-    '</div>';
+    '</div>'+
+    '<div class="vk-tiles">'+tile('ok','ok')+tile('f','diff')+tile('s','diff')+tile('nc','nc')+tile('ns','nostock')+'</div>';
   var kp=document.getElementById('val-kpis');
   if(kp){
     kp.innerHTML=kpiHtml;
     if(!kp._valDel){
       kp._valDel=true;
       kp.addEventListener('click',function(e){
-        var li=e.target.closest('.vk-li,.vk-ver'); if(li){ setValFiltro(li.dataset.f); return; }
+        var li=e.target.closest('.vk-li,.vk-ver,.vk-t'); if(li){ setValFiltro(li.dataset.f); return; }
         var ti=e.target.closest('.vk-ti'); if(ti){ valIrSku(ti.dataset.sku); }
       });
     }
