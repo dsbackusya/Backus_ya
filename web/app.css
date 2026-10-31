@@ -3962,3 +3962,13 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .mta-axis{display:flex;margin-top:10px}
 .mta-axis span{flex:1;text-align:center;font-size:12px;color:var(--text3)}
 .mta-axis span.on{color:var(--text);font-weight:600;background:var(--surface3);border-radius:8px;padding:3px 0;margin:0 4px}
+
+.mta-pt{position:absolute;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:#C4B8FA;pointer-events:none}
+.mta-pv{position:absolute;transform:translate(-50%,calc(-100% - 10px));background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:11px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;pointer-events:none;font-variant-numeric:tabular-nums}
+
+.mta-pv em,.mta-at b em{font-style:normal;font-size:10px;font-weight:600;margin-left:6px}
+.mta-pv em.up{color:#E39AA2}
+.mta-pv em.dn,.mta-at b em.dn{color:#5AD19A}
+.mta-at b em.up{color:#b04a57}
+.mta-at b em.dn{color:#1f8a5b}
+.mta-at b{display:block}
