@@ -559,6 +559,8 @@ function editarMTRow(rowNum){
 }
 
 function eliminarMTRow(rowNum){
+  var fila=(window._MT_ROWS||{})[rowNum];
+  if(fila&&fila.nroFactura){ showToast('Ya fue retirado (factura '+fila.nroFactura+'). No se puede eliminar.','err'); return; }
   _confirmDialog('Eliminar registro','Se eliminará este movimiento. Esta acción no se puede deshacer.',function(){
     google.script.run
       .withSuccessHandler(function(r){

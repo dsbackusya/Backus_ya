@@ -680,6 +680,10 @@
     return { ok: true };
   });
   API.eliminarMT = guard(async function (p, rowNum) {
+    // un registro ya retirado (con factura o NC) no se borra: es lo que respalda el retiro
+    var f = await sb.from('mt').select('nro_factura').eq('id', Number(rowNum)).maybeSingle();
+    if (f.error) throw f.error;
+    if (f.data && str(f.data.nro_factura)) return { ok: false, error: 'Este registro ya fue retirado (factura ' + str(f.data.nro_factura) + '). No se puede eliminar.' };
     var r = await sb.from('mt').delete().eq('id', Number(rowNum));
     if (r.error) throw r.error;
     return { ok: true };
