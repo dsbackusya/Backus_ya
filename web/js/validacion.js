@@ -252,6 +252,7 @@ function renderValSKU(body){
         '<div class="vk-ht"><b>'+c.ok+'</b><span>/ '+base+'</span></div>'+
         '<div class="vk-hl">productos cuadran</div>'+
         '<div class="vk-hf">'+(c.ns?'<span title="Los productos sin stock no entran en el porcentaje">'+c.ns+' sin stock excluidos</span>':'')+(c.nc?'<span class="d">'+c.nc+' sin contar</span>':'')+'</div></div></div>'+
+      '<div class="vk-tiles"><div class="vk-k">Estado de los productos</div>'+tile('ok','ok')+tile('f','diff')+tile('s','diff')+tile('nc','nc')+tile('ns','nostock')+'</div>'+
       '<div class="vk-c"><div class="vk-k">Costo del desvío</div>'+
         '<div class="vk-big '+(neto<0?'neg':neto>0?'pos':'')+'">'+costoFmt+'<small>pen</small></div>'+
         '<div class="vk-sub">'+(desv?desv+(desv===1?' producto con desvío':' productos con desvío'):'Sin desvíos en este conteo')+'</div>'+
@@ -259,8 +260,7 @@ function renderValSKU(body){
         '<div class="vk-lr"><span style="color:#CC7A83">Faltante '+_valMoney(falt)+'</span><span style="color:#C4B8FA">Sobrante '+_valMoney(sob)+'</span></div>'+
         (skusSinPrecio>0?'<div class="vk-warn" title="Estos SKUs no aparecen en la hoja MAESTRO (Cod_Lovis) o no tienen columna Precio — su costo se muestra como S/ 0.00 pero no está calculado">'+ICO('warn',12)+skusSinPrecio+' SKU sin precio en MAESTRO</div>':'')+
       '</div>'+
-    '</div>'+
-    '<div class="vk-tiles">'+tile('ok','ok')+tile('f','diff')+tile('s','diff')+tile('nc','nc')+tile('ns','nostock')+'</div>';
+    '</div>';
   var kp=document.getElementById('val-kpis');
   if(kp){
     kp.innerHTML=kpiHtml;
