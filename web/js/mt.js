@@ -109,7 +109,7 @@ function renderMT(r){
   mtVista(_MT_VISTA);
 }
 /* ── Pestaña Análisis: solo mermas, lo generado contra lo retirado (con factura) ── */
-var _MT_VISTA='reg', _MTA={ sede:'', sedes:null, d:null, n:0, esc:'lin' };
+var _MT_VISTA='reg', _MTA={ sede:'', sedes:null, d:null, n:0 };
 function mtVista(v){
   _MT_VISTA=v;
   var reg=document.getElementById('mt-reg'), an=document.getElementById('mt-an'); if(!reg||!an) return;
@@ -140,29 +140,16 @@ function _mtaPct(a,b){ return b>0?Math.round(a/b*1000)/10:0; }
 function _mtaS(v){ return _mtMoney(v).replace(/[.,]\d\d$/,''); }
 var _MTA_MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 var _MTA_MESL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-function mtAnEsc(m){ _MTA.esc=m; mtAnPintar(); }
-/* Flujo mensual: la banda se angosta con lo generado y el núcleo verde es lo retirado */
-function _mtaFlujo(ms){
-  var n=ms.length, W=720, H=320, cy=H/2, cw=W/n, mx=Math.max.apply(null,ms.map(function(m){return m.gen;}).concat([1]));
-  var k=_MTA.esc==='sqrt'?function(v){ return Math.sqrt(Math.max(v,0)/mx)*138; }:function(v){ return Math.max(v,0)/mx*138; };
-  var pts=function(fn){ var a=[[0,fn(ms[0])]]; ms.forEach(function(m,i){ a.push([(i+.5)*cw,fn(m)]); }); a.push([W,fn(ms[n-1])]); return a; };
-  var curva=function(p){ var d='',i,a,b,dx; for(i=1;i<p.length;i++){ a=p[i-1]; b=p[i]; dx=(b[0]-a[0])/2; d+=' C'+(a[0]+dx)+','+a[1]+' '+(b[0]-dx)+','+b[1]+' '+b[0]+','+b[1]; } return d; };
-  var banda=function(fn){ var up=pts(function(m){return cy-fn(m);}), lo=pts(function(m){return cy+fn(m);}).reverse(); return 'M'+up[0][0]+','+up[0][1]+curva(up)+' L'+lo[0][0]+','+lo[0][1]+curva(lo)+' Z'; };
-  var nom=function(m){ return (n>6?_MTA_MES:_MTA_MESL)[Number(m.mes.slice(5,7))-1]; };
-  var cols=ms.map(function(m){
-    return '<div class="mta-col"><div class="mta-mn"><i'+(m.ret<=0?' class="z"':'')+'></i>'+nom(m)+'</div><div class="mta-n">'+_mtaK(m.gen)+'</div><div class="mta-s">retirado '+_mtaK(m.ret)+'</div></div>'; }).join('');
-  var marcas=ms.map(function(m,i){
-    var p=_mtaPct(m.ret,m.gen);
-    return (i>0?'<span class="mta-dv" style="left:'+(i/n*100)+'%"></span>':'')+'<span class="mta-pl'+(p<=0?' z':'')+'" style="left:'+((i+.5)/n*100)+'%">'+p+' %</span>'; }).join('');
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Flujo de merma generada y retirada por mes">'+
-    '<defs><radialGradient id="mtaGl" cx="14%" cy="50%" r="55%"><stop offset="0" stop-color="#7B61EF" stop-opacity=".30"/><stop offset="1" stop-color="#7B61EF" stop-opacity="0"/></radialGradient>'+
-    '<linearGradient id="mtaGo" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#C4B8FA" stop-opacity=".62"/><stop offset="1" stop-color="#C4B8FA" stop-opacity=".12"/></linearGradient>'+
-    '<linearGradient id="mtaGm" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#7B61EF"/><stop offset=".6" stop-color="#8A73F5" stop-opacity=".7"/><stop offset="1" stop-color="#7B61EF" stop-opacity=".3"/></linearGradient></defs>'+
-    '<rect width="'+W+'" height="'+H+'" fill="url(#mtaGl)"/>'+
-    '<path d="'+banda(function(m){return Math.max(k(m.gen),3);})+'" fill="url(#mtaGo)"/>'+
-    '<path d="'+banda(function(m){return Math.max(k(m.gen-m.ret)*.9,2);})+'" fill="url(#mtaGm)"/>'+
-    '<path d="'+banda(function(m){return k(m.ret)*.9;})+'" fill="#5AD19A"/></svg>';
-  return '<div class="mta-cols" style="grid-template-columns:repeat('+n+',minmax(0,1fr))">'+cols+'</div><div class="mta-plot">'+svg+marcas+'</div>';
+/* Avance del retiro por mes: cada barra es el 100% de lo generado ese mes y el verde lo ya retirado */
+function _mtaMeses(ms){
+  var n=ms.length, mx=Math.max.apply(null,ms.map(function(m){return m.gen;}).concat([1]));
+  return '<div class="mta-mr mta-th"><span>Mes</span><span>Generado</span><span>Retirado del mes</span><span class="num">Retirado</span><span class="num">Falta</span></div>'+
+    ms.map(function(m){
+      var p=_mtaPct(m.ret,m.gen), z=p<=0;
+      return '<div class="mta-mr"><div class="mta-mn"><i'+(z?' class="z"':'')+'></i>'+(n>6?_MTA_MES:_MTA_MESL)[Number(m.mes.slice(5,7))-1]+'</div>'+
+        '<div class="mta-gn"><b>'+_mtaK(m.gen)+'</b><span style="width:'+Math.max(m.gen/mx*100,4)+'%"></span></div>'+
+        '<div class="mta-av"><div class="mta-pb"><i style="width:'+Math.min(100,p)+'%"></i></div><div class="mta-pc'+(z?' z':'')+'">'+p+'%</div></div>'+
+        '<div class="num mta-ok">'+_mtaK(m.ret)+'</div><div class="num mta-pd">'+_mtaK(m.gen-m.ret)+'</div></div>'; }).join('');
 }
 function mtAnPintar(){
   var host=document.getElementById('mt-an'), d=_MTA.d; if(!host||!d) return;
@@ -193,10 +180,8 @@ function mtAnPintar(){
       '<div class="mta-ed"><i style="width:'+eb(e.d30)+'%;background:#5AD19A"></i><i style="width:'+eb(e.d60)+'%;background:#E8B84A"></i><i style="width:'+eb(e.d60m)+'%;background:#CC7A83"></i></div>'+
       (pen>0?'<div class="mta-sub">'+Math.round(_mtaPct(e.d60m,pen))+'% del pendiente lleva más de 60 días.</div>':'')+'</div>';
   var ult=n?ms[n-1]:null;
-  var flujo='<div class="mta-c mta-fl"><div class="mta-fh"><div class="mta-k">Generado y retirado por mes</div><div class="mta-fr">'+
-      '<div class="mta-lg"><span><i style="background:#C4B8FA"></i>Generado</span><span><i style="background:#5AD19A"></i>Retirado</span></div>'+
-      (n>1?'<div class="mta-seg"><button class="'+(_MTA.esc==='sqrt'?'':'on')+'" onclick="mtAnEsc(\'lin\')">Escala real</button><button class="'+(_MTA.esc==='sqrt'?'on':'')+'" onclick="mtAnEsc(\'sqrt\')">Comprimida</button></div>':'')+
-      '</div></div>'+(n?_mtaFlujo(ms):'')+
+  var flujo='<div class="mta-c mta-fl"><div class="mta-fh"><div class="mta-k">Avance del retiro por mes</div>'+
+      '<div class="mta-lg"><span><i style="background:#5AD19A"></i>Retirado</span><span><i style="background:rgba(123,97,239,.5)"></i>Falta retirar</span></div></div>'+(n?_mtaMeses(ms):'')+
       '<div class="mta-ft"><span>Retirado en total: <b>'+_mtaS(ret)+'</b> ('+Math.round(pr)+'%)</span><span>Pendiente acumulado: <b style="color:#E39AA2">'+_mtaS(pen)+'</b></span>'+
       (ult&&ult.ret<=0&&ult.gen>0?'<span>'+_MTA_MESL[Number(ult.mes.slice(5,7))-1]+' sin retiros: <b>puede faltar cargar facturas</b></span>':'')+'</div></div>';
   var sedesHtml=(d.sedes||[]).map(function(x){ var p=_mtaPct(x.ret,x.gen), bajo=(d.sedes||[]).length>1&&p<pr*.75;
