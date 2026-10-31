@@ -109,7 +109,7 @@ function renderMT(r){
   mtVista(_MT_VISTA);
 }
 /* ── Pestaña Análisis: solo mermas, lo generado contra lo retirado (con factura) ── */
-var _MT_VISTA='reg', _MTA={ sede:'', sedes:null, d:null, n:0 };
+var _MT_VISTA='reg', _MTA={ sede:'', sedes:null, d:null, n:0, esc:'lin' };
 function mtVista(v){
   _MT_VISTA=v;
   var reg=document.getElementById('mt-reg'), an=document.getElementById('mt-an'); if(!reg||!an) return;
@@ -139,57 +139,76 @@ function _mtaK(v){ v=Number(v)||0; return 'S/ '+(Math.abs(v)>=1000?(v/1000).toFi
 function _mtaPct(a,b){ return b>0?Math.round(a/b*1000)/10:0; }
 function _mtaS(v){ return _mtMoney(v).replace(/[.,]\d\d$/,''); }
 var _MTA_MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-function _mtaGrafica(meses){
-  if(!meses.length) return '';
-  var W=640,H=230,L=40,B=26,T=14,pw=W-L-8,ph=H-B-T, acum=0, A=meses.map(function(m){ acum+=m.gen-m.ret; return acum; });
-  var top=Math.max.apply(null,meses.map(function(m){return m.gen;}).concat(A,[1]));
-  var mag=Math.pow(10,Math.floor(Math.log(top)/Math.LN10)), paso=[1,2,5,10].map(function(f){return f*mag;}).filter(function(p){return top/p<=5;})[0]||mag*10;
-  var mx=Math.ceil(top/paso)*paso, s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Merma generada, retirada y pendiente acumulado por mes">';
-  for(var v=0;v<=mx;v+=paso){ var y=T+ph-v/mx*ph; s+='<line x1="'+L+'" x2="'+(W-8)+'" y1="'+y+'" y2="'+y+'" stroke="rgba(255,255,255,.07)"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="#8A8A93">'+(v>=1000?(v/1000)+'K':v)+'</text>'; }
-  var gw=pw/meses.length, bw=Math.min(22,gw/3), pts=[];
-  meses.forEach(function(m,i){
-    var cx=L+gw*i+gw/2, hg=m.gen/mx*ph, hr=Math.max(m.ret/mx*ph,1);
-    s+='<rect x="'+(cx-bw-2)+'" y="'+(T+ph-hg)+'" width="'+bw+'" height="'+hg+'" rx="3" fill="#7B61EF"/>';
-    s+='<rect x="'+(cx+2)+'" y="'+(T+ph-hr)+'" width="'+bw+'" height="'+hr+'" rx="3" fill="#5AD19A"/>';
-    s+='<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="#8A8A93">'+_MTA_MES[Number(m.mes.slice(5,7))-1]+'</text>';
-    pts.push([cx,T+ph-A[i]/mx*ph]);
-  });
-  s+='<polyline fill="none" stroke="#CC7A83" stroke-width="2" stroke-linejoin="round" points="'+pts.map(function(p){return p.join(',');}).join(' ')+'"/>';
-  pts.forEach(function(p){ s+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="#CC7A83"/>'; });
-  var u=pts[pts.length-1]; s+='<text x="'+u[0]+'" y="'+(u[1]-9)+'" text-anchor="middle" font-size="11" fill="#E39AA2">'+_mtaK(A[A.length-1]).replace('S/ ','')+'</text>';
-  return s+'</svg>';
+var _MTA_MESL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function mtAnEsc(m){ _MTA.esc=m; mtAnPintar(); }
+/* Flujo mensual: la banda se angosta con lo generado y el núcleo verde es lo retirado */
+function _mtaFlujo(ms){
+  var n=ms.length, W=720, H=320, cy=H/2, cw=W/n, mx=Math.max.apply(null,ms.map(function(m){return m.gen;}).concat([1]));
+  var k=_MTA.esc==='sqrt'?function(v){ return Math.sqrt(Math.max(v,0)/mx)*138; }:function(v){ return Math.max(v,0)/mx*138; };
+  var pts=function(fn){ var a=[[0,fn(ms[0])]]; ms.forEach(function(m,i){ a.push([(i+.5)*cw,fn(m)]); }); a.push([W,fn(ms[n-1])]); return a; };
+  var curva=function(p){ var d='',i,a,b,dx; for(i=1;i<p.length;i++){ a=p[i-1]; b=p[i]; dx=(b[0]-a[0])/2; d+=' C'+(a[0]+dx)+','+a[1]+' '+(b[0]-dx)+','+b[1]+' '+b[0]+','+b[1]; } return d; };
+  var banda=function(fn){ var up=pts(function(m){return cy-fn(m);}), lo=pts(function(m){return cy+fn(m);}).reverse(); return 'M'+up[0][0]+','+up[0][1]+curva(up)+' L'+lo[0][0]+','+lo[0][1]+curva(lo)+' Z'; };
+  var nom=function(m){ return (n>6?_MTA_MES:_MTA_MESL)[Number(m.mes.slice(5,7))-1]; };
+  var cols=ms.map(function(m){
+    return '<div class="mta-col"><div class="mta-mn"><i'+(m.ret<=0?' class="z"':'')+'></i>'+nom(m)+'</div><div class="mta-n">'+_mtaK(m.gen)+'</div><div class="mta-s">retirado '+_mtaK(m.ret)+'</div></div>'; }).join('');
+  var marcas=ms.map(function(m,i){
+    var p=_mtaPct(m.ret,m.gen);
+    return (i>0?'<span class="mta-dv" style="left:'+(i/n*100)+'%"></span>':'')+'<span class="mta-pl'+(p<=0?' z':'')+'" style="left:'+((i+.5)/n*100)+'%">'+p+' %</span>'; }).join('');
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="Flujo de merma generada y retirada por mes">'+
+    '<defs><radialGradient id="mtaGl" cx="14%" cy="50%" r="55%"><stop offset="0" stop-color="#7B61EF" stop-opacity=".30"/><stop offset="1" stop-color="#7B61EF" stop-opacity="0"/></radialGradient>'+
+    '<linearGradient id="mtaGo" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#C4B8FA" stop-opacity=".62"/><stop offset="1" stop-color="#C4B8FA" stop-opacity=".12"/></linearGradient>'+
+    '<linearGradient id="mtaGm" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#7B61EF"/><stop offset=".6" stop-color="#8A73F5" stop-opacity=".7"/><stop offset="1" stop-color="#7B61EF" stop-opacity=".3"/></linearGradient></defs>'+
+    '<rect width="'+W+'" height="'+H+'" fill="url(#mtaGl)"/>'+
+    '<path d="'+banda(function(m){return Math.max(k(m.gen),3);})+'" fill="url(#mtaGo)"/>'+
+    '<path d="'+banda(function(m){return Math.max(k(m.gen-m.ret)*.9,2);})+'" fill="url(#mtaGm)"/>'+
+    '<path d="'+banda(function(m){return k(m.ret)*.9;})+'" fill="#5AD19A"/></svg>';
+  return '<div class="mta-cols" style="grid-template-columns:repeat('+n+',minmax(0,1fr))">'+cols+'</div><div class="mta-plot">'+svg+marcas+'</div>';
 }
 function mtAnPintar(){
   var host=document.getElementById('mt-an'), d=_MTA.d; if(!host||!d) return;
-  var gen=Number(d.gen)||0, ret=Number(d.ret)||0, pen=gen-ret, e=d.edad||{}, mas30=(Number(e.d60)||0)+(Number(e.d60m)||0);
+  var gen=Number(d.gen)||0, ret=Number(d.ret)||0, pen=gen-ret, e=d.edad||{};
   if(!gen){ host.innerHTML='<div class="mta-vacio">Aún no hay mermas registradas para analizar.</div>'; return; }
   var chips='';
   if(S&&S.rol!=='store'&&_MTA.sedes&&_MTA.sedes.length>1)
     chips='<div class="mta-chips"><button class="'+(_MTA.sede===''?'on':'')+'" onclick="mtAnSede(\'\')">Todas las sedes</button>'+
       _MTA.sedes.map(function(x){ return '<button class="'+(String(_MTA.sede)===String(x.id)?'on':'')+'" onclick="mtAnSede('+x.id+')">'+esc(x.nombre)+'</button>'; }).join('')+'</div>';
-  var ms=d.meses||[], rango=ms.length?_MTA_MES[Number(ms[0].mes.slice(5,7))-1]+' '+ms[0].mes.slice(0,4)+' – '+_MTA_MES[Number(ms[ms.length-1].mes.slice(5,7))-1]+' '+ms[ms.length-1].mes.slice(0,4):'';
-  var kpi=function(k,v,sub,col){ return '<div class="mta-c"><div class="mta-k">'+k+'</div><div class="mta-big"'+(col?' style="color:'+col+'"':'')+'>'+v+'</div><div class="mta-sub">'+sub+'</div></div>'; };
+  var ms=d.meses||[], n=ms.length, pr=_mtaPct(ret,gen), ini=n?_MTA_MESL[Number(ms[0].mes.slice(5,7))-1]+' '+ms[0].mes.slice(0,4):'';
+  var rango=n?_MTA_MES[Number(ms[0].mes.slice(5,7))-1]+' '+ms[0].mes.slice(0,4)+' – '+_MTA_MES[Number(ms[n-1].mes.slice(5,7))-1]+' '+ms[n-1].mes.slice(0,4):'';
   var edadTot=(Number(e.d30)||0)+(Number(e.d60)||0)+(Number(e.d60m)||0)||1;
   var eb=function(v){ return Math.max(0,Number(v)||0)/edadTot*100; };
-  var sedesHtml=(d.sedes||[]).map(function(x){ var p=_mtaPct(x.ret,x.gen);
-    return '<div class="mta-sd"><div><span>'+esc(x.nombre)+'</span><span class="mta-m">'+_mtaS(x.ret)+' de '+_mtaS(x.gen)+' · <b>'+p+'%</b></span></div><div class="mta-bar"><i style="width:'+Math.min(100,p)+'%"></i></div></div>'; }).join('');
-  var motHtml=(d.motivos||[]).slice(0,4).map(function(x){ return '<div class="mta-r"><span>'+esc(x.motivo)+'</span><b>'+_mtaK(x.costo)+' <span class="mta-m">'+Math.round(_mtaPct(x.costo,gen))+'%</span></b></div>'; }).join('');
+  var arco=(pr>0?'<circle class="mta-aur" cx="75" cy="75" r="62" fill="none" stroke="url(#mtaAg)" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+(pr/100*389.6).toFixed(1)+' 400" transform="rotate(-90 75 75)"/>'+
+    '<circle cx="75" cy="75" r="62" fill="none" stroke="url(#mtaAg)" stroke-width="14" stroke-linecap="round" stroke-dasharray="'+(pr/100*389.6).toFixed(1)+' 400" transform="rotate(-90 75 75)"/>':'');
+  var hero='<div class="mta-c vk-hero mta-hero"><div class="mta-ring"><svg viewBox="0 0 150 150" width="150" height="150" role="img" aria-label="'+Math.round(pr)+'% de la merma ya fue retirado">'+
+      '<defs><linearGradient id="mtaAg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E4DEFC"/><stop offset=".55" stop-color="#7B61EF"/><stop offset="1" stop-color="#CC7A83"/></linearGradient></defs>'+
+      '<circle cx="75" cy="75" r="62" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="14"/>'+arco+
+      '<text x="75" y="80" text-anchor="middle" font-size="30" font-weight="600" style="fill:var(--text)">'+Math.round(pr)+'%</text>'+
+      '<text x="75" y="99" text-anchor="middle" font-size="11" style="fill:var(--text3)">retirado</text></svg></div>'+
+    '<div class="mta-hb"><div class="mta-k">Merma por retirar</div><div class="mta-big">'+_mtaS(pen)+'</div>'+
+      '<div class="mta-sub">de '+_mtaS(gen)+' generados desde '+ini+'</div>'+
+      '<div class="mta-mini"><div><small>Generado</small><b>'+_mtaS(gen)+'</b></div><div><small>Retirado</small><b style="color:#5AD19A">'+_mtaS(ret)+'</b></div></div></div></div>';
+  var edad='<div class="mta-c"><div class="mta-k">Antigüedad del pendiente</div>'+
+      '<div class="mta-r"><span><em style="background:#5AD19A"></em>Hasta 30 días</span><b>'+_mtaS(e.d30)+'</b></div>'+
+      '<div class="mta-r"><span><em style="background:#E8B84A"></em>31 a 60 días</span><b>'+_mtaS(e.d60)+'</b></div>'+
+      '<div class="mta-r"><span><em style="background:#CC7A83"></em>Más de 60 días</span><b style="color:#E39AA2">'+_mtaS(e.d60m)+'</b></div>'+
+      '<div class="mta-ed"><i style="width:'+eb(e.d30)+'%;background:#5AD19A"></i><i style="width:'+eb(e.d60)+'%;background:#E8B84A"></i><i style="width:'+eb(e.d60m)+'%;background:#CC7A83"></i></div>'+
+      (pen>0?'<div class="mta-sub">'+Math.round(_mtaPct(e.d60m,pen))+'% del pendiente lleva más de 60 días.</div>':'')+'</div>';
+  var ult=n?ms[n-1]:null;
+  var flujo='<div class="mta-c mta-fl"><div class="mta-fh"><div class="mta-k">Generado y retirado por mes</div><div class="mta-fr">'+
+      '<div class="mta-lg"><span><i style="background:#C4B8FA"></i>Generado</span><span><i style="background:#5AD19A"></i>Retirado</span></div>'+
+      (n>1?'<div class="mta-seg"><button class="'+(_MTA.esc==='sqrt'?'':'on')+'" onclick="mtAnEsc(\'lin\')">Escala real</button><button class="'+(_MTA.esc==='sqrt'?'on':'')+'" onclick="mtAnEsc(\'sqrt\')">Comprimida</button></div>':'')+
+      '</div></div>'+(n?_mtaFlujo(ms):'')+
+      '<div class="mta-ft"><span>Retirado en total: <b>'+_mtaS(ret)+'</b> ('+Math.round(pr)+'%)</span><span>Pendiente acumulado: <b style="color:#E39AA2">'+_mtaS(pen)+'</b></span>'+
+      (ult&&ult.ret<=0&&ult.gen>0?'<span>'+_MTA_MESL[Number(ult.mes.slice(5,7))-1]+' sin retiros: <b>puede faltar cargar facturas</b></span>':'')+'</div></div>';
+  var sedesHtml=(d.sedes||[]).map(function(x){ var p=_mtaPct(x.ret,x.gen), bajo=(d.sedes||[]).length>1&&p<pr*.75;
+    return '<div class="mta-br" title="'+_mtaS(x.ret)+' de '+_mtaS(x.gen)+'"><span class="nm">'+esc(x.nombre)+'</span><span class="bar"><i style="width:'+Math.min(100,p)+'%;background:'+(bajo?'#CC7A83':'#7B61EF')+'"></i></span><b>'+p+'%</b></div>'; }).join('');
+  var mots=(d.motivos||[]).slice(0,4), mmx=Math.max.apply(null,mots.map(function(x){return Number(x.costo)||0;}).concat([1])), mcol=['#7B61EF','#9A86F2','#C4B8FA','#C4B8FA'];
+  var motHtml=mots.map(function(x,i){ return '<div class="mta-br"><span class="nm" title="'+esc(x.motivo)+'">'+esc(x.motivo)+'</span><span class="bar"><i style="width:'+((Number(x.costo)||0)/mmx*100)+'%;background:'+mcol[i]+'"></i></span><b>'+_mtaK(x.costo)+'</b></div>'; }).join('');
   var prodHtml=(d.productos||[]).slice(0,3).map(function(x){ return '<div class="mta-r"><span class="mta-tr" title="'+esc(x.desc)+'">'+esc(x.desc)+'</span><b>'+_mtaS(x.costo)+'</b></div>'; }).join('');
   host.innerHTML=chips+
     '<div class="mta-rg"><span class="mta-m">'+rango+' · solo tipo Merma</span></div>'+
-    '<div class="mta-g4">'+kpi('Generado',_mtaK(gen),ms.length+(ms.length===1?' mes':' meses'))+
-      kpi('Retirado',_mtaK(ret),Math.round(_mtaPct(ret,gen))+'% de lo generado','#5AD19A')+
-      kpi('Pendiente',_mtaK(pen),Math.round(_mtaPct(pen,gen))+'% sin factura','#E39AA2')+
-      kpi('Más de 30 días',_mtaK(mas30),(pen>0?Math.round(_mtaPct(mas30,pen)):0)+'% del pendiente','#E8B84A')+'</div>'+
-    '<div class="mta-c mta-gr"><div class="mta-hd"><div class="mta-k" style="margin:0">Merma generada vs retirada por mes</div>'+
-      '<div class="mta-lg"><span><i style="background:#7B61EF"></i>Generado</span><span><i style="background:#5AD19A"></i>Retirado</span><span><i style="background:#CC7A83"></i>Pendiente acumulado</span></div></div>'+_mtaGrafica(ms)+'</div>'+
-    '<div class="mta-g2"><div class="mta-c"><div class="mta-k">Antigüedad del pendiente</div>'+
-      '<div class="mta-ed"><i style="width:'+eb(e.d30)+'%;background:#7B61EF"></i><i style="width:'+eb(e.d60)+'%;background:#E8B84A"></i><i style="width:'+eb(e.d60m)+'%;background:#CC7A83"></i></div>'+
-      '<div class="mta-r"><span><em style="background:#7B61EF"></em>0 a 30 días</span><b>'+_mtaS(e.d30)+'</b></div>'+
-      '<div class="mta-r"><span><em style="background:#E8B84A"></em>31 a 60 días</span><b>'+_mtaS(e.d60)+'</b></div>'+
-      '<div class="mta-r"><span><em style="background:#CC7A83"></em>Más de 60 días</span><b style="color:#E39AA2">'+_mtaS(e.d60m)+'</b></div></div>'+
-      '<div class="mta-c"><div class="mta-k">Retiro por sede</div>'+sedesHtml+'</div></div>'+
-    '<div class="mta-g2"><div class="mta-c"><div class="mta-k">Dónde se pierde · motivo</div>'+motHtml+'</div>'+
+    '<div class="mta-g2">'+hero+edad+'</div>'+flujo+
+    '<div class="mta-g3"><div class="mta-c"><div class="mta-k">Retiro por sede</div>'+sedesHtml+'</div>'+
+      '<div class="mta-c"><div class="mta-k">Dónde se pierde · motivo</div>'+motHtml+'</div>'+
       '<div class="mta-c"><div class="mta-k">Productos que más pierden</div>'+prodHtml+'</div></div>';
 }
 
