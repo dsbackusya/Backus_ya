@@ -685,6 +685,13 @@
     return { ok: true };
   });
 
+  // Pestaña Análisis de M-T: solo mermas, generado vs retirado (con factura), antigüedad, sedes, motivos y productos
+  API.getMTAnalisis = guard(async function (p, sedeId) {
+    var r = await sb.rpc('get_mt_analisis', { p_sede: p.rol === 'store' ? p.sede_id : (sedeId ? Number(sedeId) : null) });
+    if (r.error) throw r.error;
+    return { ok: true, data: r.data };
+  });
+
   /* ── CONTEO ── */
   API.getMConteo = guard(async function (p) {
     var filas = await todas(function () { return filtroSede(sb.from('mconteo').select('*'), p).order('id'); });

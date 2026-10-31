@@ -90,6 +90,8 @@ function renderMT(r){
   var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
   var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   document.getElementById('mt-root').innerHTML=
+    '<div class="mta-tabs"><button id="mt-tab-reg" onclick="mtVista(\'reg\')">Registros</button><button id="mt-tab-an" onclick="mtVista(\'an\')">Análisis</button></div>'+
+    '<div id="mt-an" style="display:none"></div><div id="mt-reg">'+
     '<div class="sal2-sum mt2-sum" id="mt-kpis"></div>'+
     '<div class="sal2-pnl">'+
     '<div class="sal2-fl">'+
@@ -101,10 +103,96 @@ function renderMT(r){
       '<button id="btn-export-mt" class="sal2-exp" onclick="exportMT()">'+icoExportar+'Exportar</button>'+
     '</div>'+
     '<div class="mt2-tw" id="mt-list"></div>'+
-    '</div>';
+    '</div></div>';
   _initFiltroFecha('mt','filterMT',{page:'mt'});
   filterMT();
+  mtVista(_MT_VISTA);
 }
+/* ── Pestaña Análisis: solo mermas, lo generado contra lo retirado (con factura) ── */
+var _MT_VISTA='reg', _MTA={ sede:'', sedes:null, d:null, n:0 };
+function mtVista(v){
+  _MT_VISTA=v;
+  var reg=document.getElementById('mt-reg'), an=document.getElementById('mt-an'); if(!reg||!an) return;
+  reg.style.display=v==='an'?'none':''; an.style.display=v==='an'?'':'none';
+  document.getElementById('mt-tab-reg').classList.toggle('on',v!=='an');
+  document.getElementById('mt-tab-an').classList.toggle('on',v==='an');
+  if(v==='an') mtAnCargar();
+}
+function mtAnSede(id){ _MTA.sede=id; mtAnCargar(); }
+function mtAnCargar(){
+  var host=document.getElementById('mt-an'); if(!host) return;
+  var n=++_MTA.n;
+  if(!_MTA.d) host.innerHTML='<div class="loading ld"><div class="ld-ring"></div><div class="ld-txt">Calculando análisis<span class="ld-dots"></span></div></div>';
+  google.script.run
+    .withSuccessHandler(function(r){
+      if(n!==_MTA.n) return;
+      if(_handleExpired(r,'mt-an')) return;
+      if(!r||!r.ok){ errBox('mt-an',r?r.error:'Error desconocido','mt'); return; }
+      _MTA.d=r.data;
+      if(!_MTA.sedes&&!_MTA.sede) _MTA.sedes=r.data.sedes;
+      mtAnPintar();
+    })
+    .withFailureHandler(function(e){ if(n===_MTA.n) errBox('mt-an',e.message,'mt'); })
+    .getMTAnalisis(S.token,_MTA.sede||null);
+}
+function _mtaK(v){ v=Number(v)||0; return 'S/ '+(Math.abs(v)>=1000?(v/1000).toFixed(1)+' K':Math.round(v).toLocaleString('es-PE')); }
+function _mtaPct(a,b){ return b>0?Math.round(a/b*1000)/10:0; }
+function _mtaS(v){ return _mtMoney(v).replace(/[.,]\d\d$/,''); }
+var _MTA_MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function _mtaGrafica(meses){
+  if(!meses.length) return '';
+  var W=640,H=230,L=40,B=26,T=14,pw=W-L-8,ph=H-B-T, acum=0, A=meses.map(function(m){ acum+=m.gen-m.ret; return acum; });
+  var top=Math.max.apply(null,meses.map(function(m){return m.gen;}).concat(A,[1]));
+  var mag=Math.pow(10,Math.floor(Math.log(top)/Math.LN10)), paso=[1,2,5,10].map(function(f){return f*mag;}).filter(function(p){return top/p<=5;})[0]||mag*10;
+  var mx=Math.ceil(top/paso)*paso, s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Merma generada, retirada y pendiente acumulado por mes">';
+  for(var v=0;v<=mx;v+=paso){ var y=T+ph-v/mx*ph; s+='<line x1="'+L+'" x2="'+(W-8)+'" y1="'+y+'" y2="'+y+'" stroke="rgba(255,255,255,.07)"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="#8A8A93">'+(v>=1000?(v/1000)+'K':v)+'</text>'; }
+  var gw=pw/meses.length, bw=Math.min(22,gw/3), pts=[];
+  meses.forEach(function(m,i){
+    var cx=L+gw*i+gw/2, hg=m.gen/mx*ph, hr=Math.max(m.ret/mx*ph,1);
+    s+='<rect x="'+(cx-bw-2)+'" y="'+(T+ph-hg)+'" width="'+bw+'" height="'+hg+'" rx="3" fill="#7B61EF"/>';
+    s+='<rect x="'+(cx+2)+'" y="'+(T+ph-hr)+'" width="'+bw+'" height="'+hr+'" rx="3" fill="#5AD19A"/>';
+    s+='<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="#8A8A93">'+_MTA_MES[Number(m.mes.slice(5,7))-1]+'</text>';
+    pts.push([cx,T+ph-A[i]/mx*ph]);
+  });
+  s+='<polyline fill="none" stroke="#CC7A83" stroke-width="2" stroke-linejoin="round" points="'+pts.map(function(p){return p.join(',');}).join(' ')+'"/>';
+  pts.forEach(function(p){ s+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3.5" fill="#CC7A83"/>'; });
+  var u=pts[pts.length-1]; s+='<text x="'+u[0]+'" y="'+(u[1]-9)+'" text-anchor="middle" font-size="11" fill="#E39AA2">'+_mtaK(A[A.length-1]).replace('S/ ','')+'</text>';
+  return s+'</svg>';
+}
+function mtAnPintar(){
+  var host=document.getElementById('mt-an'), d=_MTA.d; if(!host||!d) return;
+  var gen=Number(d.gen)||0, ret=Number(d.ret)||0, pen=gen-ret, e=d.edad||{}, mas30=(Number(e.d60)||0)+(Number(e.d60m)||0);
+  if(!gen){ host.innerHTML='<div class="mta-vacio">Aún no hay mermas registradas para analizar.</div>'; return; }
+  var chips='';
+  if(S&&S.rol!=='store'&&_MTA.sedes&&_MTA.sedes.length>1)
+    chips='<div class="mta-chips"><button class="'+(_MTA.sede===''?'on':'')+'" onclick="mtAnSede(\'\')">Todas las sedes</button>'+
+      _MTA.sedes.map(function(x){ return '<button class="'+(String(_MTA.sede)===String(x.id)?'on':'')+'" onclick="mtAnSede('+x.id+')">'+esc(x.nombre)+'</button>'; }).join('')+'</div>';
+  var ms=d.meses||[], rango=ms.length?_MTA_MES[Number(ms[0].mes.slice(5,7))-1]+' '+ms[0].mes.slice(0,4)+' – '+_MTA_MES[Number(ms[ms.length-1].mes.slice(5,7))-1]+' '+ms[ms.length-1].mes.slice(0,4):'';
+  var kpi=function(k,v,sub,col){ return '<div class="mta-c"><div class="mta-k">'+k+'</div><div class="mta-big"'+(col?' style="color:'+col+'"':'')+'>'+v+'</div><div class="mta-sub">'+sub+'</div></div>'; };
+  var edadTot=(Number(e.d30)||0)+(Number(e.d60)||0)+(Number(e.d60m)||0)||1;
+  var eb=function(v){ return Math.max(0,Number(v)||0)/edadTot*100; };
+  var sedesHtml=(d.sedes||[]).map(function(x){ var p=_mtaPct(x.ret,x.gen);
+    return '<div class="mta-sd"><div><span>'+esc(x.nombre)+'</span><span class="mta-m">'+_mtaS(x.ret)+' de '+_mtaS(x.gen)+' · <b>'+p+'%</b></span></div><div class="mta-bar"><i style="width:'+Math.min(100,p)+'%"></i></div></div>'; }).join('');
+  var motHtml=(d.motivos||[]).slice(0,4).map(function(x){ return '<div class="mta-r"><span>'+esc(x.motivo)+'</span><b>'+_mtaK(x.costo)+' <span class="mta-m">'+Math.round(_mtaPct(x.costo,gen))+'%</span></b></div>'; }).join('');
+  var prodHtml=(d.productos||[]).slice(0,3).map(function(x){ return '<div class="mta-r"><span class="mta-tr" title="'+esc(x.desc)+'">'+esc(x.desc)+'</span><b>'+_mtaS(x.costo)+'</b></div>'; }).join('');
+  host.innerHTML=chips+
+    '<div class="mta-rg"><span class="mta-m">'+rango+' · solo tipo Merma</span></div>'+
+    '<div class="mta-g4">'+kpi('Generado',_mtaK(gen),ms.length+(ms.length===1?' mes':' meses'))+
+      kpi('Retirado',_mtaK(ret),Math.round(_mtaPct(ret,gen))+'% de lo generado','#5AD19A')+
+      kpi('Pendiente',_mtaK(pen),Math.round(_mtaPct(pen,gen))+'% sin factura','#E39AA2')+
+      kpi('Más de 30 días',_mtaK(mas30),(pen>0?Math.round(_mtaPct(mas30,pen)):0)+'% del pendiente','#E8B84A')+'</div>'+
+    '<div class="mta-c mta-gr"><div class="mta-hd"><div class="mta-k" style="margin:0">Merma generada vs retirada por mes</div>'+
+      '<div class="mta-lg"><span><i style="background:#7B61EF"></i>Generado</span><span><i style="background:#5AD19A"></i>Retirado</span><span><i style="background:#CC7A83"></i>Pendiente acumulado</span></div></div>'+_mtaGrafica(ms)+'</div>'+
+    '<div class="mta-g2"><div class="mta-c"><div class="mta-k">Antigüedad del pendiente</div>'+
+      '<div class="mta-ed"><i style="width:'+eb(e.d30)+'%;background:#7B61EF"></i><i style="width:'+eb(e.d60)+'%;background:#E8B84A"></i><i style="width:'+eb(e.d60m)+'%;background:#CC7A83"></i></div>'+
+      '<div class="mta-r"><span><em style="background:#7B61EF"></em>0 a 30 días</span><b>'+_mtaS(e.d30)+'</b></div>'+
+      '<div class="mta-r"><span><em style="background:#E8B84A"></em>31 a 60 días</span><b>'+_mtaS(e.d60)+'</b></div>'+
+      '<div class="mta-r"><span><em style="background:#CC7A83"></em>Más de 60 días</span><b style="color:#E39AA2">'+_mtaS(e.d60m)+'</b></div></div>'+
+      '<div class="mta-c"><div class="mta-k">Retiro por sede</div>'+sedesHtml+'</div></div>'+
+    '<div class="mta-g2"><div class="mta-c"><div class="mta-k">Dónde se pierde · motivo</div>'+motHtml+'</div>'+
+      '<div class="mta-c"><div class="mta-k">Productos que más pierden</div>'+prodHtml+'</div></div>';
+}
+
 function mtSetTipo(k){ _MT_TIPO=(_MT_TIPO===k?'':k); _filterMT(); }
 function mtSetEst(k){ _MT_EST=(_MT_EST===k?'':k); _filterMT(); }
 
