@@ -151,49 +151,6 @@ function _mtaMeses(ms){
         '<div class="mta-av"><div class="mta-pb"><i style="width:'+Math.min(100,p)+'%"></i></div><div class="mta-pc'+(z?' z':'')+'">'+p+'%</div></div>'+
         '<div class="num mta-ok">'+_mtaK(m.ret)+'</div><div class="num mta-pd">'+_mtaK(m.gen-m.ret)+'</div></div>'; }).join('');
 }
-/* Merma acumulada por retirar (generado − retirado, sumado mes a mes); se elige el mes pasando el cursor o tocando */
-function _mtaCurva(p){
-  if(p.length<2) return 'M'+p[0][0]+','+p[0][1];
-  var n=p.length, dx=[], m=[], t=[], i;
-  for(i=0;i<n-1;i++){ dx[i]=p[i+1][0]-p[i][0]; m[i]=(p[i+1][1]-p[i][1])/dx[i]; }
-  t[0]=m[0]; t[n-1]=m[n-2];
-  for(i=1;i<n-1;i++) t[i]=m[i-1]*m[i]<=0?0:(m[i-1]+m[i])/2;
-  var d='M'+p[0][0]+','+p[0][1];
-  for(i=0;i<n-1;i++){ var h=dx[i]/3; d+=' C'+(p[i][0]+h).toFixed(1)+','+(p[i][1]+t[i]*h).toFixed(1)+' '+(p[i+1][0]-h).toFixed(1)+','+(p[i+1][1]-t[i+1]*h).toFixed(1)+' '+p[i+1][0].toFixed(1)+','+p[i+1][1].toFixed(1); }
-  return d;
-}
-function _mtaInc(a,i){ if(i<1||!(a[i-1]>0)) return ''; var p=Math.round((a[i]-a[i-1])/a[i-1]*1000)/10; return '<em class="'+(p>0?'up':p<0?'dn':'')+'">'+(p>0?'▲ +':p<0?'▼ ':'')+p+'%</em>'; }
-function _mtaAcum(ms){
-  var n=ms.length, cg=[], cr=[], cp=[], i, a, b;
-  for(i=0;i<n;i++){ a=Number(ms[i].gen)||0; b=Number(ms[i].ret)||0; cg.push(a); cr.push(b); cp.push(a-b); }
-  var mx=Math.max(Math.max.apply(null,cg),1), lab=(n>6?_MTA_MES:_MTA_MESL), h=function(v){ return v>0?Math.max(v/mx*100,2):0; };
-  _MTA.ac={ v:cp, g:cg, r:cr, n:n, ms:ms };
-  var cols=ms.map(function(m,k){
-    return '<button type="button" class="mta-co" id="mta-co'+k+'" onmouseenter="mtAnSel('+k+')" onclick="mtAnSel('+k+')" aria-label="'+lab[Number(m.mes.slice(5,7))-1]+'">'+
-      '<span class="mta-cb"><span class="mta-bw"><em>'+_mtaK(cg[k]).replace('S/ ','')+'</em><i class="g" style="height:'+h(cg[k])+'%"></i></span>'+
-      '<span class="mta-bw"><em>'+_mtaK(cr[k]).replace('S/ ','')+'</em><i class="r" style="height:'+h(cr[k])+'%"></i></span></span>'+
-      '<span class="mta-cf">Falta '+_mtaK(cp[k]).replace('S/ ','')+'</span>'+
-      '<span class="mta-cm" id="mta-ax'+k+'">'+lab[Number(m.mes.slice(5,7))-1]+'</span></button>';
-  }).join('');
-  return '<div class="mta-c mta-ac"><div class="mta-fh"><div><div class="mta-k">Merma por retirar de cada mes</div><div class="mta-sub">Lo generado en el mes y lo que ya se retiró de eso</div></div>'+
-      '<div class="mta-lg"><span><i style="background:#9A86F2"></i>Generado en el mes</span><span><i style="background:#5AD19A"></i>Retirado del mes</span></div></div>'+
-    '<div class="mta-sp'+(n>6?' dense':'')+'"><div class="mta-cols" style="grid-template-columns:repeat('+n+',minmax(0,1fr))">'+cols+'</div><div class="mta-det" id="mta-det"></div></div></div>';
-}
-function mtAnSel(i){
-  var a=_MTA.ac; if(!a||i<0||i>=a.n) return;
-  _MTA.sel=i;
-  var det=document.getElementById('mta-det'); if(!det) return;
-  var m=a.ms[i], gm=Number(m.gen)||0, rm=Number(m.ret)||0, pc=gm>0?Math.min(rm/gm*100,100):0;
-  for(var k=0;k<a.n;k++){ var c=document.getElementById('mta-co'+k); if(c) c.className='mta-co'+(k===i?' sel':''); }
-  det.innerHTML='<h3>'+_MTA_MESL[Number(m.mes.slice(5,7))-1]+' '+m.mes.slice(0,4)+' · detalle</h3>'+
-        '<div class="mta-dr"><span>+ Generado</span><b class="up">'+_mtaK(gm)+'</b></div>'+
-    '<div class="mta-dr"><span>− Retirado</span><b class="dn">'+_mtaK(rm)+'</b></div>'+
-    '<div class="mta-dr tot"><span>Por retirar del mes</span><b>'+_mtaK(a.v[i])+_mtaInc(a.v,i)+'</b></div>'+
-    '<div class="mta-dp"><i style="width:'+pc+'%;background:#5AD19A"></i><i style="width:'+(100-pc)+'%;background:#CC7A83"></i></div>'+
-    '<div class="mta-dl"><span>Retirado '+Math.round(pc)+'%</span><span>Por retirar '+Math.round(100-pc)+'%</span></div>'+
-    '<button type="button" class="mta-db" onclick="mtVista(\'reg\')">Ir a registrar el retiro</button>';
-}
-
 function mtAnPintar(){
   var host=document.getElementById('mt-an'), d=_MTA.d; if(!host||!d) return;
   var gen=Number(d.gen)||0, ret=Number(d.ret)||0, pen=gen-ret, e=d.edad||{};
@@ -234,11 +191,10 @@ function mtAnPintar(){
   var prodHtml=(d.productos||[]).slice(0,3).map(function(x){ return '<div class="mta-r"><span class="mta-tr" title="'+esc(x.desc)+'">'+esc(x.desc)+'</span><b>'+_mtaS(x.costo)+'</b></div>'; }).join('');
   host.innerHTML=chips+
     '<div class="mta-rg"><span class="mta-m">'+rango+' · solo tipo Merma</span></div>'+
-    '<div class="mta-g2">'+hero+edad+'</div>'+(n?_mtaAcum(ms):'')+flujo+
+    '<div class="mta-g2">'+hero+edad+'</div>'+flujo+
     '<div class="mta-g3"><div class="mta-c"><div class="mta-k">Retiro por sede</div>'+sedesHtml+'</div>'+
       '<div class="mta-c"><div class="mta-k">Dónde se pierde · motivo</div>'+motHtml+'</div>'+
       '<div class="mta-c"><div class="mta-k">Productos que más pierden</div>'+prodHtml+'</div></div>';
-  if(n) mtAnSel(_MTA.sel!=null&&_MTA.sel<n?_MTA.sel:n-1);
 }
 
 function mtSetTipo(k){ _MT_TIPO=(_MT_TIPO===k?'':k); _filterMT(); }
