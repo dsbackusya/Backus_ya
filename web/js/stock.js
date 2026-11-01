@@ -293,6 +293,9 @@ function renderStock(r){
   var marOpts=marcas.map(function(m){return '<option value="'+esc(m)+'">'+esc(m)+'</option>';}).join('');
 
   var tot=rows.length||1;
+  _STK_T=Date.now();
+  var sinCosto=rows.filter(function(x){return x.stock>0&&!x.costo;}).length;
+  var undK=totalUnd>=1000?(totalUnd/1000).toFixed(1)+' K':fmt(totalUnd);
   var pc=function(n){return (n/tot*100).toFixed(2);};
   var costoK=costoTotal>=1000?(costoTotal/1000).toFixed(1)+' K':fmt(Math.round(costoTotal));
   var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
@@ -303,24 +306,29 @@ function renderStock(r){
   var pctCon=rows.length?Math.round(conStock/rows.length*100):0;
   var cn={}; rows.forEach(function(x){ if(x.categoria) cn[x.categoria]=(cn[x.categoria]||0)+1; });
   var catCirc=cats.slice().sort(function(a,b){return cn[b]-cn[a];}).map(function(c){
-    return '<button type="button" class="stk-ci" data-cat="'+esc(c)+'" onclick="stkCat(this.dataset.cat)"><span class="c">'+esc(c.charAt(0).toUpperCase())+'</span>'+esc(c)+'</button>';}).join('');
+    return '<button type="button" class="stk-ci" data-cat="'+esc(c)+'" onclick="stkCat(this.dataset.cat)"><span class="c">'+esc(c.charAt(0).toUpperCase())+'<em>'+cn[c]+'</em></span>'+esc(c)+'</button>';}).join('');
+  var alerta=function(k,n,txt,acc,col,ico){ return n>0?'<div class="stk-al" style="--c:'+col+'" onclick="stkAl(\''+k+'\')"><div class="t"><div class="ic">'+ico+'</div><div class="n">'+fmt(n)+'</div></div><div class="l">'+txt+'</div><div class="go">'+acc+' →</div></div>':''; };
+  var alertas=alerta('neg',negativos,'Negativos: salieron más unidades de las que entraron','Revisar','#E39AA2','<svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17v.5"/></svg>')+
+    alerta('sp',sinCosto,'Con stock pero sin costo: falta el precio en el maestro','Ver productos','#E8B84A','<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5M12 15.5v.5"/></svg>');
   var anillo=function(){ var C=188.5, a=conStock/tot*C, b=sinStock/tot*C, g=negativos/tot*C;
-    var seg=function(l,o,col){ return l>0?'<circle cx="40" cy="40" r="30" fill="none" stroke="'+col+'" stroke-width="9" stroke-dasharray="'+Math.max(l-2,1).toFixed(1)+' '+C+'" stroke-dashoffset="'+(-o).toFixed(1)+'" transform="rotate(-90 40 40)"/>':''; };
+    var seg=function(l,o,col){ return l>0?'<circle cx="40" cy="40" r="30" fill="none" stroke="'+col+'" stroke-width="9" class="stk-rs" stroke-dasharray="0 '+C+'" data-da="'+Math.max(l-2,1).toFixed(1)+'" stroke-dashoffset="'+(-o).toFixed(1)+'" transform="rotate(-90 40 40)"/>':''; };
     return '<svg class="stk-ring" viewBox="0 0 80 80" width="96" height="96" aria-hidden="true"><circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="9"/>'+seg(a,0,'#5AD19A')+seg(b,a,'rgba(255,255,255,.55)')+seg(g,a+b,'#E39AA2')+'<text x="40" y="39" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">'+pctCon+'%</text><text x="40" y="51" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.8)">con stock</text></svg>'; };
   document.getElementById('stock-root').innerHTML=
     '<div class="stk-hero">'+
       '<div class="stk-top"><button type="button" class="stk-hb" onclick="toggleMobileMenu()" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>'+
         '<div class="stk-ms"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><input id="stock-busq-m" placeholder="Buscar SKU…" oninput="stkBusqM(this.value)" autocomplete="off"/></div>'+
         '<div class="stk-sd">'+esc(_sedeBonita(S.usuario||'').replace(/^DS\s+/i,''))+'<svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg></div></div>'+
+      '<div class="stk-hello"><i></i><span id="stk-upd">Actualizado ahora</span></div>'+
       '<h1 class="stk-h1">Tu stock,<br><span>bajo control</span></h1>'+
     '<div class="stk-sum">'+
       '<div class="stk-card stk-card-h">'+anillo()+'<div class="stk-cb"><div class="stk-k">Control de inventario</div>'+
-        '<div class="stk-v">'+fmt(rows.length)+'<small>SKUs</small></div>'+
+        '<div class="stk-v"><span data-n="'+rows.length+'">'+fmt(rows.length)+'</span><small>SKUs</small></div>'+
         '<div class="stk-dist"><i style="width:'+pc(conStock)+'%;background:var(--ok)"></i><i style="width:'+pc(sinStock)+'%;background:var(--text4)"></i><i style="width:'+pc(negativos)+'%;background:var(--danger)"></i></div>'+
-        '<div class="stk-leg">'+leg('con','var(--ok)',conStock,'Con stock')+leg('sin','var(--text4)',sinStock,'Sin stock')+leg('neg','var(--danger)',negativos,'Negativos')+'</div></div></div>'+
-      '<div class="stk-card"><div class="stk-k">Unidades en stock</div><div class="stk-v">'+fmt(totalUnd)+'<small>und.</small></div><div class="stk-n">Solo stock positivo</div></div>'+
-      '<div class="stk-card"><div class="stk-k">Costo total</div><div class="stk-v">S/ '+costoK+'</div><div class="stk-n">S/ '+fmt(Math.round(costoTotal*10)/10)+' en total</div></div>'+
+        '<div class="stk-leg">'+leg('con','var(--ok)','<span data-n="'+conStock+'">'+conStock+'</span>','Con stock')+leg('sin','var(--text4)','<span data-n="'+sinStock+'">'+sinStock+'</span>','Sin stock')+leg('neg','var(--danger)','<span data-n="'+negativos+'">'+negativos+'</span>','Negativos')+'</div></div></div>'+
+      '<div class="stk-card"><div class="stk-k">Unidades en stock</div><div class="stk-v"><span data-n="'+totalUnd+'">'+fmt(totalUnd)+'</span><small>und.</small></div><div class="stk-n">Solo stock positivo</div></div>'+
+      '<div class="stk-card"><div class="stk-k">Costo total</div><div class="stk-v">S/ '+(costoTotal>=1000?'<span data-n="'+(costoTotal/1000).toFixed(1)+'" data-d="1">'+(costoTotal/1000).toFixed(1)+'</span> K':fmt(Math.round(costoTotal)))+'</div><div class="stk-n">S/ '+fmt(Math.round(costoTotal*10)/10)+' en total</div></div>'+
     '</div></div>'+
+    (alertas?'<div class="stk-alw"><div class="stk-sec"><b>Requiere atención</b><span>Toca para filtrar</span></div><div class="stk-als">'+alertas+'</div></div>':'')+
     '<div class="stk-sec"><b>Categorías</b><a onclick="stkVerCats()" id="stk-vc">Ver todas</a></div>'+
     '<div class="stk-cats" id="stk-cats"><button type="button" class="stk-ci add" onclick="abrirSKUForm(null)"><span class="c">+</span>Nuevo</button>'+catCirc+'</div>'+
     '<div class="sal2-pnl">'+
@@ -332,7 +340,7 @@ function renderStock(r){
       '<span class="sal2-cnt" id="stock-count"></span>'+
       '<button id="btn-export-stock" class="sal2-exp" onclick="exportStock()">'+icoExportar+'Exportar</button>'+
     '</div>'+
-    '<div class="stk-sec"><b>Productos</b><span id="stk-sec-n"></span></div>'+
+    '<div class="stk-sec"><b>Productos</b><span class="stk-so"><span id="stk-sec-n"></span><button type="button" class="stk-sort" onclick="stkOrden()"><span id="stk-ord">'+_STK_ORDL[_STK_ORD]+'</span><svg viewBox="0 0 24 24"><path d="M8 5v14M5 16l3 3 3-3M16 19V5M13 8l3-3 3 3"/></svg></button></span></div>'+
     '<div class="stk-tw"><table class="stk-t">'+
       '<thead><tr><th>Producto</th><th class="r">Movimientos</th><th class="r">Stock</th><th class="r">Pack</th><th class="r">Costo</th><th>Estado</th><th></th></tr></thead>'+
       '<tbody id="stock-tbody"></tbody>'+
@@ -340,13 +348,19 @@ function renderStock(r){
     '<div class="stk-cards" id="stock-cards"></div>'+
     '</div>';
 
+  var ob=document.getElementById('stk-cbar'); if(ob) ob.remove();
+  var cb=document.createElement('div'); cb.id='stk-cbar'; cb.className='stk-cbar';
+  cb.innerHTML='<button type="button" class="stk-hb" onclick="toggleMobileMenu()" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="stk-pk"><span>'+fmt(rows.length)+' SKUs</span><b>'+undK+' und.</b><b>S/ '+costoK+'</b></div>';
+  document.body.appendChild(cb);
   if(!document.getElementById('stk-dr')){
     var dr=document.createElement('div'); dr.id='stk-dr';
     dr.innerHTML='<button class="x" onclick="stkCerrar()" aria-label="Cerrar">×</button><div id="stk-drc"></div>';
     document.body.appendChild(dr);
+    var dm=document.createElement('div'); dm.id='stk-dim'; dm.onclick=stkCerrar; document.body.appendChild(dm);
   }
   stkCerrar();
   filterStock();
+  stkAnim();
 }
 
 function setStockFiltroEstado(val){
@@ -370,8 +384,10 @@ function _filterStock(){
     if(_STOCK_ESTADO_FILTRO==='con') return r.stock>0;
     if(_STOCK_ESTADO_FILTRO==='sin') return r.stock===0;
     if(_STOCK_ESTADO_FILTRO==='neg') return r.stock<0;
+    if(_STOCK_ESTADO_FILTRO==='sp') return r.stock>0&&!r.costo;
     return true;
   });
+  if(_STK.mq.matches) filtered.sort(function(a,b){ return _STK_ORD===0?b.stock-a.stock:_STK_ORD===1?a.stock-b.stock:String(a.desc).localeCompare(String(b.desc)); });
   var el=document.getElementById('stock-count');
   if(el)el.textContent=filtered.length+' productos';
   var sn=document.getElementById('stk-sec-n'); if(sn) sn.textContent=filtered.length+' productos';
@@ -406,7 +422,29 @@ function _stkFila(r,mx){
     '<td class="r"><button class="stk-ed" onclick="event.stopPropagation();abrirSKUForm('+r._row+')">Editar</button></td>'+
   '</tr>';
 }
-var _STK_CAT='';
+var _STK_CAT='', _STK_T=0, _STK_ORD=0, _STK_ORDL=['Mayor stock','Menor stock','A–Z'];
+function stkOrden(){ _STK_ORD=(_STK_ORD+1)%3; var e=document.getElementById('stk-ord'); if(e) e.textContent=_STK_ORDL[_STK_ORD]; filterStock(); }
+function stkAl(k){ setStockFiltroEstado(_STOCK_ESTADO_FILTRO===k?'':k); var c=document.getElementById('stk-cats'); if(c&&c.parentNode) c.scrollIntoView({block:'start',behavior:'smooth'}); }
+function stkUpd(){ var e=document.getElementById('stk-upd'); if(!e||!_STK_T) return; var m=Math.floor((Date.now()-_STK_T)/60000); e.textContent=m<1?'Actualizado ahora':'Actualizado hace '+m+' min'; }
+setInterval(stkUpd,30000);
+window.addEventListener('scroll',function(){
+  var b=document.getElementById('stk-cbar'), h=document.querySelector('.stk-hero'), p=document.getElementById('p-stock');
+  if(!b) return;
+  if(!h||!p||!p.classList.contains('active')){ b.classList.remove('on'); return; }
+  b.classList.toggle('on', window.innerWidth<=820 && h.getBoundingClientRect().bottom<70);
+},{passive:true});
+/* Entrada suave: los números suben contando y el anillo se dibuja (solo en móvil y sin "reducir movimiento") */
+function stkAnim(){
+  var rs=document.querySelectorAll('#stock-root .stk-rs');
+  var fin=function(){ rs.forEach(function(c){ c.setAttribute('stroke-dasharray',c.dataset.da+' 188.5'); }); };
+  setTimeout(fin,60);
+  if(!_STK.mq.matches||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  document.querySelectorAll('#stock-root [data-n]').forEach(function(e){
+    var to=+e.dataset.n, d=+(e.dataset.d||0), t0=null, ok=function(){ e.textContent=d?to.toFixed(d):fmt(to); };
+    setTimeout(ok,1500);
+    (function f(t){ if(!t0) t0=t; var k=Math.min((t-t0)/1100,1), v=to*(1-Math.pow(1-k,3)); e.textContent=d?v.toFixed(d):Math.round(v).toLocaleString('es-PE'); if(k<1) requestAnimationFrame(f); else e.textContent=d?to.toFixed(d):fmt(to); })(performance.now());
+  });
+}
 function stkBusqM(v){ var i=document.getElementById('stock-busq'); if(i){ i.value=v; filterStock(); } }
 function stkVerCats(){ var c=document.getElementById('stk-cats'), a=document.getElementById('stk-vc'); if(!c) return; var on=c.classList.toggle('all'); if(a) a.textContent=on?'Ver menos':'Ver todas'; }
 function stkCat(c){
@@ -450,7 +488,14 @@ function stkAbrir(row){
   var r=(DATA.stock||[]).filter(function(x){return x._row===row;})[0]; if(!r) return;
   var e=r.stock>0?'ok':(r.stock<0?'ng':'no');
   var c=document.getElementById('stk-drc'); if(!c) return;
-  c.innerHTML=
+  var mb='<div class="stk-mb"><div class="stk-grab" onclick="stkCerrar()"></div><div class="stk-sk">'+esc(r.sku)+'</div><h3>'+esc(r.desc)+'</h3>'+
+    '<div class="stk-sub">'+(r.marca?esc(r.marca):'')+(r.marca&&r.categoria?' · ':'')+(r.categoria?esc(r.categoria):'')+'</div>'+
+    '<div class="stk-big"><div class="v"'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'<small>und.</small></div><span class="stk-pl '+e+'">'+_STK_LAB[e]+'</span></div>'+
+    '<div class="stk-st3"><div><span>Entradas</span><b class="e">+'+fmt(r.entradas)+'</b></div><div><span>Salidas</span><b>−'+fmt(r.salidas)+'</b></div><div><span>M-T</span><b class="m">'+fmt(r.mt)+'</b></div></div>'+
+    '<div class="stk-st3 d2"><div><span>Pack</span><b>'+Math.round(r.stockPack)+'</b></div><div><span>Costo en inventario</span><b>'+(r.costo?'S/ '+fmt(r.costo):'—')+'</b></div></div>'+
+    (e==='ng'?'<div class="stk-warn">Salieron más unidades de las que entraron. Revisa las entradas o haz un conteo.</div>':'')+
+    '<button type="button" class="stk-edb" onclick="stkCerrar();abrirSKUForm('+r._row+')">Editar SKU</button></div>';
+  c.innerHTML=mb+'<div class="stk-dk">'+
     '<div class="stk-ps" style="margin:0 0 6px"><span class="sk">'+esc(r.sku)+'</span></div>'+
     '<h3>'+esc(r.desc)+'</h3>'+
     '<div class="stk-ps">'+(r.marca?'<span>'+esc(r.marca)+'</span>':'')+(r.marca&&r.categoria?'<i class="dot"></i>':'')+(r.categoria?'<span>'+esc(r.categoria)+'</span>':'')+'</div>'+
@@ -460,10 +505,11 @@ function stkAbrir(row){
     '<div class="stk-rowm"><span>Mermas y traslados</span><b>'+fmt(r.mt)+'</b></div>'+
     '<div class="stk-rowm"><span>Costo en inventario</span><b>'+(r.costo?'S/ '+fmt(r.costo):'—')+'</b></div>'+
     (e==='ng'?'<div class="stk-warn">Salieron más unidades de las que entraron. Revisa las entradas o haz un conteo.</div>':'')+
-    '<div style="margin-top:18px"><button class="btn btn-primary" style="width:100%" onclick="stkCerrar();abrirSKUForm('+r._row+')">Editar SKU</button></div>';
+    '<div style="margin-top:18px"><button class="btn btn-primary" style="width:100%" onclick="stkCerrar();abrirSKUForm('+r._row+')">Editar SKU</button></div></div>';
   document.getElementById('stk-dr').classList.add('on');
+  var dm=document.getElementById('stk-dim'); if(dm) dm.classList.add('on');
 }
-function stkCerrar(){ var d=document.getElementById('stk-dr'); if(d) d.classList.remove('on'); }
+function stkCerrar(){ var d=document.getElementById('stk-dr'); if(d) d.classList.remove('on'); var m=document.getElementById('stk-dim'); if(m) m.classList.remove('on'); }
 
 function exportStock(){
   var rows=_getFilteredRows('stock');
