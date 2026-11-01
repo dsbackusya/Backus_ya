@@ -164,43 +164,27 @@ function _mtaCurva(p){
 }
 function _mtaInc(a,i){ if(i<1||!(a[i-1]>0)) return ''; var p=Math.round((a[i]-a[i-1])/a[i-1]*1000)/10; return '<em class="'+(p>0?'up':p<0?'dn':'')+'">'+(p>0?'▲ +':p<0?'▼ ':'')+p+'%</em>'; }
 function _mtaAcum(ms){
-  var n=ms.length, cg=[], cr=[], cp=[], a=0, b=0, i;
+  var n=ms.length, cg=[], cr=[], cp=[], i, a, b;
   for(i=0;i<n;i++){ a=Number(ms[i].gen)||0; b=Number(ms[i].ret)||0; cg.push(a); cr.push(b); cp.push(a-b); }
-  var mx=Math.max(cg[n-1],1), H=240, fy=function(v){ return 1-(v/mx*.74+.08); };
-  var ext=function(v){ var p=v.map(function(x,k){ return [(k+.5)/n*1000,H*fy(x)]; }); return [[0,p[0][1]]].concat(p).concat([[1000,p[n-1][1]]]); };
-  var pg=ext(cg), pr=ext(cr), lg=_mtaCurva(pg), lr=_mtaCurva(pr);
-  var gap=lg+' L1000,'+pr[pr.length-1][1].toFixed(1)+' '+_mtaCurva(pr.slice().reverse()).replace(/^M[^C]*/,'')+' Z';
+  var mx=Math.max(Math.max.apply(null,cg),1), lab=(n>6?_MTA_MES:_MTA_MESL), h=function(v){ return v>0?Math.max(v/mx*100,2):0; };
   _MTA.ac={ v:cp, g:cg, r:cr, n:n, ms:ms };
-  var lab=(n>6?_MTA_MES:_MTA_MESL);
-  var marks=ms.map(function(m,k){
-    var x=(k+.5)/n*100, xc=Math.min(Math.max(x,5),95), yg=fy(cg[k])*100, yr=fy(cr[k])*100;
-    return '<i class="mta-vl" id="mta-vl'+k+'" style="left:'+x+'%;top:'+yg+'%;height:'+(yr-yg)+'%"></i>'+
-      '<i class="mta-pt" style="left:'+x+'%;top:'+yg+'%"></i><i class="mta-pt rt" style="left:'+x+'%;top:'+yr+'%"></i>'+
-      '<span class="mta-pv pg" id="mta-pg'+k+'" style="left:'+xc+'%;top:'+yg+'%">'+_mtaK(cg[k]).replace('S/ ','')+'</span>'+
-      '<span class="mta-pv pr" id="mta-pr'+k+'" style="left:'+xc+'%;top:'+yr+'%">'+_mtaK(cr[k]).replace('S/ ','')+'</span>'+
-      '<span class="mta-pv pw" id="mta-pw'+k+'" style="left:'+xc+'%;top:'+((yg+yr)/2)+'%">'+_mtaK(cp[k]).replace('S/ ','')+'</span>';
+  var cols=ms.map(function(m,k){
+    return '<button type="button" class="mta-co" id="mta-co'+k+'" onmouseenter="mtAnSel('+k+')" onclick="mtAnSel('+k+')" aria-label="'+lab[Number(m.mes.slice(5,7))-1]+'">'+
+      '<span class="mta-cb"><span class="mta-bw"><em>'+_mtaK(cg[k]).replace('S/ ','')+'</em><i class="g" style="height:'+h(cg[k])+'%"></i></span>'+
+      '<span class="mta-bw"><em>'+_mtaK(cr[k]).replace('S/ ','')+'</em><i class="r" style="height:'+h(cr[k])+'%"></i></span></span>'+
+      '<span class="mta-cf">Falta '+_mtaK(cp[k]).replace('S/ ','')+'</span>'+
+      '<span class="mta-cm" id="mta-ax'+k+'">'+lab[Number(m.mes.slice(5,7))-1]+'</span></button>';
   }).join('');
   return '<div class="mta-c mta-ac"><div class="mta-fh"><div><div class="mta-k">Merma por retirar de cada mes</div><div class="mta-sub">Lo generado en el mes y lo que ya se retiró de eso</div></div>'+
-      '<div class="mta-lg"><span><i style="background:#9A86F2"></i>Generado en el mes</span><span><i style="background:#5AD19A"></i>Retirado del mes</span><span><i style="background:linear-gradient(#CC7A83,#7B61EF)"></i>Por retirar</span></div></div>'+
-    '<div class="mta-sp'+(n>6?' dense':'')+'"><div><div class="mta-ap"><svg viewBox="0 0 1000 '+H+'" preserveAspectRatio="none" aria-hidden="true"><defs>'+
-      '<linearGradient id="mtaGp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#CC7A83" stop-opacity=".55"/><stop offset="1" stop-color="#7B61EF" stop-opacity=".22"/></linearGradient>'+
-      '<linearGradient id="mtaGr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5AD19A" stop-opacity=".30"/><stop offset="1" stop-color="#5AD19A" stop-opacity="0"/></linearGradient></defs>'+
-      '<path d="'+lr+' L1000,'+H+' L0,'+H+' Z" fill="url(#mtaGr)"/><path d="'+gap+'" fill="url(#mtaGp)"/>'+
-      '<path d="'+lg+'" fill="none" stroke="#9A86F2" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linecap="round"/>'+
-      '<path d="'+lr+'" fill="none" stroke="#5AD19A" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>'+marks+
-      '<div class="mta-ah">'+ms.map(function(m,k){ return '<button type="button" aria-label="'+lab[Number(m.mes.slice(5,7))-1]+'" onmouseenter="mtAnSel('+k+')" onclick="mtAnSel('+k+')"></button>'; }).join('')+'</div></div>'+
-    '<div class="mta-axis">'+ms.map(function(m,k){ return '<span id="mta-ax'+k+'">'+lab[Number(m.mes.slice(5,7))-1]+'</span>'; }).join('')+'</div></div>'+
-    '<div class="mta-det" id="mta-det"></div></div></div>';
+      '<div class="mta-lg"><span><i style="background:#9A86F2"></i>Generado en el mes</span><span><i style="background:#5AD19A"></i>Retirado del mes</span></div></div>'+
+    '<div class="mta-sp'+(n>6?' dense':'')+'"><div class="mta-cols" style="grid-template-columns:repeat('+n+',minmax(0,1fr))">'+cols+'</div><div class="mta-det" id="mta-det"></div></div></div>';
 }
 function mtAnSel(i){
   var a=_MTA.ac; if(!a||i<0||i>=a.n) return;
   _MTA.sel=i;
   var det=document.getElementById('mta-det'); if(!det) return;
   var m=a.ms[i], gm=Number(m.gen)||0, rm=Number(m.ret)||0, pc=gm>0?Math.min(rm/gm*100,100):0;
-  for(var k=0;k<a.n;k++){
-    var s=document.getElementById('mta-ax'+k); if(s) s.className=(k===i?'on':'');
-    ['pw','pg','pr'].forEach(function(t){ var e=document.getElementById('mta-'+t+k); if(e) e.className='mta-pv '+t+(k===i?' sel':''); });
-  }
+  for(var k=0;k<a.n;k++){ var c=document.getElementById('mta-co'+k); if(c) c.className='mta-co'+(k===i?' sel':''); }
   det.innerHTML='<h3>'+_MTA_MESL[Number(m.mes.slice(5,7))-1]+' '+m.mes.slice(0,4)+' · detalle</h3>'+
         '<div class="mta-dr"><span>+ Generado</span><b class="up">'+_mtaK(gm)+'</b></div>'+
     '<div class="mta-dr"><span>− Retirado</span><b class="dn">'+_mtaK(rm)+'</b></div>'+
