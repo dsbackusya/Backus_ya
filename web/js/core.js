@@ -343,6 +343,7 @@ var CURRENT_PAGE = '';
 
 function navTo(name,btn){
   CURRENT_PAGE = name;
+  document.body.classList.toggle('pg-stock', name==='stock');
   ['dashboard','stock','entradas','salidas','mt','cancelados','maestro','mconteo','conteo','envases','documentos','validacion'].forEach(function(n){
     document.getElementById('p-'+n).classList.remove('active');
     document.getElementById('nav-'+n).classList.remove('active');
