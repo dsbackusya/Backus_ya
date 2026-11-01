@@ -294,7 +294,7 @@ function renderStock(r){
 
   var tot=rows.length||1;
   var pc=function(n){return (n/tot*100).toFixed(2);};
-  var costoK=costoTotal>=1000?(costoTotal/1000).toFixed(1)+'K':fmt(Math.round(costoTotal));
+  var costoK=costoTotal>=1000?(costoTotal/1000).toFixed(1)+' K':fmt(Math.round(costoTotal));
   var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
   var seg=function(id,val,txt,n){return '<button class="stk-sb'+(val===''?' active':'')+'" id="'+id+'" onclick="setStockFiltroEstado(\''+val+'\')">'+txt+'<span>'+n+'</span></button>';};
   var leg=function(val,color,n,txt){return '<span onclick="setStockFiltroEstado(\''+val+'\')"><em style="background:'+color+'"></em><b>'+n+'</b> '+txt+'</span>';};
@@ -308,16 +308,21 @@ function renderStock(r){
     var seg=function(l,o,col){ return l>0?'<circle cx="40" cy="40" r="30" fill="none" stroke="'+col+'" stroke-width="9" stroke-dasharray="'+Math.max(l-2,1).toFixed(1)+' '+C+'" stroke-dashoffset="'+(-o).toFixed(1)+'" transform="rotate(-90 40 40)"/>':''; };
     return '<svg class="stk-ring" viewBox="0 0 80 80" width="96" height="96" aria-hidden="true"><circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="9"/>'+seg(a,0,'#5AD19A')+seg(b,a,'rgba(255,255,255,.55)')+seg(g,a+b,'#E39AA2')+'<text x="40" y="39" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">'+pctCon+'%</text><text x="40" y="51" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.8)">con stock</text></svg>'; };
   document.getElementById('stock-root').innerHTML=
-    '<div class="stk-hero"><h1 class="stk-h1">Tu stock,<br><span>bajo control</span></h1>'+
+    '<div class="stk-hero">'+
+      '<div class="stk-top"><button type="button" class="stk-hb" onclick="toggleMobileMenu()" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>'+
+        '<div class="stk-ms"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><input id="stock-busq-m" placeholder="Buscar SKU…" oninput="stkBusqM(this.value)" autocomplete="off"/></div>'+
+        '<div class="stk-sd">'+esc(_sedeBonita(S.usuario||'').replace(/^DS\s+/i,''))+'<svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg></div></div>'+
+      '<h1 class="stk-h1">Tu stock,<br><span>bajo control</span></h1>'+
     '<div class="stk-sum">'+
       '<div class="stk-card stk-card-h">'+anillo()+'<div class="stk-cb"><div class="stk-k">Control de inventario</div>'+
         '<div class="stk-v">'+fmt(rows.length)+'<small>SKUs</small></div>'+
         '<div class="stk-dist"><i style="width:'+pc(conStock)+'%;background:var(--ok)"></i><i style="width:'+pc(sinStock)+'%;background:var(--text4)"></i><i style="width:'+pc(negativos)+'%;background:var(--danger)"></i></div>'+
         '<div class="stk-leg">'+leg('con','var(--ok)',conStock,'Con stock')+leg('sin','var(--text4)',sinStock,'Sin stock')+leg('neg','var(--danger)',negativos,'Negativos')+'</div></div></div>'+
       '<div class="stk-card"><div class="stk-k">Unidades en stock</div><div class="stk-v">'+fmt(totalUnd)+'<small>und.</small></div><div class="stk-n">Solo stock positivo</div></div>'+
-      '<div class="stk-card"><div class="stk-k">Costo total</div><div class="stk-v">S/ '+costoK+'</div><div class="stk-n">S/ '+fmt(Math.round(costoTotal*10)/10)+' en inventario</div></div>'+
+      '<div class="stk-card"><div class="stk-k">Costo total</div><div class="stk-v">S/ '+costoK+'</div><div class="stk-n">S/ '+fmt(Math.round(costoTotal*10)/10)+' en total</div></div>'+
     '</div></div>'+
-    '<div class="stk-cats"><button type="button" class="stk-ci add" onclick="abrirSKUForm(null)"><span class="c">+</span>Nuevo</button>'+catCirc+'</div>'+
+    '<div class="stk-sec"><b>Categorías</b><a onclick="stkVerCats()" id="stk-vc">Ver todas</a></div>'+
+    '<div class="stk-cats" id="stk-cats"><button type="button" class="stk-ci add" onclick="abrirSKUForm(null)"><span class="c">+</span>Nuevo</button>'+catCirc+'</div>'+
     '<div class="sal2-pnl">'+
     '<div class="sal2-fl">'+
       '<div class="sal2-seg">'+seg('sbtn-todos','','Todos',rows.length)+seg('sbtn-con','con','Con stock',conStock)+seg('sbtn-sin','sin','Sin stock',sinStock)+seg('sbtn-neg','neg','Negativos',negativos)+'</div>'+
@@ -327,6 +332,7 @@ function renderStock(r){
       '<span class="sal2-cnt" id="stock-count"></span>'+
       '<button id="btn-export-stock" class="sal2-exp" onclick="exportStock()">'+icoExportar+'Exportar</button>'+
     '</div>'+
+    '<div class="stk-sec"><b>Productos</b><span id="stk-sec-n"></span></div>'+
     '<div class="stk-tw"><table class="stk-t">'+
       '<thead><tr><th>Producto</th><th class="r">Movimientos</th><th class="r">Stock</th><th class="r">Pack</th><th class="r">Costo</th><th>Estado</th><th></th></tr></thead>'+
       '<tbody id="stock-tbody"></tbody>'+
@@ -368,6 +374,7 @@ function _filterStock(){
   });
   var el=document.getElementById('stock-count');
   if(el)el.textContent=filtered.length+' productos';
+  var sn=document.getElementById('stk-sec-n'); if(sn) sn.textContent=filtered.length+' productos';
   _STK.lista=filtered; _STK.n=0; _STK.tabla=!_STK.mq.matches;
   var t=document.getElementById('stock-tbody'), c=document.getElementById('stock-cards');
   if(t) t.innerHTML='';
@@ -400,6 +407,8 @@ function _stkFila(r,mx){
   '</tr>';
 }
 var _STK_CAT='';
+function stkBusqM(v){ var i=document.getElementById('stock-busq'); if(i){ i.value=v; filterStock(); } }
+function stkVerCats(){ var c=document.getElementById('stk-cats'), a=document.getElementById('stk-vc'); if(!c) return; var on=c.classList.toggle('all'); if(a) a.textContent=on?'Ver menos':'Ver todas'; }
 function stkCat(c){
   _STK_CAT=(_STK_CAT===c?'':c);
   var s=document.getElementById('stock-cat'); if(s) s.value=_STK_CAT;
@@ -408,10 +417,9 @@ function stkCat(c){
 }
 function _stkCard(r){
   var e=r.stock>0?'ok':(r.stock<0?'ng':'no'), ini=esc((r.desc||'?').charAt(0).toUpperCase()), t=((r.desc||'?').charCodeAt(0)||0)%5;
-  return '<div class="stk-cd" onclick="stkAbrir('+r._row+')"><div class="stk-av t'+t+'">'+ini+'<i class="'+e+'"></i></div><div style="min-width:0;flex:1"><div class="stk-pn">'+esc(r.desc)+'</div>'+
-    '<div class="stk-ps"><span class="sk">'+esc(r.sku)+'</span>'+(r.marca?'<i class="dot"></i><span>'+esc(r.marca)+'</span>':'')+'</div>'+
-    '<div style="margin-top:8px"><span class="stk-pill '+e+'">'+_STK_LAB[e]+'</span></div></div>'+
-    '<div class="stk-rt"><b'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'</b><span>und.</span></div></div>';
+  return '<div class="stk-cd" onclick="stkAbrir('+r._row+')"><div class="stk-av t'+t+'">'+ini+'<i class="'+e+'"></i></div>'+
+    '<div class="stk-m"><div class="stk-t1"><b>'+esc(r.desc)+'</b><span>'+_STK_LAB[e]+'</span></div>'+
+    '<p><u'+(e==='ng'?' class="ng"':'')+'>'+fmt(r.stock)+' und.</u> · '+esc(r.sku)+(r.marca?' · '+esc(r.marca):'')+'</p></div></div>';
 }
 // Dibuja el siguiente lote y deja una marca al final: cuando se acerca a la pantalla, se dibuja el que sigue.
 function _stkMas(){
