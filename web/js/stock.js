@@ -278,6 +278,7 @@ function renderStock(r){
   if(!r||!r.ok){errBox('stock-root',r?r.error:'Error desconocido');return;}
   DATA.stock=r.data;
   _STOCK_ESTADO_FILTRO=''; // resetear filtro de estado al recibir datos frescos
+  _STK_CAT='';
   var rows=r.data;
   var conStock=rows.filter(function(x){return x.stock>0;}).length;
   var sinStock=rows.filter(function(x){return x.stock===0;}).length;
@@ -299,15 +300,24 @@ function renderStock(r){
   var leg=function(val,color,n,txt){return '<span onclick="setStockFiltroEstado(\''+val+'\')"><em style="background:'+color+'"></em><b>'+n+'</b> '+txt+'</span>';};
 
   var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  var pctCon=rows.length?Math.round(conStock/rows.length*100):0;
+  var cn={}; rows.forEach(function(x){ if(x.categoria) cn[x.categoria]=(cn[x.categoria]||0)+1; });
+  var catCirc=cats.slice().sort(function(a,b){return cn[b]-cn[a];}).map(function(c){
+    return '<button type="button" class="stk-ci" data-cat="'+esc(c)+'" onclick="stkCat(this.dataset.cat)"><span class="c">'+esc(c.charAt(0).toUpperCase())+'</span>'+esc(c)+'</button>';}).join('');
+  var anillo=function(){ var C=188.5, a=conStock/tot*C, b=sinStock/tot*C, g=negativos/tot*C;
+    var seg=function(l,o,col){ return l>0?'<circle cx="40" cy="40" r="30" fill="none" stroke="'+col+'" stroke-width="9" stroke-dasharray="'+Math.max(l-2,1).toFixed(1)+' '+C+'" stroke-dashoffset="'+(-o).toFixed(1)+'" transform="rotate(-90 40 40)"/>':''; };
+    return '<svg class="stk-ring" viewBox="0 0 80 80" width="96" height="96" aria-hidden="true"><circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="9"/>'+seg(a,0,'#5AD19A')+seg(b,a,'rgba(255,255,255,.55)')+seg(g,a+b,'#E39AA2')+'<text x="40" y="39" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">'+pctCon+'%</text><text x="40" y="51" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.8)">con stock</text></svg>'; };
   document.getElementById('stock-root').innerHTML=
+    '<div class="stk-hero"><h1 class="stk-h1">Tu stock,<br><span>bajo control</span></h1>'+
     '<div class="stk-sum">'+
-      '<div class="stk-card"><div class="stk-k">Salud del inventario</div>'+
+      '<div class="stk-card stk-card-h">'+anillo()+'<div class="stk-cb"><div class="stk-k">Control de inventario</div>'+
         '<div class="stk-v">'+fmt(rows.length)+'<small>SKUs</small></div>'+
         '<div class="stk-dist"><i style="width:'+pc(conStock)+'%;background:var(--ok)"></i><i style="width:'+pc(sinStock)+'%;background:var(--text4)"></i><i style="width:'+pc(negativos)+'%;background:var(--danger)"></i></div>'+
-        '<div class="stk-leg">'+leg('con','var(--ok)',conStock,'Con stock')+leg('sin','var(--text4)',sinStock,'Sin stock')+leg('neg','var(--danger)',negativos,'Negativos')+'</div></div>'+
+        '<div class="stk-leg">'+leg('con','var(--ok)',conStock,'Con stock')+leg('sin','var(--text4)',sinStock,'Sin stock')+leg('neg','var(--danger)',negativos,'Negativos')+'</div></div></div>'+
       '<div class="stk-card"><div class="stk-k">Unidades en stock</div><div class="stk-v">'+fmt(totalUnd)+'<small>und.</small></div><div class="stk-n">Solo stock positivo</div></div>'+
       '<div class="stk-card"><div class="stk-k">Costo total</div><div class="stk-v">S/ '+costoK+'</div><div class="stk-n">S/ '+fmt(Math.round(costoTotal*10)/10)+' en inventario</div></div>'+
-    '</div>'+
+    '</div></div>'+
+    '<div class="stk-cats"><button type="button" class="stk-ci add" onclick="abrirSKUForm(null)"><span class="c">+</span>Nuevo</button>'+catCirc+'</div>'+
     '<div class="sal2-pnl">'+
     '<div class="sal2-fl">'+
       '<div class="sal2-seg">'+seg('sbtn-todos','','Todos',rows.length)+seg('sbtn-con','con','Con stock',conStock)+seg('sbtn-sin','sin','Sin stock',sinStock)+seg('sbtn-neg','neg','Negativos',negativos)+'</div>'+
@@ -389,9 +399,16 @@ function _stkFila(r,mx){
     '<td class="r"><button class="stk-ed" onclick="event.stopPropagation();abrirSKUForm('+r._row+')">Editar</button></td>'+
   '</tr>';
 }
+var _STK_CAT='';
+function stkCat(c){
+  _STK_CAT=(_STK_CAT===c?'':c);
+  var s=document.getElementById('stock-cat'); if(s) s.value=_STK_CAT;
+  document.querySelectorAll('.stk-ci[data-cat]').forEach(function(b){ b.classList.toggle('on',b.dataset.cat===_STK_CAT); });
+  filterStock();
+}
 function _stkCard(r){
-  var e=r.stock>0?'ok':(r.stock<0?'ng':'no');
-  return '<div class="stk-cd" onclick="stkAbrir('+r._row+')"><div style="min-width:0"><div class="stk-pn">'+esc(r.desc)+'</div>'+
+  var e=r.stock>0?'ok':(r.stock<0?'ng':'no'), ini=esc((r.desc||'?').charAt(0).toUpperCase()), t=((r.desc||'?').charCodeAt(0)||0)%5;
+  return '<div class="stk-cd" onclick="stkAbrir('+r._row+')"><div class="stk-av t'+t+'">'+ini+'<i class="'+e+'"></i></div><div style="min-width:0;flex:1"><div class="stk-pn">'+esc(r.desc)+'</div>'+
     '<div class="stk-ps"><span class="sk">'+esc(r.sku)+'</span>'+(r.marca?'<i class="dot"></i><span>'+esc(r.marca)+'</span>':'')+'</div>'+
     '<div style="margin-top:8px"><span class="stk-pill '+e+'">'+_STK_LAB[e]+'</span></div></div>'+
     '<div class="stk-rt"><b'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'</b><span>und.</span></div></div>';
