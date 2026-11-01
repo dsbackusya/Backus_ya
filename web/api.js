@@ -232,7 +232,7 @@
       var o = {
         _row: row, sku: str(r.sku), desc: str(r.descripcion), marca: str(r.marca), categoria: str(r.categoria),
         entradas: num(r.entradas), salidas: num(r.salidas), mt: num(r.mt),
-        stock: num(r.stock_actual), stockPack: num(r.stock_pack), costo: num(r.costo),
+        stock: num(r.stock_actual), stockPack: num(r.stock_pack), packs: num(r.packs), costo: num(r.costo),
         fVenc: '', diasVenc: ''
       };
       o.sede = sedeNombre(r.sede_id);
@@ -240,6 +240,25 @@
       return o;
     });
     return { ok: true, data: data, usuario: p.usuario, rol: p.rol };
+  });
+
+  // Movimientos por día de un producto (últimos N días) para dibujar su evolución en la hoja de detalle
+  API.getStockHistorial = guard(async function (p, row, dias) {
+    var ref = _stockRows[row];
+    if (!ref) return { ok: false, error: 'Producto no encontrado' };
+    var n = Math.min(Math.max(Number(dias) || 30, 1), 90), d0 = new Date();
+    d0.setDate(d0.getDate() - n);
+    var desde = d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0') + '-' + String(d0.getDate()).padStart(2, '0');
+    async function dia(tabla, col) {
+      var filas = await todas(function () {
+        return sb.from(tabla).select('fecha,' + col).eq('sede_id', ref.sede_id).eq('sku', ref.sku).gte('fecha', desde).order('id');
+      });
+      var o = {};
+      filas.forEach(function (f) { o[f.fecha] = (o[f.fecha] || 0) + num(f[col]); });
+      return o;
+    }
+    var r = await Promise.all([dia('entradas', 'unidades'), dia('salidas', 'unidad'), dia('mt', 'cantidad')]);
+    return { ok: true, data: { e: r[0], s: r[1], m: r[2] } };
   });
 
   // Stock en packs de todas las sedes (para la descarga del Dashboard); una tienda solo ve su sede en el resto de la app.

@@ -295,6 +295,7 @@ function renderStock(r){
   var tot=rows.length||1;
   _STK_T=Date.now();
   var sinCosto=rows.filter(function(x){return x.stock>0&&!x.costo;}).length;
+  var packTot=rows.reduce(function(a,x){return a+(x.stock>0?(x.stockPack||0):0);},0);
   var undK=totalUnd>=1000?(totalUnd/1000).toFixed(1)+' K':fmt(totalUnd);
   var pc=function(n){return (n/tot*100).toFixed(2);};
   var costoK=costoTotal>=1000?(costoTotal/1000).toFixed(1)+' K':fmt(Math.round(costoTotal));
@@ -325,7 +326,7 @@ function renderStock(r){
         '<div class="stk-v"><span data-n="'+rows.length+'">'+fmt(rows.length)+'</span><small>SKUs</small></div>'+
         '<div class="stk-dist"><i style="width:'+pc(conStock)+'%;background:var(--ok)"></i><i style="width:'+pc(sinStock)+'%;background:var(--text4)"></i><i style="width:'+pc(negativos)+'%;background:var(--danger)"></i></div>'+
         '<div class="stk-leg">'+leg('con','var(--ok)','<span data-n="'+conStock+'">'+conStock+'</span>','Con stock')+leg('sin','var(--text4)','<span data-n="'+sinStock+'">'+sinStock+'</span>','Sin stock')+leg('neg','var(--danger)','<span data-n="'+negativos+'">'+negativos+'</span>','Negativos')+'</div></div></div>'+
-      '<div class="stk-card"><div class="stk-k">Unidades en stock</div><div class="stk-v"><span data-n="'+totalUnd+'">'+fmt(totalUnd)+'</span><small>und.</small></div><div class="stk-n">Solo stock positivo</div></div>'+
+      '<div class="stk-card"><div class="stk-k">Unidades en stock</div><div class="stk-v"><span data-n="'+totalUnd+'">'+fmt(totalUnd)+'</span><small>und.</small></div><div class="stk-n">Solo stock positivo'+(packTot?' · '+fmt(Math.round(packTot))+' packs':'')+'</div></div>'+
       '<div class="stk-card"><div class="stk-k">Costo total</div><div class="stk-v">S/ '+(costoTotal>=1000?'<span data-n="'+(costoTotal/1000).toFixed(1)+'" data-d="1">'+(costoTotal/1000).toFixed(1)+'</span> K':fmt(Math.round(costoTotal)))+'</div><div class="stk-n">S/ '+fmt(Math.round(costoTotal*10)/10)+' en total</div></div>'+
     '</div></div>'+
     (alertas?'<div class="stk-alw"><div class="stk-sec"><b>Requiere atención</b><span>Toca para filtrar</span></div><div class="stk-als">'+alertas+'</div></div>':'')+
@@ -422,6 +423,7 @@ function _stkFila(r,mx){
     '<td class="r"><button class="stk-ed" onclick="event.stopPropagation();abrirSKUForm('+r._row+')">Editar</button></td>'+
   '</tr>';
 }
+function _stkPk(v,r){ if(!(r&&r.packs>0)) return ''; var x=v/r.packs, e=Math.abs(x-Math.round(x))<.05; return (e?fmt(Math.round(x)):x.toLocaleString('es-PE',{minimumFractionDigits:1,maximumFractionDigits:1}))+' packs'; }
 var _STK_CAT='', _STK_T=0, _STK_ORD=0, _STK_ORDL=['Mayor stock','Menor stock','A–Z'];
 function stkOrden(){ _STK_ORD=(_STK_ORD+1)%3; var e=document.getElementById('stk-ord'); if(e) e.textContent=_STK_ORDL[_STK_ORD]; filterStock(); }
 function stkAl(k){ setStockFiltroEstado(_STOCK_ESTADO_FILTRO===k?'':k); var c=document.getElementById('stk-cats'); if(c&&c.parentNode) c.scrollIntoView({block:'start',behavior:'smooth'}); }
@@ -457,7 +459,7 @@ function _stkCard(r){
   var e=r.stock>0?'ok':(r.stock<0?'ng':'no'), ini=esc((r.desc||'?').charAt(0).toUpperCase()), t=((r.desc||'?').charCodeAt(0)||0)%5;
   return '<div class="stk-cd" onclick="stkAbrir('+r._row+')"><div class="stk-av t'+t+'">'+ini+'<i class="'+e+'"></i></div>'+
     '<div class="stk-m"><div class="stk-t1"><b>'+esc(r.desc)+'</b><span>'+_STK_LAB[e]+'</span></div>'+
-    '<p><u'+(e==='ng'?' class="ng"':'')+'>'+fmt(r.stock)+' und.</u> · '+esc(r.sku)+(r.marca?' · '+esc(r.marca):'')+'</p></div></div>';
+    '<p><u'+(e==='ng'?' class="ng"':'')+'>'+fmt(r.stock)+' und.</u>'+(r.packs>0?' · '+_stkPk(r.stock,r):'')+' · '+esc(r.sku)+(r.marca?' · '+esc(r.marca):'')+'</p></div></div>';
 }
 // Dibuja el siguiente lote y deja una marca al final: cuando se acerca a la pantalla, se dibuja el que sigue.
 function _stkMas(){
@@ -488,13 +490,17 @@ function stkAbrir(row){
   var r=(DATA.stock||[]).filter(function(x){return x._row===row;})[0]; if(!r) return;
   var e=r.stock>0?'ok':(r.stock<0?'ng':'no');
   var c=document.getElementById('stk-drc'); if(!c) return;
+  var pk=function(v){ var t=_stkPk(v,r); return t?'<small>'+t+'</small>':''; };
+  var tienda=S&&S.rol==='store';
   var mb='<div class="stk-mb"><div class="stk-grab" onclick="stkCerrar()"></div><div class="stk-sk">'+esc(r.sku)+'</div><h3>'+esc(r.desc)+'</h3>'+
     '<div class="stk-sub">'+(r.marca?esc(r.marca):'')+(r.marca&&r.categoria?' · ':'')+(r.categoria?esc(r.categoria):'')+'</div>'+
-    '<div class="stk-big"><div class="v"'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'<small>und.</small></div><span class="stk-pl '+e+'">'+_STK_LAB[e]+'</span></div>'+
-    '<div class="stk-st3"><div><span>Entradas</span><b class="e">+'+fmt(r.entradas)+'</b></div><div><span>Salidas</span><b>−'+fmt(r.salidas)+'</b></div><div><span>M-T</span><b class="m">'+fmt(r.mt)+'</b></div></div>'+
-    '<div class="stk-st3 d2"><div><span>Pack</span><b>'+Math.round(r.stockPack)+'</b></div><div><span>Costo en inventario</span><b>'+(r.costo?'S/ '+fmt(r.costo):'—')+'</b></div></div>'+
+    '<div class="stk-big"><div><div class="v"'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'<small>und.</small></div>'+(r.packs>0?'<div class="stk-vp">≈ '+_stkPk(r.stock,r)+'</div>':'')+'</div><span class="stk-pl '+e+'">'+_STK_LAB[e]+'</span></div>'+
+    '<div class="stk-chart" id="stk-ch"><div class="stk-chl">Cargando evolución…</div></div>'+
+    '<div class="stk-st3"><div><span>Entradas</span><b class="e">+'+fmt(r.entradas)+'</b>'+pk(r.entradas)+'</div><div><span>Salidas</span><b>−'+fmt(r.salidas)+'</b>'+pk(r.salidas)+'</div><div><span>M-T</span><b class="m">'+fmt(r.mt)+'</b>'+pk(r.mt)+'</div></div>'+
+    '<div class="stk-st3 d2"><div><span>Costo en inventario</span><b>'+(r.costo?'S/ '+fmt(r.costo):'—')+'</b></div><div><span>Unidades por pack</span><b>'+(r.packs>0?fmt(r.packs):'—')+'</b></div></div>'+
     (e==='ng'?'<div class="stk-warn">Salieron más unidades de las que entraron. Revisa las entradas o haz un conteo.</div>':'')+
-    '<button type="button" class="stk-edb" onclick="stkCerrar();abrirSKUForm('+r._row+')">Editar SKU</button></div>';
+    '<div class="stk-btns">'+(tienda?'<button type="button" class="stk-b e" onclick="stkIr(\'entradas\')">'+_stkIc('<path d="M12 4v13"/><path d="M6 12l6 6 6-6"/>')+'Entrada</button><button type="button" class="stk-b s" onclick="stkIr(\'salidas\')">'+_stkIc('<path d="M12 20V7"/><path d="M6 12l6-6 6 6"/>')+'Salida</button><button type="button" class="stk-b g" onclick="stkIr(\'conteo\')">'+_stkIc('<path d="M5 9h14M5 15h14M9 4L7 20M17 4l-2 16"/>')+'Contar</button>':'')+
+    '<button type="button" class="stk-b g'+(tienda?'':' w')+'" onclick="stkCerrar();abrirSKUForm('+r._row+')">'+_stkIc('<path d="M4 20h4l11-11-4-4L4 16z"/>')+'Editar SKU</button></div></div>';
   c.innerHTML=mb+'<div class="stk-dk">'+
     '<div class="stk-ps" style="margin:0 0 6px"><span class="sk">'+esc(r.sku)+'</span></div>'+
     '<h3>'+esc(r.desc)+'</h3>'+
@@ -508,6 +514,31 @@ function stkAbrir(row){
     '<div style="margin-top:18px"><button class="btn btn-primary" style="width:100%" onclick="stkCerrar();abrirSKUForm('+r._row+')">Editar SKU</button></div></div>';
   document.getElementById('stk-dr').classList.add('on');
   var dm=document.getElementById('stk-dim'); if(dm) dm.classList.add('on');
+  stkEvol(r);
+}
+function _stkIc(p){ return '<svg viewBox="0 0 24 24">'+p+'</svg>'; }
+function stkIr(n){ stkCerrar(); navTo(n,document.getElementById('nav-'+n)); }
+/* Evolución del stock de los últimos 30 días: se arma hacia atrás desde el stock de hoy con las entradas, salidas y M-T de cada día */
+function stkEvol(r){
+  google.script.run
+    .withSuccessHandler(function(res){
+      var el=document.getElementById('stk-ch'); if(!el||!res||!res.ok) { if(el) el.innerHTML='<div class="stk-chl">No se pudo cargar la evolución</div>'; return; }
+      var d=res.data, N=30, fechas=[], hoy=new Date(), k;
+      for(k=N;k>=0;k--){ var x=new Date(hoy); x.setDate(x.getDate()-k); fechas.push(x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')); }
+      var delta=fechas.map(function(f){ return (d.e[f]||0)-(d.s[f]||0)-(d.m[f]||0); });
+      var v=new Array(N+1), cur=r.stock; v[N]=cur;
+      for(k=N;k>0;k--){ cur-=delta[k]; v[k-1]=cur; }
+      var hay=delta.some(function(x){return x!==0;});
+      if(!hay){ el.innerHTML='<div class="stk-chl">Sin movimientos en los últimos 30 días</div>'; return; }
+      var mx=Math.max.apply(null,v), mn=Math.min.apply(null,v), W=300, H=120, id='stkg'+r._row;
+      var pts=v.map(function(y,i){ return [i/N*W, H-6-(y-mn)/(mx-mn||1)*(H-12)]; });
+      var dd='M'+pts.map(function(q){return q[0].toFixed(1)+','+q[1].toFixed(1);}).join(' L');
+      var base=v[N-7], pc=base!==0?Math.round((v[N]-base)/Math.abs(base)*100):null;
+      el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9A86F2" stop-opacity=".5"/><stop offset="1" stop-color="#9A86F2" stop-opacity="0"/></linearGradient></defs><path d="'+dd+' L'+W+','+H+' L0,'+H+' Z" fill="url(#'+id+')"/><path d="'+dd+'" fill="none" stroke="#9A86F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>'+
+        '<div class="stk-cl"><span>hace 30 días</span>'+(pc===null?'':'<span>'+(pc>=0?'▲ +':'▼ ')+pc+'% en 7 días</span>')+'<span>hoy</span></div>';
+    })
+    .withFailureHandler(function(){ var el=document.getElementById('stk-ch'); if(el) el.innerHTML='<div class="stk-chl">No se pudo cargar la evolución</div>'; })
+    .getStockHistorial(S.token,r._row,30);
 }
 function stkCerrar(){ var d=document.getElementById('stk-dr'); if(d) d.classList.remove('on'); var m=document.getElementById('stk-dim'); if(m) m.classList.remove('on'); }
 
