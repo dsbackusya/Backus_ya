@@ -164,32 +164,51 @@ function _mtaCurva(p){
 }
 function _mtaInc(a,i){ if(i<1||!(a[i-1]>0)) return ''; var p=Math.round((a[i]-a[i-1])/a[i-1]*1000)/10; return '<em class="'+(p>0?'up':p<0?'dn':'')+'">'+(p>0?'▲ +':p<0?'▼ ':'')+p+'%</em>'; }
 function _mtaAcum(ms){
-  var n=ms.length, ac=[], s=0, i;
-  for(i=0;i<n;i++){ s+=(Number(ms[i].gen)||0)-(Number(ms[i].ret)||0); ac.push(s); }
-  var mx=Math.max(Math.max.apply(null,ac),1), pts=ac.map(function(v,i){ return [(i+.5)/n*1000, 200-(v/mx*62+8)*2]; });
-  var line=_mtaCurva([[0,pts[0][1]]].concat(pts).concat([[1000,pts[n-1][1]]]));
-  _MTA.ac={ v:ac, y:pts.map(function(p){return p[1]/2;}), n:n, ms:ms };
+  var n=ms.length, cg=[], cr=[], cp=[], a=0, b=0, i;
+  for(i=0;i<n;i++){ a+=Number(ms[i].gen)||0; b+=Number(ms[i].ret)||0; cg.push(a); cr.push(b); cp.push(a-b); }
+  var mx=Math.max(cg[n-1],1), H=240, fy=function(v){ return 1-(v/mx*.74+.08); };
+  var ext=function(v){ var p=v.map(function(x,k){ return [(k+.5)/n*1000,H*fy(x)]; }); return [[0,p[0][1]]].concat(p).concat([[1000,p[n-1][1]]]); };
+  var pg=ext(cg), pr=ext(cr), lg=_mtaCurva(pg), lr=_mtaCurva(pr);
+  var gap=lg+' L1000,'+pr[pr.length-1][1].toFixed(1)+' '+_mtaCurva(pr.slice().reverse()).replace(/^M[^C]*/,'')+' Z';
+  _MTA.ac={ v:cp, g:cg, r:cr, n:n, ms:ms };
   var lab=(n>6?_MTA_MES:_MTA_MESL);
-  return '<div class="mta-c mta-ac"><div class="mta-fh"><div class="mta-k">Merma acumulada por retirar</div><div class="mta-lg"><span>Lo generado mes a mes menos lo ya retirado</span></div></div>'+
-    '<div class="mta-ap"><svg viewBox="0 0 1000 200" preserveAspectRatio="none" aria-hidden="true"><defs>'+
-      '<linearGradient id="mtaAf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7B61EF" stop-opacity=".42"/><stop offset=".6" stop-color="#CC7A83" stop-opacity=".14"/><stop offset="1" stop-color="#CC7A83" stop-opacity="0"/></linearGradient>'+
-      '<linearGradient id="mtaAl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#CC7A83"/><stop offset=".55" stop-color="#9A86F2"/><stop offset="1" stop-color="#7B61EF"/></linearGradient></defs>'+
-      '<path d="'+line+' L1000,200 L0,200 Z" fill="url(#mtaAf)"/>'+
-      '<path d="'+line+'" fill="none" stroke="url(#mtaAl)" stroke-width="3" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>'+
-      ac.map(function(v,i){ var x=(i+.5)/n*100; return '<i class="mta-pt" id="mta-pt'+i+'" style="left:'+x+'%;top:'+(pts[i][1]/2)+'%"></i><span class="mta-pv" id="mta-pv'+i+'" style="left:'+Math.min(Math.max(x,6),94)+'%;top:'+(pts[i][1]/2)+'%">'+_mtaK(v)+_mtaInc(ac,i)+'</span>'; }).join('')+'<i class="mta-al" id="mta-al"></i><i class="mta-ad" id="mta-ad"></i><div class="mta-at" id="mta-at"></div>'+
-      '<div class="mta-ah">'+ms.map(function(m,i){ return '<button type="button" aria-label="'+lab[Number(m.mes.slice(5,7))-1]+'" onmouseenter="mtAnSel('+i+')" onclick="mtAnSel('+i+')"></button>'; }).join('')+'</div></div>'+
-    '<div class="mta-axis">'+ms.map(function(m,i){ return '<span id="mta-ax'+i+'">'+lab[Number(m.mes.slice(5,7))-1]+'</span>'; }).join('')+'</div></div>';
+  var marks=ms.map(function(m,k){
+    var x=(k+.5)/n*100, xc=Math.min(Math.max(x,5),95), yg=fy(cg[k])*100, yr=fy(cr[k])*100;
+    return '<i class="mta-vl" id="mta-vl'+k+'" style="left:'+x+'%;top:'+yg+'%;height:'+(yr-yg)+'%"></i>'+
+      '<i class="mta-pt" style="left:'+x+'%;top:'+yg+'%"></i><i class="mta-pt rt" style="left:'+x+'%;top:'+yr+'%"></i>'+
+      '<span class="mta-pv pg" id="mta-pg'+k+'" style="left:'+xc+'%;top:'+yg+'%">'+(cg[k]/1000).toFixed(1)+' K</span>'+
+      '<span class="mta-pv pr" id="mta-pr'+k+'" style="left:'+xc+'%;top:'+yr+'%">'+(cr[k]/1000).toFixed(1)+' K</span>'+
+      '<span class="mta-pv pw" id="mta-pw'+k+'" style="left:'+xc+'%;top:'+((yg+yr)/2)+'%">'+_mtaK(cp[k]).replace('S/ ','')+'</span>';
+  }).join('');
+  return '<div class="mta-c mta-ac"><div class="mta-fh"><div><div class="mta-k">Merma acumulada por retirar</div><div class="mta-ab">'+_mtaK(cp[n-1])+'</div></div>'+
+      '<div class="mta-lg"><span><i style="background:#9A86F2"></i>Generado acumulado</span><span><i style="background:#5AD19A"></i>Retirado acumulado</span><span><i style="background:linear-gradient(#CC7A83,#7B61EF)"></i>Por retirar</span></div></div>'+
+    '<div class="mta-sp'+(n>6?' dense':'')+'"><div><div class="mta-ap"><svg viewBox="0 0 1000 '+H+'" preserveAspectRatio="none" aria-hidden="true"><defs>'+
+      '<linearGradient id="mtaGp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#CC7A83" stop-opacity=".55"/><stop offset="1" stop-color="#7B61EF" stop-opacity=".22"/></linearGradient>'+
+      '<linearGradient id="mtaGr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5AD19A" stop-opacity=".30"/><stop offset="1" stop-color="#5AD19A" stop-opacity="0"/></linearGradient></defs>'+
+      '<path d="'+lr+' L1000,'+H+' L0,'+H+' Z" fill="url(#mtaGr)"/><path d="'+gap+'" fill="url(#mtaGp)"/>'+
+      '<path d="'+lg+'" fill="none" stroke="#9A86F2" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linecap="round"/>'+
+      '<path d="'+lr+'" fill="none" stroke="#5AD19A" stroke-width="2.2" vector-effect="non-scaling-stroke" stroke-linecap="round"/></svg>'+marks+
+      '<div class="mta-ah">'+ms.map(function(m,k){ return '<button type="button" aria-label="'+lab[Number(m.mes.slice(5,7))-1]+'" onmouseenter="mtAnSel('+k+')" onclick="mtAnSel('+k+')"></button>'; }).join('')+'</div></div>'+
+    '<div class="mta-axis">'+ms.map(function(m,k){ return '<span id="mta-ax'+k+'">'+lab[Number(m.mes.slice(5,7))-1]+'</span>'; }).join('')+'</div></div>'+
+    '<div class="mta-det" id="mta-det"></div></div></div>';
 }
 function mtAnSel(i){
   var a=_MTA.ac; if(!a||i<0||i>=a.n) return;
   _MTA.sel=i;
-  var x=(i+.5)/a.n*100, y=a.y[i], al=document.getElementById('mta-al'), ad=document.getElementById('mta-ad'), at=document.getElementById('mta-at');
-  if(!al||!ad||!at) return;
-  al.style.left=ad.style.left=x+'%'; al.style.top=y+'%'; ad.style.top=y+'%';
-  at.style.left=Math.min(Math.max(x,9),91)+'%'; at.style.top=y+'%';
-  var gm=Number(a.ms[i].gen)||0, rm=Number(a.ms[i].ret)||0;
-  at.innerHTML='<b>'+_mtaK(a.v[i])+_mtaInc(a.v,i)+'</b><small>+'+_mtaK(gm)+(rm>0?' · −'+_mtaK(rm)+' retirado':'')+'</small>';
-  for(var k=0;k<a.n;k++){ var s=document.getElementById('mta-ax'+k), v=document.getElementById('mta-pv'+k), q=document.getElementById('mta-pt'+k); if(s) s.className=(k===i?'on':''); if(v) v.style.visibility=(k===i?'hidden':''); if(q) q.style.visibility=(k===i?'hidden':''); }
+  var det=document.getElementById('mta-det'); if(!det) return;
+  var m=a.ms[i], gm=Number(m.gen)||0, rm=Number(m.ret)||0, pc=a.g[i]>0?a.r[i]/a.g[i]*100:0;
+  for(var k=0;k<a.n;k++){
+    var s=document.getElementById('mta-ax'+k); if(s) s.className=(k===i?'on':'');
+    ['pw','pg','pr'].forEach(function(t){ var e=document.getElementById('mta-'+t+k); if(e) e.className='mta-pv '+t+(k===i?' sel':''); });
+  }
+  det.innerHTML='<h3>'+_MTA_MESL[Number(m.mes.slice(5,7))-1]+' '+m.mes.slice(0,4)+' · detalle</h3>'+
+    (i?'<div class="mta-dr"><span>Pendiente anterior</span><b>'+_mtaK(a.v[i-1])+'</b></div>':'')+
+    '<div class="mta-dr"><span>+ Generado</span><b class="up">'+_mtaK(gm)+'</b></div>'+
+    '<div class="mta-dr"><span>− Retirado</span><b class="dn">'+_mtaK(rm)+'</b></div>'+
+    '<div class="mta-dr tot"><span>Pendiente acumulado</span><b>'+_mtaK(a.v[i])+_mtaInc(a.v,i)+'</b></div>'+
+    '<div class="mta-dp"><i style="width:'+pc+'%;background:#5AD19A"></i><i style="width:'+(100-pc)+'%;background:#CC7A83"></i></div>'+
+    '<div class="mta-dl"><span>Retirado '+Math.round(pc)+'%</span><span>Por retirar '+Math.round(100-pc)+'%</span></div>'+
+    '<button type="button" class="mta-db" onclick="mtVista(\'reg\')">Ir a registrar el retiro</button>';
 }
 
 function mtAnPintar(){
