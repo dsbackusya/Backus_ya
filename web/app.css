@@ -4096,3 +4096,60 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
   .stk-b.e{background:#5AD19A;color:#0A0A0B;border:0}.stk-b.s{background:#E39AA2;color:#0A0A0B;border:0}
   .stk-b.w{grid-column:1/-1;background:#fff;color:#111;border:0}
 }
+
+/* Envases: el conteo inicial del lunes también cierra la semana anterior */
+.ev-ci{display:block;margin-top:4px;font:600 10.5px 'Inter',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-ci.ev-zero{color:#8A8A93}
+.ev-d.on .ev-ci.ev-zero{color:#555}
+.gx-acum{display:block;margin-top:3px;font:500 12px 'Inter',sans-serif;color:var(--text3)}
+.gx-acum.ok{color:#5AD19A}
+@media(max-width:560px){.ev-ci{font-size:9px}}
+.gx-tg.gx-tci{top:8px;transform:translateX(-50%);font-size:10px}
+.gx-tg.gx-tci.ab{top:auto;bottom:8px}
+.gx-bar.ci{opacity:.75}
+
+/* Envases · Historial semanal */
+.evh .evm2-rh{margin-bottom:14px}
+.evh-plot{display:flex;gap:8px;height:170px;padding:6px 0 0;border-bottom:1px solid var(--border);margin-bottom:12px}
+.evh-col{flex:1;min-width:0;display:flex;flex-direction:column;cursor:pointer;border-radius:10px;transition:background .15s}
+.evh-col:hover{background:rgba(255,255,255,.03)}
+.evh-pl{position:relative;flex:1}
+.evh-pl::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--border2)}
+.evh-pl i{position:absolute;left:50%;width:30px;margin-left:-15px}
+.evh-pl i.f{background:linear-gradient(180deg,#CC7A83,#A04E58);border-radius:3px 3px 8px 8px}
+.evh-pl i.s{background:linear-gradient(180deg,#9A86F2,#7B61EF);border-radius:8px 8px 3px 3px}
+.evh-col.ab .evh-pl i{opacity:.45;outline:1px dashed rgba(255,255,255,.25);outline-offset:-1px}
+.evh-pl em{position:absolute;left:0;right:0;text-align:center;font:600 10.5px 'Inter',sans-serif;font-style:normal;white-space:nowrap}
+.evh-pl span{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font:500 10.5px 'Inter',sans-serif;color:var(--text4);line-height:1.25;background:var(--surface);padding:2px 0}
+.evh-col>b{display:block;text-align:center;padding:6px 0 8px;font:500 11px var(--font-mono);color:var(--text3);white-space:nowrap}
+.evh-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:var(--text3);margin-bottom:8px}
+.evh-leg span{display:inline-flex;align-items:center;gap:6px}.evh-leg i{width:8px;height:8px;border-radius:2px}
+.evh-leg .evh-u{margin-left:auto;color:var(--text4)}
+.evh-r{display:grid;grid-template-columns:minmax(180px,1.6fr) 96px repeat(3,minmax(80px,.7fr)) minmax(230px,1.4fr) 18px;gap:12px;align-items:center;padding:12px 10px;border-top:1px solid var(--border);border-radius:12px;cursor:pointer;transition:background .15s}
+.evh-r:hover{background:var(--surface2)}
+.evh-w b{display:block;font:600 13.5px 'Inter',sans-serif;color:var(--text)}
+.evh-w small{font-size:11.5px;color:var(--text3)}
+.evh-st{justify-self:start;font:600 11px 'Inter',sans-serif;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.evh-st.ok{background:rgba(90,209,154,.12);color:#5AD19A}
+.evh-st.w{background:rgba(232,184,74,.12);color:#E8B84A}
+.evh-st.no{background:rgba(255,255,255,.06);color:var(--text3)}
+.evh-n{text-align:right}.evh-n b{font:600 13.5px var(--font-mono)}
+.evh-n::before{content:attr(data-l);display:block;font:500 10.5px 'Inter',sans-serif;color:var(--text4);margin-bottom:2px}
+.evh-fm{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.evh-fm span{display:flex;align-items:center;justify-content:center;gap:5px;height:28px;border-radius:8px;font:600 12px var(--font-mono);background:var(--surface2);color:var(--text2)}
+.evh-fm span i{width:6px;height:6px;border-radius:2px;flex:none}
+.evh-fm span.f{background:rgba(204,122,131,.14);color:#E39AA2}
+.evh-fm span.s{background:rgba(123,97,239,.16);color:#C4B8FA}
+.evh-fm span.dim{color:var(--text4)}
+.evh-go{color:var(--text4)}
+.evh-mas{display:flex;justify-content:center;margin-top:12px}
+.evh-vacio{padding:24px;text-align:center;color:var(--text3)}
+@media(max-width:900px){
+  .evh-r{grid-template-columns:repeat(3,1fr);gap:10px}
+  .evh-w{grid-column:1/3}.evh-st{justify-self:end}
+  .evh-n{text-align:left}
+  .evh-fm{grid-column:1/-1}
+  .evh-go{display:none}
+  .evh-plot{height:140px;gap:4px}.evh-pl i{width:18px;margin-left:-9px}.evh-col>b{font-size:10px}
+  .evh-leg .evh-u{margin-left:0}
+}

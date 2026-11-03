@@ -4,7 +4,7 @@
    · Movimientos del día: ENT y Venta en las botellas llenas, DEV en las vacías (Marcaje suma solo).
    · Motorizados: lo que deben y lo que devuelven; lo que deben cuenta como parte del conteo de vacías.
    El conteo de un día se hace al empezar el día y se compara con los movimientos de los días anteriores;
-   el primer conteo de la semana (el lunes) es el inicial.
+   el primer conteo de la semana (el lunes) es el inicial y, a la vez, el cierre de la semana anterior.
    ══════════════════════════════════════════════════════════════ */
 var ENV_FILAS = [
   { k:'caja', tam:630,  sku:'3500192', n:'CJPL620/650',  t:'Caja plástica',          fam:'C6', g:'6xx · 630 / 650 ML' },
@@ -68,7 +68,7 @@ function loadEnvases(){
 function envRecibir(r){
   if(_handleExpired(r,'envases-root')) return;
   if(!r||!r.ok){ errBox('envases-root',r&&r.error?r.error:'Error al cargar Envases','envases'); return; }
-  var primera=!ENV.d; ENV.d=r; _evCalc();
+  var primera=!ENV.d; ENV.d=r; ENV.his=null; _evCalc(); _evVecinas();
   if(primera||ENV._reselDia){
     // día seleccionado: hoy si está en la semana; si no, el último con conteo; si no, el lunes
     var hi=ENV.m.days.indexOf(r.hoy); ENV.sel=hi>=0?hi:Math.max(0,ENV.m.last); ENV._reselDia=false;
@@ -76,14 +76,43 @@ function envRecibir(r){
   _evRender();
 }
 function _evRecargar(){ var t=(REQ_TOKEN.envases=(REQ_TOKEN.envases||0)+1); google.script.run
-  .withSuccessHandler(function(r){ if(t===REQ_TOKEN.envases&&r&&r.ok){ ENV.d=r; _evCalc(); _evRender(); } })
+  .withSuccessHandler(function(r){ if(t===REQ_TOKEN.envases&&r&&r.ok){ ENV.d=r; ENV.his=null; _evCalc(); _evRender(); } })
   .withFailureHandler(function(e){ showToast(e.message,'err'); }).getEnvSemana(S.token,ENV.lunes); }
 function envSemana(n){ ENV.lunes=_evSumar(ENV.lunes,7*n); ENV._reselDia=true; ENV.ses=null; PAGE_LOADING['envases']=true;
   document.getElementById('envases-root').innerHTML=LD('Cargando la semana'); loadEnvases(); }
 
+/* semanas vecinas: la anterior (su cierre es el conteo inicial de esta) y la siguiente (su inicial cierra esta) */
+function _evVecinas(){
+  var t=ENV.vt=(ENV.vt||0)+1, lun=ENV.lunes;
+  ENV.pm=null; ENV.nm=null; _evCierres();
+  function pedir(l,k){
+    google.script.run.withSuccessHandler(function(r){
+      if(t!==ENV.vt||!r||!r.ok) return;
+      ENV[k]=_evCalcD(r); _evCierres();
+      if(ENV.vista==='ctl'&&document.getElementById('ev-days')){ _evDias(); _evTabla(); _evResumen(); }
+    }).withFailureHandler(function(){}).getEnvSemana(S.token,l);
+  }
+  pedir(_evSumar(lun,-7),'pm');
+  if(_evSumar(lun,7)<=_evHoy()) pedir(_evSumar(lun,7),'nm');
+}
+/* cierre de la semana p con el primer conteo de la semana n: esperado = inicial de p + movimientos hasta ese conteo */
+function _evCierreDe(p,n){
+  if(!p||!n||p.b<0||n.b<0) return null;
+  var o={C6:0,B6:0,C3:0,B3:0};
+  var filas=ENV_FILAS.map(function(f,j){
+    var e=p.tot[p.b][j], k;
+    for(k=p.b;k<7;k++) e+=_evMovDia(k,j,p);
+    for(k=0;k<n.b;k++) e+=_evMovDia(k,j,n);
+    var c=n.tot[n.b][j]; o[f.fam]+=c-e; return { esp:e, cnt:c, dif:c-e };
+  });
+  return { filas:filas, o:o, dia:n.days[n.b], desde:p.days[0], hasta:p.days[6] };
+}
+function _evCierres(){ ENV.ci=_evCierreDe(ENV.pm,ENV.m); ENV.cf=_evCierreDe(ENV.m,ENV.nm); }
+
 /* ── cálculo de la semana ── */
-function _evCalc(){
-  var d=ENV.d, days=[], i, k;
+function _evCalc(){ ENV.m=_evCalcD(ENV.d); _evCierres(); }
+function _evCalcD(d){
+  var days=[], i, k;
   for(k=0;k<7;k++) days.push(_evSumar(d.desde,k));
   var C=days.map(function(){ return { pal:_evCeros(), cam:_evCeros(), mo:null, has:false }; });
   var snaps={};
@@ -126,11 +155,12 @@ function _evCalc(){
   });
   var b=-1, last=-1;
   C.forEach(function(c,di){ if(c.has){ if(b<0) b=di; last=di; } });
-  ENV.m={ days:days, C:C, pfn:pfn, tot:tot, M:M, PEND:PEND, b:b, last:last };
+  return { days:days, C:C, pfn:pfn, tot:tot, M:M, PEND:PEND, b:b, last:last };
 }
-function _evMovDia(di,j){ var m=ENV.m.M[di][j]; return m.ent+m.entD-m.dev-m.devD-m.ven-m.venD; }
+function _evMovDia(di,j,m){ var x=(m||ENV.m).M[di][j]; return x.ent+x.entD-x.dev-x.devD-x.ven-x.venD; }
 function _evEsp(di,j){
-  var m=ENV.m; if(m.b<0||di<=m.b) return null;
+  var m=ENV.m; if(m.b>=0&&di===m.b&&ENV.ci) return ENV.ci.filas[j].esp;  // el inicial también cierra la semana anterior
+  if(m.b<0||di<=m.b) return null;
   var s=m.tot[m.b][j]; for(var k=m.b;k<di;k++) s+=_evMovDia(k,j); return s;
 }
 function _evDif(di,j){ var t=ENV.m.tot[di]; if(!t||t[j]==null) return null; var e=_evEsp(di,j); return e==null?null:t[j]-e; }
@@ -147,7 +177,8 @@ function _evRender(){
     '<div class="ev-wrap"><div class="sal2-pnl ev-pnl">'+
       '<div class="sal2-fl"><div class="sal2-seg ev-vtabs"><button class="ev-vtab'+(ENV.vista==='ctl'?' on':'')+'" onclick="envVista(\'ctl\')">Control semanal</button>'+
         '<button class="ev-vtab'+(ENV.vista==='mot'?' on':'')+'" onclick="envVista(\'mot\')">Motorizados'+(deudores?' <b>'+deudores+'</b>':'')+'</button>'+
-        '<button class="ev-vtab'+(ENV.vista==='pfn'?' on':'')+'" onclick="envVista(\'pfn\')">PFN</button></div>'+
+        '<button class="ev-vtab'+(ENV.vista==='pfn'?' on':'')+'" onclick="envVista(\'pfn\')">PFN</button>'+
+        '<button class="ev-vtab'+(ENV.vista==='his'?' on':'')+'" onclick="envVista(\'his\')">Historial</button></div>'+
         '<span class="ev-acts"><button class="sal2-exp" onclick="envPrecios()">Precios</button>'+
           '<button id="btn-export-envases" class="sal2-exp" onclick="exportEnvases()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar</button></span></div>'+
       '<div class="ev-well">'+
@@ -155,16 +186,17 @@ function _evRender(){
         ? '<div class="ev-wk"><button class="ev-nav" title="Semana anterior" onclick="envSemana(-1)">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg>'+'</button><b>'+sem+'<small>de '+ENV_MES[parseInt(z.slice(5,7),10)-1]+' de '+z.slice(0,4)+'</small></b>'+
           '<button class="ev-nav" title="Semana siguiente" onclick="envSemana(1)">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>'+'</button>'+
           '<div class="ev-days" id="ev-days"></div></div>'+
-          '<div class="ev-leg"><span>El conteo de un día se hace al empezar el día y se compara con los movimientos de los días anteriores. El primer conteo de la semana es el inicial.</span></div>'+
+          '<div class="ev-leg"><span>El conteo de un día se hace al empezar el día y se compara con los movimientos de los días anteriores. El conteo del lunes es el inicial de la semana y, a la vez, cierra la semana anterior.</span></div>'+
           '<div class="evm2" id="ev-merge"></div>'+
           '<div class="ev-card"><div class="ev-h"><span class="t">Movimientos y conteo</span><span class="s" id="ev-hd"></span><span class="ev-sp"></span><button class="btn btn-primary" id="ev-bc" onclick="envContar()"></button></div>'+
             '<div class="ev-t" id="ev-t"></div>'+
             '<div class="ev-ft">Conteo = Palet + Cámara + PFN + lo que deben los motorizados (columnas PFN y Moto). Lo de los motorizados queda fijo al empezar el conteo del día: entregas o cambios posteriores no lo modifican. Esperado = conteo inicial + entradas − devoluciones − ventas, de los días anteriores. Diferencia = conteo del día − esperado. Dentro de una familia, las diferencias de llenas y vacías se compensan. ENT y DEV de Marcaje se suman solos (aparecen como + debajo del número).</div></div>'
-        : ENV.vista==='pfn' ? '<div id="ev-pfn"></div>' : '<div id="ev-mot"></div>')+
+        : ENV.vista==='pfn' ? '<div id="ev-pfn"></div>' : ENV.vista==='his' ? '<div id="ev-his"></div>' : '<div id="ev-mot"></div>')+
       '</div>'+
     '</div></div>';
   if(ENV.vista==='ctl'){ _evDias(); _evTabla(); _evResumen(); }
   else if(ENV.vista==='pfn') _evPfnPinta();
+  else if(ENV.vista==='his') _evHisPinta();
   else _evMotPinta();
 }
 function envVista(v){ ENV.vista=v; ENV.pfnFecha=null; _evRender(); }
@@ -175,7 +207,10 @@ function _evDias(){
   var m=ENV.m, el=document.getElementById('ev-days'); if(!el) return;
   el.innerHTML=m.days.map(function(dia,i){
     var est;
-    if(i===m.b) est='<span class="ev-st ini">Inicial</span>';
+    if(i===m.b){
+      est='<span class="ev-st ini">Inicial</span>';
+      if(ENV.ci){ var cv=_evTotDif(ENV.ci.o).v; est+='<small class="ev-ci '+_evCls(cv)+'" title="Cierre de la semana anterior">cierre '+(cv?(cv>0?'+':'')+_evMoney(cv):'cuadra')+'</small>'; }
+    }
     else if(m.b>=0&&i>m.b&&m.C[i].has){
       var o=_evDifs(i), hay=false, k; for(k in o) if(o[k]) hay=true;
       if(!hay) est='<span class="ev-st ok">Cuadra</span>';
@@ -183,7 +218,7 @@ function _evDias(){
     } else est='<span class="ev-st no">sin conteo</span>';
     return '<div class="ev-d'+(i===ENV.sel?' on':'')+(dia===_evHoy()?' hoy':'')+'" onclick="envSel('+i+')"><span class="dn">'+ENV_DN[i]+'</span><b>'+parseInt(dia.slice(8),10)+'</b>'+est+'</div>';
   }).join('');
-  var s=ENV.sel; document.getElementById('ev-hd').textContent=ENV_DL[s].charAt(0).toUpperCase()+ENV_DL[s].slice(1)+' '+parseInt(m.days[s].slice(8),10)+' de '+ENV_MES[parseInt(m.days[s].slice(5,7),10)-1]+(s===m.b?' · conteo inicial':'');
+  var s=ENV.sel; document.getElementById('ev-hd').textContent=ENV_DL[s].charAt(0).toUpperCase()+ENV_DL[s].slice(1)+' '+parseInt(m.days[s].slice(8),10)+' de '+ENV_MES[parseInt(m.days[s].slice(5,7),10)-1]+(s===m.b?' · conteo inicial'+(ENV.ci?' y cierre de la semana anterior':''):'');
   document.getElementById('ev-bc').textContent=m.C[s].has?'Editar conteo del día':'Contar este día';
 }
 
@@ -244,7 +279,7 @@ function gxTip(col,i){
   var x=ENV._gx&&ENV._gx[i], t=document.getElementById('gx-tip');
   if(!t){ t=document.createElement('div'); t.id='gx-tip'; document.body.appendChild(t); }
   if(!x){ t.classList.remove('on'); return; }
-  var dia=ENV.m.days[i], tot=0, h='<h4>'+ENV_DL[i].charAt(0).toUpperCase()+ENV_DL[i].slice(1)+' '+parseInt(dia.slice(8),10)+'</h4>';
+  var dia=ENV.m.days[i], tot=0, h='<h4>'+ENV_DL[i].charAt(0).toUpperCase()+ENV_DL[i].slice(1)+' '+parseInt(dia.slice(8),10)+(x.ci?' · cierre de la semana anterior':'')+'</h4>';
   Object.keys(ENV_FAM).forEach(function(k){
     var u=x.o[k], v=u*_evPrecio(ENV_FAM[k].g); tot+=v;
     h+='<div class="t"><i style="background:'+ENV_FCOL[k]+'"></i><span>'+ENV_FAM[k].n+'</span><b class="'+_evCls(u)+'">'+(u===0?'—':(u>0?'+':'−')+Math.abs(u))+'</b><b class="m">'+(u===0?'':_evMoney(v))+'</b></div>';
@@ -260,21 +295,38 @@ function _evSumFilas(di,k){ // contado y esperado de un tipo de fila ('caja' | '
 function _evMerge(){
   var m=ENV.m, el=document.getElementById('ev-merge'); if(!el) return;
   var val=ENV.met==='val', s=ENV.sel, f=0, sob=0, mx=1, H=70;
+  // la columna del lunes muestra el cierre de la semana anterior mientras sea el último conteo o cuando se elige el lunes
+  var verCi=!!ENV.ci&&(m.last===m.b||s===m.b);
   var dias=m.days.map(function(d,i){
-    if(m.b<0||i<=m.b||!m.C[i].has) return null;
-    var o=_evDifs(i), v={}; Object.keys(ENV_FAM).forEach(function(k){ v[k]=val?o[k]*_evPrecio(ENV_FAM[k].g):o[k]; });
+    var esCi=verCi&&i===m.b;
+    if(!esCi&&(m.b<0||i<=m.b||!m.C[i].has)) return null;
+    var o=esCi?ENV.ci.o:_evDifs(i), v={}; Object.keys(ENV_FAM).forEach(function(k){ v[k]=val?o[k]*_evPrecio(ENV_FAM[k].g):o[k]; });
     var up=0, dn=0; Object.keys(v).forEach(function(k){ if(v[k]>0) up+=v[k]; else dn+=-v[k]; });
-    mx=Math.max(mx,up,dn); return { o:o, v:v, tot:up-dn, up:up, dn:dn };
+    mx=Math.max(mx,up,dn); return { o:o, v:v, tot:up-dn, up:up, dn:dn, ci:esCi };
   });
   // Cada día se compara con el conteo inicial de la semana, así que la diferencia de un día ya incluye la de los anteriores:
   // el acumulado de la semana es el del último día contado (no la suma de los días).
-  var ultimo=-1; dias.forEach(function(x,i){ if(x) ultimo=i; });
+  var ultimo=-1; dias.forEach(function(x,i){ if(x&&!x.ci) ultimo=i; });
   if(ultimo>=0){ f=dias[ultimo].dn; sob=dias[ultimo].up; }
+  if(ENV.cf){ f=0; sob=0; Object.keys(ENV_FAM).forEach(function(k){ var x=val?ENV.cf.o[k]*_evPrecio(ENV_FAM[k].g):ENV.cf.o[k]; if(x>0) sob+=x; else f+=-x; }); }
   var fm=function(n){ return val?_evMoney(n):(n>0?'+':'')+n; }, net=sob-f;
-  var acum=ultimo>=0?'Acumulado al conteo del '+ENV_DL[ultimo]+' '+parseInt(m.days[ultimo].slice(8),10):'';
+  var acum=ENV.cf?'Semana cerrada con el conteo del lunes '+parseInt(ENV.cf.dia.slice(8),10):ultimo>=0?'Acumulado al conteo del '+ENV_DL[ultimo]+' '+parseInt(m.days[ultimo].slice(8),10)+' · se cierra con el conteo del próximo lunes':'';
   // panel izquierdo: resultado del día
   var d=dias[s], c, v, st, seg, sub=['',''], ct='';
-  if(s===m.b){ c='#8A8A93'; v='Inicial'; st='Punto de partida'; seg=['','','','']; sub=['Es el conteo base de la semana',''];
+  var tit='Resultado del conteo';
+  if(s===m.b&&ENV.ci){
+    // el inicial de esta semana cierra la anterior: se compara con lo esperado al terminar el domingo
+    var ci=ENV.ci, tc=_evTotDif(ci.o), cf=0, cs=0; Object.keys(ENV_FAM).forEach(function(k){ if(ci.o[k]<0) cf++; else if(ci.o[k]>0) cs++; });
+    tit='Cierre de la semana del '+parseInt(ci.desde.slice(8),10)+(ci.desde.slice(5,7)!==ci.hasta.slice(5,7)?' de '+ENV_MES[parseInt(ci.desde.slice(5,7),10)-1]:'')+' al '+parseInt(ci.hasta.slice(8),10)+' de '+ENV_MES[parseInt(ci.hasta.slice(5,7),10)-1];
+    c=tc.v<0?'#CC7A83':tc.v>0?'#B5A5FA':(cf||cs)?'#D9A85A':'#E6E6EA';
+    v=(tc.v===0&&!cf&&!cs)?'Cuadra':_evMoney(tc.v);
+    st=cf&&cs?'Faltante y sobrante':cf?'Faltante':cs?'Sobrante':'Todo en orden';
+    seg=Object.keys(ENV_FAM).map(function(k){ return ci.o[k]<0?'f':ci.o[k]>0?'s':'c'; });
+    sub=['También es el conteo inicial de esta semana',cf||cs?(4-cf-cs)+' de 4 familias cuadran':'Las 4 familias cuadran'];
+    ct=[['Cajas plásticas','caja'],['Botellas vacías','vac'],['Botellas llenas','lle']].map(function(x){ var q=_evSumFilas(s,x[1]);
+      return '<div><span>'+x[0]+'</span><span><b>'+q.c.toLocaleString('es-PE')+'</b>'+(q.e!=null?'<em>esperado '+q.e.toLocaleString('es-PE')+'</em>':'')+'</span></div>'; }).join('');
+  }
+  else if(s===m.b){ c='#8A8A93'; v='Inicial'; st='Punto de partida'; seg=['','','','']; sub=[ENV.pm&&ENV.pm.b<0?'Es el conteo base de la semana (la semana anterior no tiene conteo para cerrar)':'Es el conteo base de la semana',''];
     ct=''; }
   else if(!d){ c='#8A8A93'; v='Sin conteo'; st='Pendiente'; seg=['','','','']; sub=[m.b<0?'Primero cuenta el primer día de la semana':'Toca «Contar este día»','']; }
   else {
@@ -288,7 +340,7 @@ function _evMerge(){
       return '<div><span>'+x[0]+'</span><span><b>'+q.c.toLocaleString('es-PE')+'</b>'+(q.e!=null?'<em>esperado '+q.e.toLocaleString('es-PE')+'</em>':'')+'</span></div>'; }).join('');
   }
   var nom=ENV_DL[s]+' '+parseInt(m.days[s].slice(8),10);
-  var L='<div class="evm2-l" style="--c:'+c+'"><div class="ev-k">Resultado del conteo · '+nom+'</div><div class="evm2-v">'+v+'</div><span class="evm2-st"><i></i>'+st+'</span>'+
+  var L='<div class="evm2-l" style="--c:'+c+'"><div class="ev-k">'+tit+' · '+nom+'</div><div class="evm2-v">'+v+'</div><span class="evm2-st"><i></i>'+st+'</span>'+
     '<div class="evm2-sg">'+seg.map(function(x){ return '<span class="'+x+'"></span>'; }).join('')+'</div><div class="evm2-sb"><b>'+sub[0]+'</b><span>'+sub[1]+'</span></div>'+
     (ct?'<div class="evm2-ct">'+ct+'</div>':'')+'</div>';
   // panel derecho: barras con eje + detalle por familia (mapa de calor)
@@ -302,15 +354,22 @@ function _evMerge(){
   ENV._gx=dias;
   var cs=m.days.map(function(dia,i){
     var x=dias[i], inner='';
-    if(i===m.b) inner='<span class="gx-tg ini">Inicial</span>';
+    if(i===m.b&&!x) inner='<span class="gx-tg ini">Inicial</span>';
     else if(!x) inner='<span class="gx-tg">sin<br>conteo</span>';
     else if(fams.every(function(k){ return !x.o[k]; })) inner='<span class="gx-tg ok">Cuadra</span>';
     else if(!x.tot) inner='<span class="gx-tg w">Se compensa</span>';
+    else if(x.ci) inner='';
     else {
       var hh=Math.max(1.5,Math.abs(x.tot)/top*50);
       inner=x.tot<0?'<div class="gx-bar f" style="top:50%;height:'+hh+'%"></div><div class="gx-val ev-neg" style="top:calc('+(50+hh)+'% + 4px)">'+fv(x.tot)+'</div>'
                    :'<div class="gx-bar s" style="bottom:50%;height:'+hh+'%"></div><div class="gx-val ev-pos" style="bottom:calc('+(50+hh)+'% + 4px)">'+fv(x.tot)+'</div>';
     }
+    if(x&&x.ci&&x.tot){
+      var hc=Math.max(1.5,Math.abs(x.tot)/top*50);
+      inner=(x.tot<0?'<div class="gx-bar f ci" style="top:50%;height:'+hc+'%"></div><div class="gx-val ev-neg" style="top:calc('+(50+hc)+'% + 4px)">'+fv(x.tot)+'</div>'
+                    :'<div class="gx-bar s ci" style="bottom:50%;height:'+hc+'%"></div><div class="gx-val ev-pos" style="bottom:calc('+(50+hc)+'% + 4px)">'+fv(x.tot)+'</div>');
+    }
+    if(x&&x.ci) inner+='<span class="gx-tg ini gx-tci'+(x.tot>0?' ab':'')+'">Cierre sem. anterior</span>';
     return '<div class="gx-col'+(i===s?' on':'')+'" onclick="envSel('+i+')" onmouseenter="gxTip(this,'+i+')" onmousemove="gxMueve(event)" onmouseleave="gxFuera()">'+inner+'</div>';
   }).join('');
   var dn=m.days.map(function(dia,i){ return '<div class="'+(i===s?'on':'')+(dia===_evHoy()?' hoy':'')+'" onclick="envSel('+i+')">'+ENV_DN[i]+'<b>'+parseInt(dia.slice(8),10)+'</b></div>'; }).join('');
@@ -321,7 +380,7 @@ function _evMerge(){
       var u=x.o[k];
       return '<div class="gx-cell '+(u<0?'f':u>0?'s':'ok')+'" title="'+_evMoney(u*_evPrecio(ENV_FAM[k].g))+'">'+(u===0?'0':(u>0?'+':'−')+Math.abs(u))+'</div>'; }).join('');
   });
-  var R='<div class="evm2-r gx"><div class="evm2-rh"><h3>Faltantes y sobrantes de la semana</h3><span class="ev-sp"></span>'+
+  var R='<div class="evm2-r gx"><div class="evm2-rh"><h3>Faltantes y sobrantes de la semana'+(acum?'<small class="gx-acum'+(ENV.cf?' ok':'')+'">'+acum+'</small>':'')+'</h3><span class="ev-sp"></span>'+
     '<div class="ev-seg"><button class="'+(val?'on':'')+'" onclick="envMet(\'val\')">S/</button><button class="'+(!val?'on':'')+'" onclick="envMet(\'und\')">Unidades</button></div></div>'+
     '<div class="gx-kp"><div><span>Faltante</span><b class="ev-neg">'+(val?_evMoney(-f):(f?'−'+f:'0'))+'</b></div><div><span>Sobrante</span><b class="ev-pos">'+(val?_evMoney(sob):'+'+sob)+'</b></div><div><span>Neto</span><b class="'+_evCls(net)+'">'+fm(net)+'</b></div>'+'</div>'+
     '<div class="gx-plot">'+gl+'<div class="gx-cols">'+cs+'</div></div><div class="gx-days">'+dn+'</div>'+
@@ -674,4 +733,80 @@ function envPfnGuardar(){
     if(mas) showToast('PFN guardado desde el '+_evF(f)+'. Ojo: hay un PFN más nuevo del '+_evF(mas)+' que prevalece desde esa fecha','err');
     else showToast('PFN guardado desde el '+_evF(f)); _evRecargar();
   }).withFailureHandler(function(e){ showToast(e.message,'err'); }).guardarEnvPfn(S.token,{ fecha:f, lineas:lineas });
+}
+
+/* ══ Historial: resultado de cada semana de un vistazo (cerrada con el lunes siguiente o acumulada al último conteo) ══ */
+var ENV_HIS_N = 8;
+function _evDifsDe(m,di){ // diferencias por familia del día di contra el inicial de su semana
+  var o={C6:0,B6:0,C3:0,B3:0};
+  ENV_FILAS.forEach(function(f,j){ var e=m.tot[m.b][j], k; for(k=m.b;k<di;k++) e+=_evMovDia(k,j,m); o[f.fam]+=m.tot[di][j]-e; });
+  return o;
+}
+function _evSemEtq(a,z){ return parseInt(a.slice(8),10)+(a.slice(5,7)!==z.slice(5,7)?' '+ENV_MES[parseInt(a.slice(5,7),10)-1].slice(0,3):'')+' al '+parseInt(z.slice(8),10)+' '+ENV_MES[parseInt(z.slice(5,7),10)-1].slice(0,3); }
+function _evHisCargar(){
+  var t=ENV.hvt=(ENV.hvt||0)+1, l0=_evLunes(_evHoy()), n=ENV.his.n, ls=[], k;
+  for(k=0;k<n;k++) ls.push(_evSumar(l0,-7*k));
+  Promise.all(ls.map(function(l){ return new Promise(function(ok,ko){ google.script.run.withSuccessHandler(ok).withFailureHandler(ko).getEnvSemana(S.token,l); }); }))
+    .then(function(rs){
+      if(t!==ENV.hvt) return;
+      var ms=rs.map(function(r){ if(!r||!r.ok) throw new Error((r&&r.error)||'No se pudo cargar el historial'); return _evCalcD(r); });
+      ENV.his.filas=ms.map(function(m,i){
+        var ci=i>0?_evCierreDe(m,ms[i-1]):null, o=null, est;
+        if(m.b<0) est='sin';
+        else if(ci){ o=ci.o; est='cerrada'; }
+        else if(m.last>m.b){ o=_evDifsDe(m,m.last); est='curso'; }
+        else { o={C6:0,B6:0,C3:0,B3:0}; est='ini'; }
+        return { lunes:ls[i], a:m.days[0], z:m.days[6], est:est, o:o, hasta:ci?ci.dia:(m.last>=0?m.days[m.last]:null) };
+      });
+      _evHisPinta();
+    })
+    .catch(function(e){ if(t!==ENV.hvt) return; ENV.his=null; var el=document.getElementById('ev-his'); if(el) el.innerHTML='<div class="ev-card"><div class="evh-vacio">'+esc(e.message||e)+'</div></div>'; });
+}
+function envHisMas(){ ENV.his={ n:ENV.his.n+ENV_HIS_N, filas:null }; _evHisCargar(); _evHisPinta(); }
+function envHisMet(x){ ENV.met=x; _evHisPinta(); }
+function envHisIr(l){ ENV.vista='ctl'; ENV.lunes=l; ENV._reselDia=true; ENV.ses=null; PAGE_LOADING['envases']=true;
+  document.getElementById('envases-root').innerHTML=LD('Cargando la semana'); loadEnvases(); }
+function _evHisPinta(){
+  var el=document.getElementById('ev-his'); if(!el) return;
+  if(!ENV.his){ ENV.his={ n:ENV_HIS_N, filas:null }; _evHisCargar(); }
+  if(!ENV.his.filas){ el.innerHTML='<div class="ev-card">'+LD('Cargando el historial')+'</div>'; return; }
+  var val=ENV.met==='val', fams=Object.keys(ENV_FAM), filas=ENV.his.filas;
+  var res=function(o){ var f=0,sb=0; fams.forEach(function(k){ var x=val?o[k]*_evPrecio(ENV_FAM[k].g):o[k]; if(x>0) sb+=x; else f+=-x; }); return { f:f, s:sb, n:sb-f }; };
+  var fm=function(n){ return val?_evMoney(n):(n>0?'+':n<0?'−':'')+Math.abs(n); };
+  var ff=function(n){ return val?_evMoney(-n):(n?'−'+n:'0'); }, fs=function(n){ return val?_evMoney(n):'+'+n; };
+  var tf=0, ts=0, nc=0, mx=0;
+  filas.forEach(function(x){ x.r=x.o?res(x.o):null; if(x.r) mx=Math.max(mx,Math.abs(x.r.n)); if(x.est==='cerrada'){ nc++; tf+=x.r.f; ts+=x.r.s; } });
+  if(!mx) mx=1;
+  // neto por semana, de la más antigua a la actual
+  var bars=filas.slice().reverse().map(function(x){
+    var r=x.r, h=r&&r.n?Math.max(3,Math.abs(r.n)/mx*44):0, lb=parseInt(x.a.slice(8),10)+' '+ENV_MES[parseInt(x.a.slice(5,7),10)-1].slice(0,3);
+    var inner=r&&r.n
+      ? '<i class="'+(r.n<0?'f':'s')+'" style="'+(r.n<0?'top':'bottom')+':50%;height:'+h+'%"></i><em class="'+_evCls(r.n)+'" style="'+(r.n<0?'top':'bottom')+':calc('+(50+h)+'% + 3px)">'+fm(r.n)+'</em>'
+      : '<span>'+(x.est==='sin'?'sin<br>conteo':r?'cuadra':'—')+'</span>';
+    return '<div class="evh-col'+(x.est==='cerrada'?'':' ab')+'" onclick="envHisIr(\''+x.lunes+'\')" title="Semana del '+_evSemEtq(x.a,x.z)+'"><div class="evh-pl">'+inner+'</div><b>'+lb+'</b></div>';
+  }).join('');
+  var est={ cerrada:['ok','Cerrada'], curso:['w','En curso'], ini:['w','Solo inicial'], sin:['no','Sin conteo'] };
+  var lst=filas.map(function(x){
+    var r=x.r, e=est[x.est];
+    var nota=x.est==='cerrada'?'Cerrada con el conteo del '+_evF(x.hasta):x.est==='curso'?'Acumulado al '+_evF(x.hasta)+' · se cierra con el conteo del lunes':x.est==='ini'?'Solo tiene el conteo inicial':'No se registró conteo';
+    return '<div class="evh-r" onclick="envHisIr(\''+x.lunes+'\')">'+
+      '<div class="evh-w"><b>Semana del '+_evSemEtq(x.a,x.z)+'</b><small>'+nota+'</small></div>'+
+      '<span class="evh-st '+e[0]+'">'+e[1]+'</span>'+
+      '<div class="evh-n" data-l="Faltante"><b class="ev-neg">'+(r?ff(r.f):'—')+'</b></div>'+
+      '<div class="evh-n" data-l="Sobrante"><b class="ev-pos">'+(r?fs(r.s):'—')+'</b></div>'+
+      '<div class="evh-n" data-l="Neto"><b class="'+(r?_evCls(r.n):'')+'">'+(r?fm(r.n):'—')+'</b></div>'+
+      '<div class="evh-fm">'+fams.map(function(k){ var u=x.o?x.o[k]:null;
+        return '<span class="'+(u==null?'dim':u<0?'f':u>0?'s':'ok')+'" title="'+ENV_FAM[k].n+'"><i style="background:'+ENV_FCOL[k]+'"></i>'+(u==null?'—':u===0?'0':(u>0?'+':'−')+Math.abs(u))+'</span>'; }).join('')+'</div>'+
+      '<svg class="evh-go" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>'+
+    '</div>';
+  }).join('');
+  el.innerHTML='<div class="ev-card evh">'+
+    '<div class="evm2-rh"><h3>Historial semanal<small class="gx-acum">Últimas '+filas.length+' semanas · toca una para abrirla en Control semanal</small></h3><span class="ev-sp"></span>'+
+      '<div class="ev-seg"><button class="'+(val?'on':'')+'" onclick="envHisMet(\'val\')">S/</button><button class="'+(!val?'on':'')+'" onclick="envHisMet(\'und\')">Unidades</button></div></div>'+
+    '<div class="gx-kp"><div><span>Faltante · semanas cerradas</span><b class="ev-neg">'+ff(tf)+'</b></div><div><span>Sobrante · semanas cerradas</span><b class="ev-pos">'+fs(ts)+'</b></div><div><span>Neto</span><b class="'+_evCls(ts-tf)+'">'+fm(ts-tf)+'</b></div><div><span>Semanas cerradas</span><b>'+nc+' de '+filas.length+'</b></div></div>'+
+    '<div class="evh-plot">'+bars+'</div>'+
+    '<div class="evh-leg">'+fams.map(function(k){ return '<span><i style="background:'+ENV_FCOL[k]+'"></i>'+ENV_FAM[k].n+'</span>'; }).join('')+'<span class="evh-u">por familia, en unidades</span></div>'+
+    '<div class="evh-ls">'+lst+'</div>'+
+    '<div class="evh-mas"><button class="sal2-exp" onclick="envHisMas()">Ver '+ENV_HIS_N+' semanas más</button></div>'+
+  '</div>';
 }
