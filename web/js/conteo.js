@@ -768,18 +768,19 @@ function editBufferItem(idx) {
   var item = _conteoBuffer[idx];
   if (!item) return;
 
-  // 1. Quitarlo del historial (para que lo vuelvan a agregar modificado)
-  _conteoBuffer.splice(idx, 1);
-  saveConteoBuffer();
+  // No se quita del buffer todavía: si el usuario abandona la edición (cierra el formulario,
+  // pierde la conexión, se le cae el navegador) antes de volver a guardar, el conteo sin enviar
+  // no debe desaparecer. Se quita recién cuando el reemplazo quede guardado o encolado (más abajo).
+  _cnt._editBufferRef = item;
 
-  // 2. Cargarlo en el formulario activo — guardar _editRow para que el servidor sobreescriba esa fila
+  // Cargarlo en el formulario activo — guardar _editRow para que el servidor sobreescriba esa fila
   _cnt._editRow = item._row || null;
   setProductoConteo(item.ean, item.sku, item.sap, item.producto, item.multiplicador);
   document.getElementById('cnt-packs').value = item.packs;
   document.getElementById('cnt-und-sueltas').value = item.sueltas || '';
   calcTotalConteo();
 
-  // 3. Subir el scroll hasta arriba
+  // Subir el scroll hasta arriba
   document.querySelector('#fs-conteo .fs-body').scrollTop = 0;
   showToast('Cargado para editar. Al terminar presiona Siguiente.', 'info');
 }
@@ -836,6 +837,7 @@ function guardarYContinuar(){
   var err=document.getElementById('cnt-err');
 
   if(!sku){err.textContent='Escanea un EAN o busca el SKU';document.getElementById('cnt-ean').focus();return;}
+  if(packs<0||sueltas<0){err.textContent='Packs y unidades no pueden ser negativos';document.getElementById('cnt-packs').focus();return;}
   if(packs<=0&&sueltas<=0){err.textContent='Ingresa packs o unidades sueltas';document.getElementById('cnt-packs').focus();return;}
 
   err.textContent='';
@@ -849,6 +851,15 @@ function guardarYContinuar(){
       _editRow:_cnt._editRow||null,
       _uid: _cnt._editRow ? '' : _genUID()};
   _cnt._editRow = null; // limpiar para el siguiente escaneo
+  // Si se estaba editando un conteo sin enviar, su entrada del buffer se quita recién cuando
+  // el reemplazo quede a salvo (guardado o encolado) — no antes, para no perderlo si se aborta.
+  var _editBufferRef = _cnt._editBufferRef || null;
+  function _quitarBufferOriginal(){
+    if(!_editBufferRef) return;
+    var ei=_conteoBuffer.indexOf(_editBufferRef);
+    if(ei>=0) _conteoBuffer.splice(ei,1);
+    _editBufferRef=null; _cnt._editBufferRef=null;
+  }
 
   // Enviar inmediatamente al servidor
   google.script.run
@@ -860,6 +871,7 @@ function guardarYContinuar(){
           // Falla transitoria (ej. otro usuario contando a la vez) — no se pierde el
           // dato: se encola como pendiente y se reintenta solo en unos segundos.
           showToast(r.error+' Se reintentará automáticamente.','warn');
+          _quitarBufferOriginal();
           _conteoBuffer.push(Object.assign({}, fila, { _ts: Date.now() }));
           saveConteoBuffer();
           _actualizarBannerPendientes();
@@ -877,6 +889,7 @@ function guardarYContinuar(){
 
       // Agregar al historial — sin deduplicar por SKU (cada escaneo es un registro independiente)
       // Si fue una edición, la fila ya existe en el historial: se reemplaza, no se agrega otra
+      _quitarBufferOriginal();
       var itemHistorial = Object.assign({}, fila, { _ts: Date.now(), _row: r.inserted[0]._row });
       _conteoBuffer = _conteoBuffer.filter(function(b){ return !(b._row && b._row === itemHistorial._row); });
       _conteoBuffer.push(itemHistorial);
@@ -904,7 +917,8 @@ function guardarYContinuar(){
       _CNT_EDIT_ROW = null;
       var btn2=document.getElementById('btn-guardar-siguiente');
       if(btn2) btn2.textContent='Guardar y escanear siguiente';
-      
+
+      _quitarBufferOriginal();
       _conteoBuffer.push(Object.assign({}, fila, { _ts: Date.now() }));
       saveConteoBuffer();
       _actualizarBannerPendientes();

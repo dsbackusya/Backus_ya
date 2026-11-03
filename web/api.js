@@ -440,8 +440,9 @@
     var r = await sb.from('salidas').update({
       sku: str(fila.sku), nro_pedido: nulo(fila.nroPedido), descripcion: str(fila.desc),
       pack: entero(fila.pack), unidad: entero(fila.unidad), motorizado: nulo(fila.motorizado)
-    }).eq('id', rowNum);
+    }).eq('id', rowNum).select('id');
     if (r.error) throw r.error;
+    if (!r.data.length) return { ok: false, error: 'No se pudo editar (fila no encontrada o sin permiso)' };
     return { ok: true };
   });
 
@@ -868,6 +869,10 @@
     var fecha = hoyISO(), hora = horaAhora();
     var inserted = [];
     var nuevas = [], edits = [];
+
+    for (var fi = 0; fi < filas.length; fi++) {
+      if (num(filas[fi].packs) < 0 || num(filas[fi].sueltas) < 0) return { ok: false, error: 'Packs y unidades no pueden ser negativos' };
+    }
 
     filas.forEach(function (f) {
       var packs = num(f.packs), mult = num(f.multiplicador || 1) || 1, sueltas = num(f.sueltas);

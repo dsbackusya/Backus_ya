@@ -24,7 +24,10 @@ function _salVivoCambio(c){
 function _salVivoResync(){
   _sbSalidasRefrescar();
   if(!S||!S.token||!document.getElementById('salidas-tbody')) return;
+  // comparte el token de loadSalidas: si el usuario cambia de rango mientras esto está en vuelo, la respuesta vieja se descarta
+  var t = (REQ_TOKEN.salidas = (REQ_TOKEN.salidas||0) + 1);
   google.script.run.withSuccessHandler(function(r){
+    if(t!==REQ_TOKEN.salidas) return;
     if(r&&r.ok&&document.getElementById('salidas-tbody')){ DATA.salidas=r.data; _SAL.mantener=true; filterSalidas(); }
   }).getSalidas(S.token, true, window.sal_rango||null);
 }

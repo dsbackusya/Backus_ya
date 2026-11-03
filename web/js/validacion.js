@@ -80,8 +80,10 @@ function correrValidacion(force){
   st.textContent='Calculando...';
   document.getElementById('val-body').innerHTML=LD('Cruzando datos');
   // Cargar maestro (precios) y validación en paralelo
+  var t=(REQ_TOKEN.validacion=(REQ_TOKEN.validacion||0)+1);
   var _maestroOk=false, _valOk=false, _maestroData=null, _valData=null;
   function _tryRender(){
+    if(t!==REQ_TOKEN.validacion) return; // se corrió otra validación (fecha distinta o reintento) mientras esta estaba en vuelo
     if(!_maestroOk || !_valOk) return;
     st.textContent='';
     if(_maestroData && _maestroData.ok){
@@ -102,7 +104,7 @@ function correrValidacion(force){
     .getMaestroCompleto(S.token, false);
   google.script.run
     .withSuccessHandler(function(r){ _valData=r; _valOk=true; _tryRender(); })
-    .withFailureHandler(function(e){ st.textContent=''; showToast(e.message,'err'); })
+    .withFailureHandler(function(e){ if(t!==REQ_TOKEN.validacion) return; st.textContent=''; showToast(e.message,'err'); })
     .getValidacion(S.token, VAL_FECHA, force===true);
 }
 
@@ -703,8 +705,9 @@ function recontar(sku){
         .withSuccessHandler(function(r){
           if(!r.ok){showToast(r.error,'err');return;}
           showToast('Conteo eliminado ('+r.eliminados+' fila'+(r.eliminados>1?'s':'')+') — ve a Conteo para recontar','ok');
-          // Quitar de VAL_DATA localmente y re-renderizar
-          VAL_DATA=VAL_DATA.filter(function(d){return d.sku!==sku;});
+          // Marcar el producto como "sin contar" localmente (no quitarlo: seguiría contando en Stock,
+          // categorías y KPIs, y desaparecería de la pantalla hasta la próxima validación completa)
+          VAL_DATA.forEach(function(d){ if(d.sku===sku){ d.sinContar=true; d.real=null; d.diff=null; } });
           renderValBody();
         })
         .withFailureHandler(function(e){showToast(e.message,'err');})

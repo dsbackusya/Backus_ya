@@ -333,7 +333,7 @@ function entEliminarLinea(row){
   var r=(window._ENT_ROWS||{})[row]; if(!r) return;
   _confirmDialog('Eliminar producto','Se eliminará '+r.sku+' ('+fmt(r.unidades)+' und.) de la factura '+(r.factura||'—')+'. El stock se descuenta. No se puede deshacer.',function(){
     google.script.run
-      .withSuccessHandler(function(x){ if(!x.ok){ showToast(x.error,'err'); return; } showToast('Producto eliminado','ok'); _entRecargar(); })
+      .withSuccessHandler(function(x){ if(!x.ok){ showToast(x.error,'err'); return; } showToast('Producto eliminado','ok'); PAGE_LOADED['stock']=false; _entRecargar(); })
       .withFailureHandler(function(e){ showToast(e.message,'err'); })
       .eliminarEntradas(S.token,[row]);
   },'Eliminar');
@@ -342,7 +342,7 @@ function entEliminarFactura(i){
   var g=_ENT_GRUPOS[i]; if(!g) return;
   _confirmDialog('Eliminar ingreso completo','Se eliminarán los '+g.items.length+' productos ('+fmt(g.und)+' und.) de la factura '+(g.factura||'—')+' del '+g.fecha+'. El stock se descuenta. No se puede deshacer.',function(){
     google.script.run
-      .withSuccessHandler(function(x){ if(!x.ok){ showToast(x.error,'err'); return; } showToast('Ingreso eliminado ('+x.eliminados+' productos)','ok'); _entRecargar(); })
+      .withSuccessHandler(function(x){ if(!x.ok){ showToast(x.error,'err'); return; } showToast('Ingreso eliminado ('+x.eliminados+' productos)','ok'); PAGE_LOADED['stock']=false; _entRecargar(); })
       .withFailureHandler(function(e){ showToast(e.message,'err'); })
       .eliminarEntradas(S.token,g.items.map(function(x){return x._row;}));
   },'Eliminar todo');
@@ -396,7 +396,7 @@ function entGuardarEdicion(){
   if(d.fecha!==m.dataset.fecha0 && document.getElementById('ee-todos').checked && m.dataset.ids) d.ids=m.dataset.ids.split(',').map(Number);
   var b=document.getElementById('ee-ok'); b.disabled=true;
   google.script.run
-    .withSuccessHandler(function(x){ b.disabled=false; if(!x.ok){ err.textContent=x.error; return; } m.style.display='none'; showToast('Entrada actualizada','ok'); _entRecargar(); })
+    .withSuccessHandler(function(x){ b.disabled=false; if(!x.ok){ err.textContent=x.error; return; } m.style.display='none'; showToast('Entrada actualizada','ok'); PAGE_LOADED['stock']=false; _entRecargar(); })
     .withFailureHandler(function(e){ b.disabled=false; err.textContent=e.message; })
     .editarEntradaLinea(S.token,row,d);
 }
@@ -959,6 +959,7 @@ function guardarEntradaManual(){
       if(!r.ok){err.textContent=r.error;return;}
       showToast('Entrada registrada ('+filas.length+' SKU'+(filas.length>1?'s':'')+')','ok');
       closeFS('fs-entrada');
+      PAGE_LOADED['stock']=false;
       reloadPage('entradas');
     })
     .withFailureHandler(function(e){btn.disabled=false;btn.textContent='Guardar entrada';err.textContent=e.message;})
@@ -994,6 +995,7 @@ function guardarEntradaArchivo(){
       showToast('Importados '+filas.length+' SKU'+(filas.length>1?'s':'')+' correctamente','ok');
       clearFile();
       closeFS('fs-entrada');
+      PAGE_LOADED['stock']=false;
       reloadPage('entradas');
     })
     .withFailureHandler(function(e){btn.disabled=false;btn.textContent='Importar desde archivo';err.textContent=e.message;})

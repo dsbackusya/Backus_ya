@@ -182,15 +182,18 @@ function dashVerOC(oc){
   dashDibujar();
   var el=document.getElementById('dash-oclist'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
 }
+var _dashIrIv=null;
 function dashIr(dest,key){
   if(dest==='oc'){ dashVerOC(key); return; }
   var p=String(dest).split(':'), pag=p[0], filtro=p[1]||'';
   navTo(pag,document.getElementById('nav-'+pag));
   if(pag==='stock'&&filtro){
-    var n=0, iv=setInterval(function(){
+    if(_dashIrIv) clearInterval(_dashIrIv); // doble clic en una alerta: no dejar dos relojes corriendo
+    var n=0;
+    _dashIrIv=setInterval(function(){
       n++;
-      if(document.getElementById('sbtn-'+filtro)){ clearInterval(iv); setStockFiltroEstado(filtro); }
-      else if(n>40) clearInterval(iv);
+      if(document.getElementById('sbtn-'+filtro)){ clearInterval(_dashIrIv); _dashIrIv=null; setStockFiltroEstado(filtro); }
+      else if(n>40){ clearInterval(_dashIrIv); _dashIrIv=null; }
     },150);
   }
 }

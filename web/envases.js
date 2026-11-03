@@ -110,7 +110,7 @@ function _evCierreDe(p,n){
 function _evCierres(){ ENV.ci=_evCierreDe(ENV.pm,ENV.m); ENV.cf=_evCierreDe(ENV.m,ENV.nm); }
 
 /* ── cálculo de la semana ── */
-function _evCalc(){ ENV.m=_evCalcD(ENV.d); _evCierres(); }
+function _evCalc(){ ENV.m=_evCalcD(ENV.d); _evCierres(); ENV.his=null; /* cualquier cambio en los datos de la semana deja desactualizado el Historial */ }
 function _evCalcD(d){
   var days=[], i, k;
   for(k=0;k<7;k++) days.push(_evSumar(d.desde,k));
@@ -501,7 +501,7 @@ function envGuardarUbi(){
     ENV.ses.f.ubi=r.nombre; ENV.ses.addUbi=false; showToast('Ubicación guardada para esta sede: '+r.nombre,'ok'); _evcPinta();
   }).withFailureHandler(function(e){ showToast(e.message,'err'); }).guardarEnvUbicacion(S.token,v);
 }
-function _evcSeg(opts,sel,fn,extra){ return '<div class="ev-seg evcf-seg">'+opts.map(function(o){ return '<button class="'+(String(o[0])===String(sel)?'on':'')+'" onclick="'+fn+'(\''+String(o[0]).replace(/'/g,"\\'")+'\')">'+o[1]+'</button>'; }).join('')+(extra||'')+'</div>'; }
+function _evcSeg(opts,sel,fn,extra){ return '<div class="ev-seg evcf-seg">'+opts.map(function(o){ return '<button class="'+(String(o[0])===String(sel)?'on':'')+'" onclick="'+fn+'(\''+String(o[0]).replace(/'/g,"\\'")+'\')">'+esc(o[1])+'</button>'; }).join('')+(extra||'')+'</div>'; }
 function envFE(v){ envF('estado',v); } function envFT(v){ envF('tam',v); } function envFU(v){ envF('ubi',v); }
 function _evcPinta(){
   var s=ENV.ses, m=ENV.m; if(!s) return;
@@ -637,12 +637,16 @@ function envMotoSel(n,t){
   var m=_evMotoLista().filter(function(x){ return x.n===n; })[0], q=document.getElementById('evp-q-'+_evK(n)); if(m&&q&&ENV.mAb[n]==='dev') q.value=m.bal[t]||'';
 }
 function _evMotoGuardar(d,fin){
+  if(ENV._motoBusy) return; // evita duplicar el movimiento con un doble clic/doble toque
+  ENV._motoBusy=true;
   google.script.run.withSuccessHandler(function(r){
+    ENV._motoBusy=false;
     if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo guardar','err'); return; }
     ENV.d.moto.push(r.fila); _evCalc(); fin(); showToast('Guardado','ok');
-  }).withFailureHandler(function(e){ showToast(e.message,'err'); }).guardarEnvMoto(S.token,d);
+  }).withFailureHandler(function(e){ ENV._motoBusy=false; showToast(e.message,'err'); }).guardarEnvMoto(S.token,d);
 }
 function envMotoNuevo(){
+  if(ENV._motoBusy) return;
   var n=document.getElementById('evm-n').value.trim(), q=_evNum(document.getElementById('evm-q').value);
   if(!n){ document.getElementById('evm-n').focus(); return; } if(!q){ document.getElementById('evm-q').focus(); return; }
   var ex=_evMotoLista().filter(function(x){ return x.n.toLowerCase()===n.toLowerCase(); })[0]; if(ex) n=ex.n;
@@ -650,6 +654,7 @@ function envMotoNuevo(){
     function(){ ENV.mForm=null; ENV.mAb[n]=''; _evRender(); });
 }
 function envMotoMov(n){
+  if(ENV._motoBusy) return;
   var kk=_evK(n), q=_evNum(document.getElementById('evp-q-'+kk).value); if(!q){ document.getElementById('evp-q-'+kk).focus(); return; }
   var tp=ENV.mAb[n]==='dev'?'dev':'debe';
   _evMotoGuardar({ fecha:document.getElementById('evp-d-'+kk).value, motorizado:n, tamano:_evMkP(document.getElementById('evp-t-'+kk).value).tamano, caja:_evMkP(document.getElementById('evp-t-'+kk).value).caja, tipo:tp, cantidad:q },
