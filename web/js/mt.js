@@ -195,7 +195,7 @@ function mtAnPintar(){
     '<div class="mta-g3"><div class="mta-c"><div class="mta-k">Retiro por sede</div>'+sedesHtml+'</div>'+
       '<div class="mta-c"><div class="mta-k">Dónde se pierde · motivo</div>'+motHtml+'</div>'+
       '<div class="mta-c"><div class="mta-k">Productos que más pierden</div>'+prodHtml+'</div></div>'+
-    '<div class="mta-c mta-det"><div class="mta-fh"><div class="mta-k">Detalle de la pérdida</div><span class="mta-m">Toda la merma, sin importar la fecha</span></div>'+
+    '<div class="mta-c mta-det"><div class="mta-fh"><div class="mta-k">Detalle de la pérdida</div><span class="mta-m">Solo lo pendiente de retirar · todas las fechas</span></div>'+
       '<div id="mt-tree-root"></div></div>';
   if(typeof _vcInjectCss==='function') _vcInjectCss();
   renderMtTree(document.getElementById('mt-tree-root'),true);
@@ -228,20 +228,27 @@ function _mtTreeNode(cls,key,name,val,und,kind,active,dim,clickable,idx){
 function renderMtTree(root,anim){
   if(!root) return;
   var D=_mtTreeData();
-  if(!D.n){ root.innerHTML='<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px">Aún no hay mermas registradas.</div>'; return; }
+  if(!D.n){
+    var gen0=Number((_MTA.d&&_MTA.d.gen)||0);
+    root.innerHTML=gen0>0
+      ? '<div style="padding:30px;text-align:center;color:var(--ok);font-size:13px">'+ICO('check',14,'l')+'Nada pendiente — toda la merma generada ya fue retirada.</div>'
+      : '<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px">Aún no hay mermas registradas.</div>';
+    return;
+  }
   var noanim=anim?'':' vc-noanim';
   var colStyle='display:flex;flex-direction:column;gap:22px;min-width:220px;max-width:220px;max-height:560px;overflow-y:auto;padding:8px;';
   var hdr=function(t,n){ return '<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:0 4px 6px;border-bottom:2px solid var(--border);margin-bottom:4px">'+t+(n!=null?' <span style="color:var(--p500)">'+n+'</span>':'')+'</div>'; };
   var catArr=Object.values(D.cats).sort(function(a,b){return b.val-a.val;});
 
+  var gen=Number((_MTA.d&&_MTA.d.gen)||0), pctPend=gen>0?Math.round(D.total/gen*100):0;
   var html='<div id="mt-tree-cols" class="'+noanim+'" style="position:relative;display:flex;gap:84px;overflow-x:auto;padding:10px 4px">'+
     '<svg id="mt-tree-svg" style="position:absolute;inset:0;pointer-events:none"></svg>'+
-    '<div style="'+colStyle+'align-self:center;max-height:none;overflow:visible">'+hdr('Merma total',D.n+' SKU')+
-      '<div id="mt-tn-total"><div class="vc-node vc-g-blue vc-tn-big" style="--i:0">'+
+    '<div style="'+colStyle+'align-self:center;max-height:none;overflow:visible">'+hdr('Por retirar',D.n+' SKU')+
+      '<div id="mt-tn-total"><div class="vc-node vc-g-pink vc-tn-big" style="--i:0">'+
         '<div class="vc-n-ico"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/></svg></div>'+
-        '<div class="vc-n-name">Costo total de merma</div>'+
+        '<div class="vc-n-name">Merma por retirar</div>'+
         '<div class="vc-n-val">'+_mtaS(D.total)+'</div>'+
-        '<span class="vc-n-und">'+fmt(D.totalUnd)+' und.</span></div></div></div>';
+        '<span class="vc-n-und">'+fmt(D.totalUnd)+' und. · '+pctPend+'% de lo generado</span></div></div></div>';
 
   html+='<div class="mt-tree-col" style="'+colStyle+'">'+hdr('Categoría',catArr.length);
   catArr.forEach(function(c,ci){
@@ -312,7 +319,7 @@ function mtTreeDrawLinks(animate){
   var esc2=function(s){ return (window.CSS&&CSS.escape)?CSS.escape(s):s.replace(/"/g,'\\"'); };
   var tot=document.getElementById('mt-tn-total'), totCard=tot?tot.firstElementChild:null;
   var catEls=Array.prototype.slice.call(document.querySelectorAll('.vc-tn-cat'));
-  group(totCard,catEls,'var(--blue)','var(--p500)',function(el){
+  group(totCard,catEls,'var(--danger)','var(--p500)',function(el){
     var isSel=el.getAttribute('data-key')===_MTA_SEL.cat;
     return !_MTA_SEL.cat?'.72':(isSel?'.9':'.12');
   });
