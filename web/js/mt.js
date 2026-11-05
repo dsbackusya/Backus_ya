@@ -184,48 +184,41 @@ function mtAnPintar(){
       '<div class="mta-lg"><span><i style="background:#5AD19A"></i>Retirado</span><span><i style="background:rgba(123,97,239,.5)"></i>Falta retirar</span></div></div>'+(n?_mtaMeses(ms):'')+
       '<div class="mta-ft"><span>Retirado en total: <b>'+_mtaS(ret)+'</b> ('+Math.round(pr)+'%)</span><span>Pendiente acumulado: <b style="color:#E39AA2">'+_mtaS(pen)+'</b></span>'+
       (ult&&ult.ret<=0&&ult.gen>0?'<span>'+_MTA_MESL[Number(ult.mes.slice(5,7))-1]+' sin retiros: <b>puede faltar cargar facturas</b></span>':'')+'</div></div>';
-  var sedesHtml=(d.sedes||[]).map(function(x){ var p=_mtaPct(x.ret,x.gen), bajo=(d.sedes||[]).length>1&&p<pr*.75;
-    return '<div class="mta-br" title="'+_mtaS(x.ret)+' de '+_mtaS(x.gen)+'"><span class="nm">'+esc(x.nombre)+'</span><span class="bar"><i style="width:'+Math.min(100,p)+'%;background:'+(bajo?'#CC7A83':'#7B61EF')+'"></i></span><b>'+p+'%</b></div>'; }).join('');
-  var mots=(d.motivos||[]).slice(0,4), mmx=Math.max.apply(null,mots.map(function(x){return Number(x.costo)||0;}).concat([1])), mcol=['#7B61EF','#9A86F2','#C4B8FA','#C4B8FA'];
-  var motHtml=mots.map(function(x,i){ return '<div class="mta-br"><span class="nm" title="'+esc(x.motivo)+'">'+esc(x.motivo)+'</span><span class="bar"><i style="width:'+((Number(x.costo)||0)/mmx*100)+'%;background:'+mcol[i]+'"></i></span><b>'+_mtaK(x.costo)+'</b></div>'; }).join('');
-  var prodHtml=(d.productos||[]).slice(0,3).map(function(x){ return '<div class="mta-r"><span class="mta-tr" title="'+esc(x.desc)+'">'+esc(x.desc)+'</span><b>'+_mtaS(x.costo)+'</b></div>'; }).join('');
   host.innerHTML=chips+
     '<div class="mta-rg"><span class="mta-m">'+rango+' · solo tipo Merma</span></div>'+
     '<div class="mta-g2">'+hero+edad+'</div>'+flujo+
-    '<div class="mta-g3"><div class="mta-c"><div class="mta-k">Retiro por sede</div>'+sedesHtml+'</div>'+
-      '<div class="mta-c"><div class="mta-k">Dónde se pierde · motivo</div>'+motHtml+'</div>'+
-      '<div class="mta-c"><div class="mta-k">Productos que más pierden</div>'+prodHtml+'</div></div>'+
-    '<div class="mta-c mta-det"><div class="mta-fh"><div class="mta-k">Evolución mensual del pendiente</div><span class="mta-m">Saldo pendiente (S/) al cierre de cada mes, por producto</span></div>'+
+    '<div class="mta-c mta-det mta-det-xl"><div class="mta-fh"><div class="mta-k">Evolución mensual del pendiente</div><span class="mta-m">Unidades pendientes al cierre de cada mes, por producto</span></div>'+
       '<div id="mt-tree-root"></div></div>';
   _mteInjectCss();
   renderMtEvolTable(document.getElementById('mt-tree-root'));
 }
 
 /* ══ Evolución mensual del pendiente: tabla tipo Excel — filas = producto, columnas = mes,
-   valor = saldo pendiente (S/) acumulado al cierre de ese mes. Rojo = subió (se generó más merma
-   sin retirar), verde = bajó (hubo retiro ese mes). ══ */
+   valor principal = unidades pendientes acumuladas al cierre de ese mes, con el costo (S/) como
+   dato secundario debajo. Rojo = subió (se generó más merma sin retirar), verde = bajó (hubo retiro). ══ */
 function _mteInjectCss(){
   if(document.getElementById('mte-css')) return;
   var st=document.createElement('style'); st.id='mte-css';
   st.textContent=
-    '.mte-wrap{overflow:auto;max-height:640px;border:1px solid var(--border);border-radius:10px}'+
-    '.mte-t{border-collapse:collapse;font-size:11.5px;white-space:nowrap}'+
-    '.mte-t th,.mte-t td{padding:8px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:right}'+
-    '.mte-t thead th{position:sticky;top:0;z-index:3;background:var(--surface2);font:600 9.5px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}'+
+    '.mte-wrap{overflow:auto;max-height:72vh;border:1px solid var(--border);border-radius:10px}'+
+    '.mte-t{border-collapse:collapse;font-size:13px;white-space:nowrap}'+
+    '.mte-t th,.mte-t td{padding:10px 16px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:right}'+
+    '.mte-t thead th{position:sticky;top:0;z-index:3;background:var(--surface2);font:600 10.5px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}'+
     '.mte-t thead th:first-child{text-align:left;position:sticky;left:0;z-index:4;background:var(--surface2)}'+
     '.mte-t td{color:var(--text);font-variant-numeric:tabular-nums}'+
-    '.mte-t td:first-child{text-align:left;position:sticky;left:0;z-index:2;background:var(--surface);max-width:230px;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:600}'+
+    '.mte-t td:first-child{text-align:left;position:sticky;left:0;z-index:2;background:var(--surface);max-width:280px;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:600}'+
     '.mte-t tbody tr:hover td{background:var(--surface3)}'+
     '.mte-t tbody tr:nth-child(even) td:first-child{background:var(--surface2)}'+
     '.mte-t tbody tr:nth-child(even):hover td{background:var(--surface3)}'+
-    '.mte-t td.mte-up{color:var(--danger)!important;font-weight:700}'+
-    '.mte-t td.mte-down{color:var(--ok)!important;font-weight:700}'+
-    '.mte-t td.mte-zero{color:var(--text4)!important}'+
-    '.mte-leg{display:flex;gap:16px;align-items:center;font-size:11px;color:var(--text3);margin-top:8px;padding:0 4px}'+
+    '.mte-und{font-size:13.5px;font-weight:700}'+
+    '.mte-cost{display:block;font-size:10px;font-weight:500;color:var(--text3);margin-top:1px}'+
+    '.mte-t td.mte-up .mte-und{color:var(--danger)!important}'+
+    '.mte-t td.mte-down .mte-und{color:var(--ok)!important}'+
+    '.mte-t td.mte-zero .mte-und{color:var(--text4)!important;font-weight:500}'+
+    '.mte-leg{display:flex;gap:16px;align-items:center;font-size:11px;color:var(--text3);margin-top:10px;padding:0 4px}'+
     '.mte-leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}';
   document.head.appendChild(st);
 }
-function _mteMoney(v){ v=Number(v)||0; return v===0?'—':Math.round(v).toLocaleString('es-PE'); }
 function renderMtEvolTable(root){
   if(!root) return;
   var ev=(_MTA.d&&_MTA.d.evolucion)||{meses:[],filas:[]};
@@ -241,11 +234,12 @@ function renderMtEvolTable(root){
   var mesLblLarga=function(m){ var mm=Number(m.slice(5,7))-1; return ((_MTA_MESL&&_MTA_MESL[mm])||m)+' '+m.slice(0,4); };
   var thead='<tr><th>Producto</th>'+meses.map(function(m){ return '<th>'+esc(mesLbl(m))+'</th>'; }).join('')+'</tr>';
   var tbody=filas.map(function(f){
-    var vs=f.v||[];
-    var cells=vs.map(function(v,i){
-      var prev=i>0?Number(vs[i-1])||0:0, cur=Number(v)||0, cls='';
-      if(cur===0) cls='mte-zero'; else if(i>0&&cur>prev) cls='mte-up'; else if(i>0&&cur<prev) cls='mte-down';
-      return '<td class="'+cls+'" title="'+esc(mesLblLarga(meses[i]))+': S/ '+cur.toLocaleString('es-PE',{minimumFractionDigits:2})+'">'+_mteMoney(cur)+'</td>';
+    var vs=f.v||[], us=f.u||[];
+    var cells=us.map(function(u,i){
+      var prevU=i>0?Number(us[i-1])||0:0, curU=Number(u)||0, curV=Number(vs[i])||0, cls='';
+      if(curU===0) cls='mte-zero'; else if(i>0&&curU>prevU) cls='mte-up'; else if(i>0&&curU<prevU) cls='mte-down';
+      var title=esc(mesLblLarga(meses[i]))+': '+curU+' und. · S/ '+curV.toLocaleString('es-PE',{minimumFractionDigits:2});
+      return '<td class="'+cls+'" title="'+title+'"><span class="mte-und">'+(curU===0?'—':fmt(curU))+'</span>'+(curU?'<span class="mte-cost">S/ '+Math.round(curV).toLocaleString('es-PE')+'</span>':'')+'</td>';
     }).join('');
     return '<tr><td title="'+esc(f.sku)+'">'+esc(f.desc||f.sku)+'</td>'+cells+'</tr>';
   }).join('');
