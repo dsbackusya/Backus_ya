@@ -194,7 +194,30 @@ function mtAnPintar(){
     '<div class="mta-g2">'+hero+edad+'</div>'+flujo+
     '<div class="mta-g3"><div class="mta-c"><div class="mta-k">Retiro por sede</div>'+sedesHtml+'</div>'+
       '<div class="mta-c"><div class="mta-k">Dónde se pierde · motivo</div>'+motHtml+'</div>'+
-      '<div class="mta-c"><div class="mta-k">Productos que más pierden</div>'+prodHtml+'</div></div>';
+      '<div class="mta-c"><div class="mta-k">Productos que más pierden</div>'+prodHtml+'</div></div>'+
+    _mtaDetHtml(d);
+}
+
+/* Detalle visual por Categoría / Marca / Producto — pestaña dentro de Análisis, con barras más grandes */
+var _MTA_DET='cat';
+var _MTA_DCOL=['#7B61EF','#9A86F2','#B5A5FA','#C4B8FA','#D6CCFB','#E4DEFC','#CC7A83','#E39AA2'];
+function mtAnDet(k){ _MTA_DET=k; mtAnPintar(); }
+function _mtaDetHtml(d){
+  var map={cat:['categorias','categoria','Categoría'],marca:['marcas','marca','Marca'],prod:['productos','desc','Producto']};
+  var cfg=map[_MTA_DET], arr=(d[cfg[0]]||[]).slice(0,8);
+  var mx=Math.max.apply(null,arr.map(function(x){return Number(x.costo)||0;}).concat([1]));
+  var totGen=Number(d.gen)||1;
+  var rows=arr.length?arr.map(function(x,i){
+    var v=Number(x.costo)||0, pct=Math.round(v/totGen*100), nm=x[cfg[1]]||'—';
+    return '<div class="mta-dr"><div class="mta-dn" title="'+esc(nm)+'">'+esc(nm)+'</div>'+
+      '<div class="mta-dbar"><i style="width:'+(v/mx*100)+'%;background:'+_MTA_DCOL[i%_MTA_DCOL.length]+'"></i></div>'+
+      '<div class="mta-dv">'+_mtaK(v)+'<small>'+pct+'%'+(x.und!=null?' · '+fmt(x.und)+' und.':x.n?' · '+x.n+' mov.':'')+'</small></div></div>';
+  }).join(''):'<div class="mta-vacio" style="padding:20px 0">Sin datos para este corte.</div>';
+  return '<div class="mta-c mta-det"><div class="mta-fh"><div class="mta-k">Detalle de la pérdida</div>'+
+    '<div class="sal2-seg mta-dseg"><button class="'+(_MTA_DET==='cat'?'on':'')+'" onclick="mtAnDet(\'cat\')">Categoría</button>'+
+      '<button class="'+(_MTA_DET==='marca'?'on':'')+'" onclick="mtAnDet(\'marca\')">Marca</button>'+
+      '<button class="'+(_MTA_DET==='prod'?'on':'')+'" onclick="mtAnDet(\'prod\')">Producto</button></div></div>'+
+    '<div class="mta-dlist">'+rows+'</div></div>';
 }
 
 function mtSetTipo(k){ _MT_TIPO=(_MT_TIPO===k?'':k); _filterMT(); }
