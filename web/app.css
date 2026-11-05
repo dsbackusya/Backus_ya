@@ -4154,7 +4154,7 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
   .evh-leg .evh-u{margin-left:0}
 }
 
-/* M-T · Análisis: tarjeta "Detalle de la pérdida" — organigrama Total → Categoría → Marca → Producto
-   siempre desplegado (mto-node/mto-wrap, CSS inyectada por _mtoInjectCss en mt.js) */
+/* M-T · Análisis: tarjeta "Evolución mensual del pendiente" — tabla tipo Excel, filas = producto,
+   columnas = mes (mte-wrap/mte-t, CSS inyectada por _mteInjectCss en mt.js) */
 .mta-det{margin-top:16px;padding:0}
 .mta-det .mta-fh{padding:14px 18px}

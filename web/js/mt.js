@@ -195,141 +195,64 @@ function mtAnPintar(){
     '<div class="mta-g3"><div class="mta-c"><div class="mta-k">Retiro por sede</div>'+sedesHtml+'</div>'+
       '<div class="mta-c"><div class="mta-k">Dónde se pierde · motivo</div>'+motHtml+'</div>'+
       '<div class="mta-c"><div class="mta-k">Productos que más pierden</div>'+prodHtml+'</div></div>'+
-    '<div class="mta-c mta-det"><div class="mta-fh"><div class="mta-k">Detalle de la pérdida</div><span class="mta-m">Solo lo pendiente de retirar · todas las fechas</span></div>'+
+    '<div class="mta-c mta-det"><div class="mta-fh"><div class="mta-k">Evolución mensual del pendiente</div><span class="mta-m">Saldo pendiente (S/) al cierre de cada mes, por producto</span></div>'+
       '<div id="mt-tree-root"></div></div>';
-  _mtoInjectCss();
-  renderMtOrgTree(document.getElementById('mt-tree-root'));
+  _mteInjectCss();
+  renderMtEvolTable(document.getElementById('mt-tree-root'));
 }
 
-/* ══ Detalle de la pérdida: organigrama Total -> Categoría -> Marca -> Producto (toda la merma, cualquier fecha) ══
-   Árbol jerárquico estilo organigrama (nodos con ícono + valor, conectores en ángulo recto), siempre
-   totalmente desplegado — sin necesidad de tocar para ver cada nivel. */
-function _mtTreeData(){
-  var filas=(_MTA.d&&_MTA.d.detalle)||[];
-  var cats={}, total=0, totalUnd=0;
-  filas.forEach(function(r){
-    var v=Number(r.costo)||0, u=Number(r.und)||0, c=r.categoria||'Sin categoría', m=r.marca||'Sin marca';
-    if(!cats[c]) cats[c]={name:c,val:0,und:0,marcas:{}};
-    var C=cats[c];
-    if(!C.marcas[m]) C.marcas[m]={name:m,val:0,und:0,skus:[]};
-    C.val+=v; C.und+=u; C.marcas[m].val+=v; C.marcas[m].und+=u;
-    total+=v; totalUnd+=u;
-    C.marcas[m].skus.push({name:r.desc||r.sku,sku:r.sku,val:v,und:u});
-  });
-  return {total:total,totalUnd:totalUnd,cats:cats,n:filas.length};
-}
-function _mtoInjectCss(){
-  if(document.getElementById('mto-css')) return;
-  var st=document.createElement('style'); st.id='mto-css';
+/* ══ Evolución mensual del pendiente: tabla tipo Excel — filas = producto, columnas = mes,
+   valor = saldo pendiente (S/) acumulado al cierre de ese mes. Rojo = subió (se generó más merma
+   sin retirar), verde = bajó (hubo retiro ese mes). ══ */
+function _mteInjectCss(){
+  if(document.getElementById('mte-css')) return;
+  var st=document.createElement('style'); st.id='mte-css';
   st.textContent=
-    '.mto-wrap{overflow:auto;padding:14px 4px;max-height:640px}'+
-    '.mto-node{position:absolute;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0 10px;box-sizing:border-box;transition:border-color .15s}'+
-    '.mto-node:hover{border-color:var(--p500)}'+
-    '.mto-root{background:linear-gradient(135deg,color-mix(in srgb,var(--danger),#fff 20%),color-mix(in srgb,var(--danger),#000 18%));border-color:transparent;box-shadow:0 10px 26px -10px color-mix(in srgb,var(--danger) 55%,transparent)}'+
-    '.mto-ico{flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center}'+
-    '.mto-ico svg{width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}'+
-    '.mto-ico-cat{background:var(--p500)}'+
-    '.mto-ico-marca{background:var(--p600)}'+
-    '.mto-root .mto-ico{background:rgba(255,255,255,.25);width:32px;height:32px}'+
-    '.mto-root .mto-ico svg{width:16px;height:16px}'+
-    '.mto-dot{flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:var(--danger);margin:0 3px}'+
-    '.mto-txt{min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center;overflow:hidden}'+
-    '.mto-name{font-size:11.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
-    '.mto-root .mto-name{color:#fff;font-size:12.5px}'+
-    '.mto-val{font-size:10.5px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
-    '.mto-root .mto-val{color:#fff;font-size:16px;font-weight:800}'+
-    '.mto-sub{font-size:9.5px;color:rgba(255,255,255,.82);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
-    '.mto-badge{flex:0 0 auto;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--surface);border:1px solid var(--border);color:var(--text2);font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center}'+
-    '.mto-root .mto-badge{background:rgba(255,255,255,.22);border-color:transparent;color:#fff}'+
-    'path.mto-lnk{fill:none}';
+    '.mte-wrap{overflow:auto;max-height:640px;border:1px solid var(--border);border-radius:10px}'+
+    '.mte-t{border-collapse:collapse;font-size:11.5px;white-space:nowrap}'+
+    '.mte-t th,.mte-t td{padding:8px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:right}'+
+    '.mte-t thead th{position:sticky;top:0;z-index:3;background:var(--surface2);font:600 9.5px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}'+
+    '.mte-t thead th:first-child{text-align:left;position:sticky;left:0;z-index:4;background:var(--surface2)}'+
+    '.mte-t td{color:var(--text);font-variant-numeric:tabular-nums}'+
+    '.mte-t td:first-child{text-align:left;position:sticky;left:0;z-index:2;background:var(--surface);max-width:230px;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:600}'+
+    '.mte-t tbody tr:hover td{background:var(--surface3)}'+
+    '.mte-t tbody tr:nth-child(even) td:first-child{background:var(--surface2)}'+
+    '.mte-t tbody tr:nth-child(even):hover td{background:var(--surface3)}'+
+    '.mte-t td.mte-up{color:var(--danger)!important;font-weight:700}'+
+    '.mte-t td.mte-down{color:var(--ok)!important;font-weight:700}'+
+    '.mte-t td.mte-zero{color:var(--text4)!important}'+
+    '.mte-leg{display:flex;gap:16px;align-items:center;font-size:11px;color:var(--text3);margin-top:8px;padding:0 4px}'+
+    '.mte-leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}';
   document.head.appendChild(st);
 }
-function _mtoLayout(D){
-  var catArr=Object.values(D.cats).sort(function(a,b){return b.val-a.val;});
-  var leaves=[], marcaMeta=[], catMeta=[];
-  catArr.forEach(function(c){
-    var marcaArr=Object.values(c.marcas).sort(function(a,b){return b.val-a.val;});
-    var catLeafStart=leaves.length;
-    marcaArr.forEach(function(m){
-      var skuArr=m.skus.slice().sort(function(a,b){return b.val-a.val;});
-      var mLeafStart=leaves.length;
-      skuArr.forEach(function(s){ leaves.push({name:s.name,val:s.val,und:s.und}); });
-      marcaMeta.push({name:m.name,val:m.val,und:m.und,cat:c.name,leafStart:mLeafStart,leafEnd:leaves.length-1,n:skuArr.length});
-    });
-    catMeta.push({name:c.name,val:c.val,und:c.und,leafStart:catLeafStart,leafEnd:leaves.length-1,n:marcaArr.length});
-  });
-  return {leaves:leaves,marcaMeta:marcaMeta,catMeta:catMeta};
-}
-function renderMtOrgTree(root){
+function _mteMoney(v){ v=Number(v)||0; return v===0?'—':Math.round(v).toLocaleString('es-PE'); }
+function renderMtEvolTable(root){
   if(!root) return;
-  var D=_mtTreeData();
-  if(!D.n){
+  var ev=(_MTA.d&&_MTA.d.evolucion)||{meses:[],filas:[]};
+  var meses=ev.meses||[], filas=ev.filas||[];
+  if(!meses.length||!filas.length){
     var gen0=Number((_MTA.d&&_MTA.d.gen)||0);
     root.innerHTML=gen0>0
-      ? '<div style="padding:30px;text-align:center;color:var(--ok);font-size:13px">'+ICO('check',14,'l')+'Nada pendiente — toda la merma generada ya fue retirada.</div>'
+      ? '<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px">Aún no hay suficiente historial para mostrar la evolución mensual.</div>'
       : '<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px">Aún no hay mermas registradas.</div>';
     return;
   }
-  var L=_mtoLayout(D), leaves=L.leaves, marcaMeta=L.marcaMeta, catMeta=L.catMeta;
-  var ROWH=40, PADV=20, ROOT_W=210, ROOT_H=76, CAT_W=190, CAT_H=44, MARCA_W=190, MARCA_H=44, PROD_W=230, PROD_H=30, GAP=54;
-  var xRoot=0, xCat=ROOT_W+GAP, xMarca=xCat+CAT_W+GAP, xProd=xMarca+MARCA_W+GAP;
-  leaves.forEach(function(l,i){ l.y=PADV+i*ROWH+ROWH/2; });
-  marcaMeta.forEach(function(m){ m.y=(leaves[m.leafStart].y+leaves[m.leafEnd].y)/2; });
-  catMeta.forEach(function(c){ c.y=(leaves[c.leafStart].y+leaves[c.leafEnd].y)/2; });
-  var totalH=PADV*2+leaves.length*ROWH, rootY=totalH/2, totalW=xProd+PROD_W+10;
-  var gen=Number((_MTA.d&&_MTA.d.gen)||0), pctPend=gen>0?Math.round(D.total/gen*100):0;
-
-  var elbow=function(x1,y1,x2,y2){ var mx=(x1+x2)/2; return 'M'+x1+' '+y1+' H'+mx+' V'+y2+' H'+x2; };
-  var catY={}; catMeta.forEach(function(c){ catY[c.name]=c.y; });
-  var dCat=catMeta.map(function(c){ return elbow(xRoot+ROOT_W,rootY,xCat,c.y); }).join(' ');
-  var dMarca=marcaMeta.map(function(m){ return elbow(xCat+CAT_W,catY[m.cat],xMarca,m.y); }).join(' ');
-  var dProd=marcaMeta.map(function(m){
-    var segs=[]; for(var i=m.leafStart;i<=m.leafEnd;i++) segs.push(elbow(xMarca+MARCA_W,m.y,xProd,leaves[i].y));
-    return segs.join(' ');
-  }).join(' ');
-  var svg='<svg class="mto-svg" style="position:absolute;inset:0;pointer-events:none" width="'+totalW+'" height="'+totalH+'" viewBox="0 0 '+totalW+' '+totalH+'">'+
-    '<path class="mto-lnk" d="'+dCat+'" stroke="var(--danger)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity=".5"/>'+
-    '<path class="mto-lnk" d="'+dMarca+'" stroke="var(--p500)" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" opacity=".45"/>'+
-    '<path class="mto-lnk" d="'+dProd+'" stroke="var(--p600)" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" opacity=".35"/>'+
-  '</svg>';
-
-  var rootHtml='<div class="mto-node mto-root" style="left:'+xRoot+'px;top:'+(rootY-ROOT_H/2)+'px;width:'+ROOT_W+'px;height:'+ROOT_H+'px">'+
-    '<span class="mto-ico">'+ICO('caja',16)+'</span>'+
-    '<span class="mto-txt"><span class="mto-name">Merma por retirar</span>'+
-      '<span class="mto-val">'+_mtaS(D.total)+'</span>'+
-      '<span class="mto-sub">'+fmt(D.totalUnd)+' und. · '+pctPend+'% de lo generado</span></span>'+
-    '<span class="mto-badge">'+D.n+'</span>'+
-  '</div>';
-
-  var catHtml=catMeta.map(function(c){
-    return '<div class="mto-node" style="left:'+xCat+'px;top:'+(c.y-CAT_H/2)+'px;width:'+CAT_W+'px;height:'+CAT_H+'px">'+
-      '<span class="mto-ico mto-ico-cat">'+ICO('caja',12)+'</span>'+
-      '<span class="mto-txt"><span class="mto-name" title="'+esc(c.name)+'">'+esc(c.name)+'</span><span class="mto-val">'+_mtaS(c.val)+'</span></span>'+
-      '<span class="mto-badge">'+c.n+'</span>'+
-    '</div>';
+  var mesLbl=function(m){ var mm=Number(m.slice(5,7))-1; return (_MTA_MES&&_MTA_MES[mm])||m; };
+  var mesLblLarga=function(m){ var mm=Number(m.slice(5,7))-1; return ((_MTA_MESL&&_MTA_MESL[mm])||m)+' '+m.slice(0,4); };
+  var thead='<tr><th>Producto</th>'+meses.map(function(m){ return '<th>'+esc(mesLbl(m))+'</th>'; }).join('')+'</tr>';
+  var tbody=filas.map(function(f){
+    var vs=f.v||[];
+    var cells=vs.map(function(v,i){
+      var prev=i>0?Number(vs[i-1])||0:0, cur=Number(v)||0, cls='';
+      if(cur===0) cls='mte-zero'; else if(i>0&&cur>prev) cls='mte-up'; else if(i>0&&cur<prev) cls='mte-down';
+      return '<td class="'+cls+'" title="'+esc(mesLblLarga(meses[i]))+': S/ '+cur.toLocaleString('es-PE',{minimumFractionDigits:2})+'">'+_mteMoney(cur)+'</td>';
+    }).join('');
+    return '<tr><td title="'+esc(f.sku)+'">'+esc(f.desc||f.sku)+'</td>'+cells+'</tr>';
   }).join('');
-
-  var marcaHtml=marcaMeta.map(function(m){
-    return '<div class="mto-node" style="left:'+xMarca+'px;top:'+(m.y-MARCA_H/2)+'px;width:'+MARCA_W+'px;height:'+MARCA_H+'px">'+
-      '<span class="mto-ico mto-ico-marca">'+ICO('botella',12)+'</span>'+
-      '<span class="mto-txt"><span class="mto-name" title="'+esc(m.name)+'">'+esc(m.name)+'</span><span class="mto-val">'+_mtaS(m.val)+'</span></span>'+
-      '<span class="mto-badge">'+m.n+'</span>'+
-    '</div>';
-  }).join('');
-
-  var prodHtml=leaves.map(function(l){
-    return '<div class="mto-node" style="left:'+xProd+'px;top:'+(l.y-PROD_H/2)+'px;width:'+PROD_W+'px;height:'+PROD_H+'px">'+
-      '<span class="mto-dot"></span>'+
-      '<span class="mto-txt"><span class="mto-name" title="'+esc(l.name)+'">'+esc(l.name)+'</span><span class="mto-val">'+_mtaS(l.val)+' · '+fmt(l.und)+' und.</span></span>'+
-    '</div>';
-  }).join('');
-
-  root.innerHTML='<div class="mto-wrap" id="mt-org-wrap"><div style="position:relative;width:'+totalW+'px;height:'+totalH+'px">'+
-    svg+rootHtml+catHtml+marcaHtml+prodHtml+
-  '</div></div>';
-
-  var wrapEl=document.getElementById('mt-org-wrap');
-  if(wrapEl) requestAnimationFrame(function(){ wrapEl.scrollTop=Math.max(0,rootY-wrapEl.clientHeight/2); wrapEl.scrollLeft=0; });
+  root.innerHTML='<div class="mte-wrap"><table class="mte-t"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div>'+
+    '<div class="mte-leg"><span><i style="background:var(--danger)"></i>Subió (más merma sin retirar)</span>'+
+    '<span><i style="background:var(--ok)"></i>Bajó (hubo retiro ese mes)</span>'+
+    '<span><i style="background:var(--text4)"></i>Sin saldo pendiente</span></div>';
 }
 
 function mtSetTipo(k){ _MT_TIPO=(_MT_TIPO===k?'':k); _filterMT(); }
