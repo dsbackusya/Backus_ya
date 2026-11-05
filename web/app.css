@@ -4154,19 +4154,7 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
   .evh-leg .evh-u{margin-left:0}
 }
 
-/* M-T · Análisis: tarjeta "Detalle de la pérdida" (Categoría/Marca/Producto), barras más grandes */
+/* M-T · Análisis: tarjeta "Detalle de la pérdida" — árbol Total → Categoría → Marca → Producto
+   (mismo componente visual que Validación: vc-node/vc-tree-col, con su CSS inyectada por _vcInjectCss) */
 .mta-det{margin-top:16px;padding:0}
 .mta-det .mta-fh{padding:14px 18px}
-.mta-dseg button{font-size:12px}
-.mta-dlist{padding:6px 18px 16px}
-.mta-dr{display:grid;grid-template-columns:150px 1fr 120px;align-items:center;gap:14px;padding:9px 0;border-bottom:1px solid var(--border)}
-.mta-dr:last-child{border-bottom:0}
-.mta-dn{font-size:13px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mta-dbar{height:10px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}
-.mta-dbar i{display:block;height:100%;border-radius:5px;transition:width .25s}
-.mta-dv{text-align:right;font-weight:600;color:var(--text);font-size:13px;white-space:nowrap}
-.mta-dv small{display:block;font-weight:500;color:var(--text3);font-size:11px;margin-top:1px}
-@media (max-width:700px){
-  .mta-dr{grid-template-columns:1fr 70px;grid-template-areas:"nm val" "bar bar";row-gap:6px}
-  .mta-dn{grid-area:nm}.mta-dv{grid-area:val}.mta-dbar{grid-area:bar}
-}

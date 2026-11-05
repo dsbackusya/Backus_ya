@@ -195,29 +195,141 @@ function mtAnPintar(){
     '<div class="mta-g3"><div class="mta-c"><div class="mta-k">Retiro por sede</div>'+sedesHtml+'</div>'+
       '<div class="mta-c"><div class="mta-k">Dónde se pierde · motivo</div>'+motHtml+'</div>'+
       '<div class="mta-c"><div class="mta-k">Productos que más pierden</div>'+prodHtml+'</div></div>'+
-    _mtaDetHtml(d);
+    '<div class="mta-c mta-det"><div class="mta-fh"><div class="mta-k">Detalle de la pérdida</div><span class="mta-m">Toda la merma, sin importar la fecha</span></div>'+
+      '<div id="mt-tree-root"></div></div>';
+  if(typeof _vcInjectCss==='function') _vcInjectCss();
+  renderMtTree(document.getElementById('mt-tree-root'),true);
 }
 
-/* Detalle visual por Categoría / Marca / Producto — pestaña dentro de Análisis, con barras más grandes */
-var _MTA_DET='cat';
-var _MTA_DCOL=['#7B61EF','#9A86F2','#B5A5FA','#C4B8FA','#D6CCFB','#E4DEFC','#CC7A83','#E39AA2'];
-function mtAnDet(k){ _MTA_DET=k; mtAnPintar(); }
-function _mtaDetHtml(d){
-  var map={cat:['categorias','categoria','Categoría'],marca:['marcas','marca','Marca'],prod:['productos','desc','Producto']};
-  var cfg=map[_MTA_DET], arr=(d[cfg[0]]||[]).slice(0,8);
-  var mx=Math.max.apply(null,arr.map(function(x){return Number(x.costo)||0;}).concat([1]));
-  var totGen=Number(d.gen)||1;
-  var rows=arr.length?arr.map(function(x,i){
-    var v=Number(x.costo)||0, pct=Math.round(v/totGen*100), nm=x[cfg[1]]||'—';
-    return '<div class="mta-dr"><div class="mta-dn" title="'+esc(nm)+'">'+esc(nm)+'</div>'+
-      '<div class="mta-dbar"><i style="width:'+(v/mx*100)+'%;background:'+_MTA_DCOL[i%_MTA_DCOL.length]+'"></i></div>'+
-      '<div class="mta-dv">'+_mtaK(v)+'<small>'+pct+'%'+(x.und!=null?' · '+fmt(x.und)+' und.':x.n?' · '+x.n+' mov.':'')+'</small></div></div>';
-  }).join(''):'<div class="mta-vacio" style="padding:20px 0">Sin datos para este corte.</div>';
-  return '<div class="mta-c mta-det"><div class="mta-fh"><div class="mta-k">Detalle de la pérdida</div>'+
-    '<div class="sal2-seg mta-dseg"><button class="'+(_MTA_DET==='cat'?'on':'')+'" onclick="mtAnDet(\'cat\')">Categoría</button>'+
-      '<button class="'+(_MTA_DET==='marca'?'on':'')+'" onclick="mtAnDet(\'marca\')">Marca</button>'+
-      '<button class="'+(_MTA_DET==='prod'?'on':'')+'" onclick="mtAnDet(\'prod\')">Producto</button></div></div>'+
-    '<div class="mta-dlist">'+rows+'</div></div>';
+/* ══ Detalle de la pérdida: árbol Total -> Categoría -> Marca -> Producto (toda la merma, cualquier fecha) ══
+   Mismo componente visual que el de Validación (vc-node/vc-tree-col, cintas SVG) — se reutiliza su CSS inyectada. */
+var _MTA_SEL={cat:null,marca:null};
+function _mtTreeData(){
+  var filas=(_MTA.d&&_MTA.d.detalle)||[];
+  var cats={}, total=0, totalUnd=0;
+  filas.forEach(function(r){
+    var v=Number(r.costo)||0, u=Number(r.und)||0, c=r.categoria||'Sin categoría', m=r.marca||'Sin marca';
+    if(!cats[c]) cats[c]={name:c,val:0,und:0,marcas:{}};
+    var C=cats[c];
+    if(!C.marcas[m]) C.marcas[m]={name:m,val:0,und:0,skus:[]};
+    C.val+=v; C.und+=u; C.marcas[m].val+=v; C.marcas[m].und+=u;
+    total+=v; totalUnd+=u;
+    C.marcas[m].skus.push({name:r.desc||r.sku,sku:r.sku,val:v,und:u});
+  });
+  return {total:total,totalUnd:totalUnd,cats:cats,n:filas.length};
+}
+function _mtTreeNode(cls,key,name,val,und,kind,active,dim,clickable,idx){
+  return '<div class="vc-node vc-g-'+kind+' '+cls+(active?' vc-sel':'')+(dim?' vc-dim':'')+'" data-key="'+esc(key)+'" data-val="'+Math.abs(val)+'" data-sign="pos" style="--i:'+(idx||0)+';'+(clickable?'cursor:pointer':'')+'">'+
+    '<div class="vc-n-name" title="'+esc(name)+'">'+esc(name)+'</div>'+
+    '<div class="vc-n-val">'+_mtaS(val)+'</div>'+
+    '<span class="vc-n-und">'+fmt(und)+' und.</span>'+
+  '</div>';
+}
+function renderMtTree(root,anim){
+  if(!root) return;
+  var D=_mtTreeData();
+  if(!D.n){ root.innerHTML='<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px">Aún no hay mermas registradas.</div>'; return; }
+  var noanim=anim?'':' vc-noanim';
+  var colStyle='display:flex;flex-direction:column;gap:22px;min-width:220px;max-width:220px;max-height:560px;overflow-y:auto;padding:8px;';
+  var hdr=function(t,n){ return '<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:0 4px 6px;border-bottom:2px solid var(--border);margin-bottom:4px">'+t+(n!=null?' <span style="color:var(--p500)">'+n+'</span>':'')+'</div>'; };
+  var catArr=Object.values(D.cats).sort(function(a,b){return b.val-a.val;});
+
+  var html='<div id="mt-tree-cols" class="'+noanim+'" style="position:relative;display:flex;gap:84px;overflow-x:auto;padding:10px 4px">'+
+    '<svg id="mt-tree-svg" style="position:absolute;inset:0;pointer-events:none"></svg>'+
+    '<div style="'+colStyle+'align-self:center;max-height:none;overflow:visible">'+hdr('Merma total',D.n+' SKU')+
+      '<div id="mt-tn-total"><div class="vc-node vc-g-blue vc-tn-big" style="--i:0">'+
+        '<div class="vc-n-ico"><svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/></svg></div>'+
+        '<div class="vc-n-name">Costo total de merma</div>'+
+        '<div class="vc-n-val">'+_mtaS(D.total)+'</div>'+
+        '<span class="vc-n-und">'+fmt(D.totalUnd)+' und.</span></div></div></div>';
+
+  html+='<div class="mt-tree-col" style="'+colStyle+'">'+hdr('Categoría',catArr.length);
+  catArr.forEach(function(c,ci){
+    var isSel=c.name===_MTA_SEL.cat;
+    html+=_mtTreeNode('vc-tn-cat',c.name,c.name,c.val,c.und,'purple',isSel,_MTA_SEL.cat&&!isSel,true,ci);
+  });
+  html+='</div>';
+
+  var selCat=_MTA_SEL.cat?D.cats[_MTA_SEL.cat]:null;
+  if(selCat){
+    var marcaArr=Object.values(selCat.marcas).sort(function(a,b){return b.val-a.val;});
+    html+='<div class="mt-tree-col" style="'+colStyle+'">'+hdr('Marca',marcaArr.length);
+    marcaArr.forEach(function(m,mi){
+      var isSel=m.name===_MTA_SEL.marca;
+      html+=_mtTreeNode('vc-tn-marca',m.name,m.name,m.val,m.und,'violet',isSel,_MTA_SEL.marca&&!isSel,true,mi);
+    });
+    html+='</div>';
+  }
+
+  var selM=selCat&&_MTA_SEL.marca?selCat.marcas[_MTA_SEL.marca]:null;
+  if(selM){
+    var skuArr=selM.skus.slice().sort(function(a,b){return b.val-a.val;});
+    html+='<div class="mt-tree-col" style="'+colStyle+'min-width:260px;max-width:260px">'+hdr('Producto',skuArr.length);
+    skuArr.forEach(function(s,si){
+      html+=_mtTreeNode('mt-tn-sku',s.sku,s.name,s.val,s.und,'pink',false,false,false,si);
+    });
+    html+='</div>';
+  }
+  html+='</div><div style="font-size:11px;color:var(--text3);margin-top:8px;padding:0 4px">Toca una categoría o marca para desglosar.</div>';
+  root.innerHTML=html;
+
+  var cols=document.getElementById('mt-tree-cols');
+  cols.onclick=function(e){
+    var cat=e.target.closest('.vc-tn-cat');
+    if(cat){ var k=cat.getAttribute('data-key'); _MTA_SEL=(_MTA_SEL.cat===k)?{cat:null,marca:null}:{cat:k,marca:null}; renderMtTree(root,false); return; }
+    var m=e.target.closest('.vc-tn-marca');
+    if(m){ var km=m.getAttribute('data-key'); _MTA_SEL.marca=(_MTA_SEL.marca===km)?null:km; renderMtTree(root,false); return; }
+  };
+  cols.addEventListener('scroll',function(){requestAnimationFrame(function(){mtTreeDrawLinks(false);});},true);
+  requestAnimationFrame(function(){mtTreeDrawLinks(!!anim);});
+}
+function mtTreeDrawLinks(animate){
+  var rootEl=document.getElementById('mt-tree-cols'), svg=document.getElementById('mt-tree-svg');
+  if(!rootEl||!svg) return;
+  var W=rootEl.scrollWidth,H=rootEl.scrollHeight;
+  svg.setAttribute('width',W); svg.setAttribute('height',H); svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  svg.style.width=W+'px'; svg.style.height=H+'px';
+  var rb=rootEl.getBoundingClientRect();
+  var defs='<defs>', paths='', nLnk=0, GID=0;
+  var ribbon=function(x1,y1,x2,y2,t,c1,c2,op){
+    var mx=(x1+x2)/2,h=t/2,id='mtrg'+(GID++);
+    defs+='<linearGradient id="'+id+'" x1="'+x1+'" y1="0" x2="'+x2+'" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="'+c1+'"/><stop offset="1" stop-color="'+c2+'"/></linearGradient>';
+    var d='M'+x1+' '+(y1-h)+' C'+mx+' '+(y1-h)+' '+mx+' '+(y2-h)+' '+x2+' '+(y2-h)+' L'+x2+' '+(y2+h)+' C'+mx+' '+(y2+h)+' '+mx+' '+(y1+h)+' '+x1+' '+(y1+h)+' Z';
+    paths+='<path '+(animate?'class="vc-lnk" style="--j:'+(nLnk++)+';mix-blend-mode:screen" ':'style="mix-blend-mode:screen" ')+'d="'+d+'" fill="url(#'+id+')" opacity="'+op+'"/>';
+  };
+  var group=function(srcEl,els,srcCol,destCol,opFn){
+    if(!srcEl||!els.length) return;
+    var sb=srcEl.getBoundingClientRect();
+    var sx=sb.right-rb.left+rootEl.scrollLeft, sTop=sb.top-rb.top+rootEl.scrollTop;
+    var list=els.map(function(el){ var b=el.getBoundingClientRect();
+      return {el:el,x:b.left-rb.left+rootEl.scrollLeft,y:b.top+b.height/2-rb.top+rootEl.scrollTop,v:parseFloat(el.getAttribute('data-val'))||0}; }).sort(function(a,b){return a.y-b.y;});
+    var maxV=list.reduce(function(m,o){return Math.max(m,o.v);},0);
+    var ths=list.map(function(o){return maxV>0?10+Math.sqrt(o.v/maxV)*22:12;});
+    var sum=ths.reduce(function(a,b){return a+b;},0);
+    var pad=5, avail=Math.max(sb.height-pad*2,10), k=sum>avail?avail/sum:1, off=sTop+pad+(avail-sum*k)/2;
+    list.forEach(function(o,i){ var t=Math.max(ths[i]*k,3); ribbon(sx,off+t/2,o.x,o.y,t,srcCol,destCol,opFn(o.el)); off+=t; });
+  };
+  var esc2=function(s){ return (window.CSS&&CSS.escape)?CSS.escape(s):s.replace(/"/g,'\\"'); };
+  var tot=document.getElementById('mt-tn-total'), totCard=tot?tot.firstElementChild:null;
+  var catEls=Array.prototype.slice.call(document.querySelectorAll('.vc-tn-cat'));
+  group(totCard,catEls,'var(--blue)','var(--p500)',function(el){
+    var isSel=el.getAttribute('data-key')===_MTA_SEL.cat;
+    return !_MTA_SEL.cat?'.72':(isSel?'.9':'.12');
+  });
+  if(_MTA_SEL.cat){
+    var selCatEl=document.querySelector('.vc-tn-cat[data-key="'+esc2(_MTA_SEL.cat)+'"]');
+    var mEls=Array.prototype.slice.call(document.querySelectorAll('.vc-tn-marca'));
+    group(selCatEl,mEls,'var(--p500)','var(--p600)',function(el){
+      var isSel=el.getAttribute('data-key')===_MTA_SEL.marca;
+      return !_MTA_SEL.marca?'.72':(isSel?'.9':'.12');
+    });
+  }
+  if(_MTA_SEL.marca){
+    var selMEl=document.querySelector('.vc-tn-marca[data-key="'+esc2(_MTA_SEL.marca)+'"]');
+    var sEls=Array.prototype.slice.call(document.querySelectorAll('.mt-tn-sku'));
+    if(selMEl) group(selMEl,sEls,'var(--p600)','var(--danger)',function(){return '.78';});
+  }
+  svg.innerHTML=defs+'</defs>'+paths;
 }
 
 function mtSetTipo(k){ _MT_TIPO=(_MT_TIPO===k?'':k); _filterMT(); }
