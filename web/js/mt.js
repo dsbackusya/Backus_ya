@@ -236,7 +236,7 @@ function renderMtTree(root,anim){
     return;
   }
   var noanim=anim?'':' vc-noanim';
-  var colStyle='display:flex;flex-direction:column;gap:22px;min-width:220px;max-width:220px;max-height:560px;overflow-y:auto;padding:8px;';
+  var colStyle='display:flex;flex-direction:column;gap:34px;min-width:220px;max-width:220px;max-height:560px;overflow-y:auto;padding:8px;';
   var hdr=function(t,n){ return '<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:0 4px 6px;border-bottom:2px solid var(--border);margin-bottom:4px">'+t+(n!=null?' <span style="color:var(--p500)">'+n+'</span>':'')+'</div>'; };
   var catArr=Object.values(D.cats).sort(function(a,b){return b.val-a.val;});
 
