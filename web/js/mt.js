@@ -185,10 +185,12 @@ function mtAnPintar(){
       '<div class="mta-lg"><span><i style="background:#5AD19A"></i>Retirado</span><span><i style="background:rgba(123,97,239,.5)"></i>Falta retirar</span></div></div>'+(n?_mtaMeses(ms):'')+
       '<div class="mta-ft"><span>Retirado en total: <b>'+_mtaS(ret)+'</b> ('+Math.round(pr)+'%)</span><span>Pendiente acumulado: <b style="color:#E39AA2">'+_mtaS(pen)+'</b></span>'+
       (ult&&ult.ret<=0&&ult.gen>0?'<span>'+_MTA_MESL[Number(ult.mes.slice(5,7))-1]+' sin retiros: <b>puede faltar cargar facturas</b></span>':'')+'</div></div>';
+  var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   host.innerHTML=chips+
     '<div class="mta-rg"><span class="mta-m">'+rango+' · solo tipo Merma</span></div>'+
     '<div class="mta-g2">'+hero+edad+'</div>'+flujo+
-    '<div class="mta-c mta-det mta-det-xl"><div class="mta-fh"><div class="mta-k">Evolución mensual del pendiente</div><span class="mta-m">Unidades pendientes al cierre de cada mes, por producto</span></div>'+
+    '<div class="mta-c mta-det mta-det-xl"><div class="mta-fh"><div><div class="mta-k">Evolución mensual del pendiente</div><span class="mta-m">Unidades pendientes al cierre de cada mes, por producto</span></div>'+
+      '<button id="btn-export-mt-evol" class="sal2-exp" onclick="exportMtEvolucion()">'+icoExportar+'Exportar</button></div>'+
       '<div id="mt-tree-root"></div></div>';
   _mteInjectCss();
   renderMtEvolTable(document.getElementById('mt-tree-root'));
@@ -248,6 +250,19 @@ function renderMtEvolTable(root){
     '<div class="mte-leg"><span><i style="background:var(--danger)"></i>Subió (más merma sin retirar)</span>'+
     '<span><i style="background:var(--ok)"></i>Bajó (hubo retiro ese mes)</span>'+
     '<span><i style="background:var(--text4)"></i>Sin saldo pendiente</span></div>';
+}
+function exportMtEvolucion(){
+  var ev=(_MTA.d&&_MTA.d.evolucion)||{meses:[],filas:[]};
+  var meses=ev.meses||[], filas=ev.filas||[];
+  if(!meses.length||!filas.length){showToast('No hay datos para exportar','err');return;}
+  var mesLblLarga=function(m){ var mm=Number(m.slice(5,7))-1; return ((_MTA_MESL&&_MTA_MESL[mm])||m)+' '+m.slice(0,4); };
+  var headers=['Producto','SKU'];
+  meses.forEach(function(m){ headers.push(mesLblLarga(m)+' (und.)'); headers.push(mesLblLarga(m)+' (S/.)'); });
+  _exportXLSX(headers,filas,function(f){
+    var us=f.u||[], vs=f.v||[], row=[f.desc||f.sku,f.sku];
+    meses.forEach(function(m,i){ row.push(Number(us[i])||0); row.push(Number(vs[i])||0); });
+    return row;
+  },'Evolucion mensual','mt_evolucion_mensual');
 }
 
 function mtSetTipo(k){ _MT_TIPO=(_MT_TIPO===k?'':k); _filterMT(); }
