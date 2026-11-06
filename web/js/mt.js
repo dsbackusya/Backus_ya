@@ -366,7 +366,7 @@ function mtTipo(t,conservar){
   _mtEl('mt-b-motivo').classList.remove('mt3-oculto');
   _mtEl('mt-b-destino').classList.toggle('mt3-oculto',t!=='TRASLADO'||_MTF.edit);
   var cantEl=_mtEl('mt-cant');
-  if(t==='AJUSTE'){ cantEl.removeAttribute('min'); cantEl.placeholder='Unidades (+ suma, - resta)'; }
+  if(t==='AJUSTE'){ cantEl.removeAttribute('min'); cantEl.placeholder='Unidades (- suma, + resta)'; }
   else { cantEl.setAttribute('min','1'); cantEl.placeholder='Unidades'; }
   _mtEl('mt-chips').innerHTML=(_MT_MOTIVOS[t]||[]).map(function(m,i){
     return '<button type="button" class="mt3-chip" onclick="mtElegirMotivo('+i+')">'+esc(m)+'</button>';
