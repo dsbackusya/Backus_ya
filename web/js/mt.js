@@ -186,10 +186,12 @@ function mtAnPintar(){
       '<div class="mta-ft"><span>Retirado en total: <b>'+_mtaS(ret)+'</b> ('+Math.round(pr)+'%)</span><span>Pendiente acumulado: <b style="color:#E39AA2">'+_mtaS(pen)+'</b></span>'+
       (ult&&ult.ret<=0&&ult.gen>0?'<span>'+_MTA_MESL[Number(ult.mes.slice(5,7))-1]+' sin retiros: <b>puede faltar cargar facturas</b></span>':'')+'</div></div>';
   var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  var icoBuscarEv='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
   host.innerHTML=chips+
     '<div class="mta-rg"><span class="mta-m">'+rango+' · solo tipo Merma</span></div>'+
     '<div class="mta-g2">'+hero+edad+'</div>'+flujo+
     '<div class="mta-c mta-det mta-det-xl"><div class="mta-fh"><div><div class="mta-k">Evolución mensual del pendiente</div><span class="mta-m">Unidades pendientes al cierre de cada mes, por producto</span></div>'+
+      '<div class="sal2-srch mte-srch">'+icoBuscarEv+'<input id="mt-evol-busq" placeholder="Buscar producto o SKU…" value="'+esc(_MTE_Q||'')+'" oninput="mtEvolBuscar(this.value)"/></div>'+
       '<button id="btn-export-mt-evol" class="sal2-exp" onclick="exportMtEvolucion()">'+icoExportar+'Exportar</button></div>'+
       '<div id="mt-tree-root"></div></div>';
   _mteInjectCss();
@@ -222,6 +224,8 @@ function _mteInjectCss(){
     '.mte-leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}';
   document.head.appendChild(st);
 }
+var _MTE_Q='';
+function mtEvolBuscar(v){ _MTE_Q=v||''; renderMtEvolTable(document.getElementById('mt-tree-root')); }
 function renderMtEvolTable(root){
   if(!root) return;
   var ev=(_MTA.d&&_MTA.d.evolucion)||{meses:[],filas:[]};
@@ -233,10 +237,16 @@ function renderMtEvolTable(root){
       : '<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px">Aún no hay mermas registradas.</div>';
     return;
   }
+  var q=(_MTE_Q||'').trim().toLowerCase();
+  var filasV=q?filas.filter(function(f){ return String(f.desc||'').toLowerCase().indexOf(q)>-1||String(f.sku||'').toLowerCase().indexOf(q)>-1; }):filas;
+  if(!filasV.length){
+    root.innerHTML='<div style="padding:30px;text-align:center;color:var(--text3);font-size:13px">Ningún producto coincide con "'+esc(_MTE_Q)+'".</div>';
+    return;
+  }
   var mesLbl=function(m){ var mm=Number(m.slice(5,7))-1; return (_MTA_MES&&_MTA_MES[mm])||m; };
   var mesLblLarga=function(m){ var mm=Number(m.slice(5,7))-1; return ((_MTA_MESL&&_MTA_MESL[mm])||m)+' '+m.slice(0,4); };
   var thead='<tr><th>Producto</th>'+meses.map(function(m){ return '<th>'+esc(mesLbl(m))+'</th>'; }).join('')+'</tr>';
-  var tbody=filas.map(function(f){
+  var tbody=filasV.map(function(f){
     var vs=f.v||[], us=f.u||[];
     var cells=us.map(function(u,i){
       var prevU=i>0?Number(us[i-1])||0:0, curU=Number(u)||0, curV=Number(vs[i])||0, cls='';

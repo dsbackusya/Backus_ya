@@ -3941,6 +3941,8 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .mta-fl{padding:0;overflow:hidden;margin-bottom:12px}
 .mta-fh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--border)}
 .mta-fh .mta-k{margin:0}
+.mta-fh .mte-srch{flex:1 1 200px;min-width:160px;max-width:280px;order:1}
+.mta-fh .mte-srch+button{order:2}
 .mta-mr{display:grid;grid-template-columns:92px 150px minmax(180px,1fr) 96px 96px;gap:18px;align-items:center;padding:13px 20px;border-top:1px solid var(--border)}
 .mta-mr.mta-th{border-top:0;padding:10px 20px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);background:var(--surface2)}
 .mta-mr .num{text-align:right}
