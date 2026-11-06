@@ -345,7 +345,7 @@ function exportMT(){
 
 /* ── REGISTRAR / EDITAR M-T ── */
 var _MT_MOTIVOS={
-  'MERMA':['Producto vencido','Roto en almacén','Roto en transporte','Faltante de inventario','Producto dañado'],
+  'MERMA':['Producto vencido','Roto en almacén','Roto en transporte','Faltante de inventario','Producto dañado','Ajuste de inventario'],
   'TRASLADO':['Reposición de stock','Pedido urgente','Devolución a sede'],
   'Nota de credito':['Devolución de cliente','Error de facturación','Producto en mal estado']
 };
