@@ -673,11 +673,13 @@
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { ok: false, error: 'Fecha inválida' };
     if (fecha > hoy) return { ok: false, error: 'La fecha no puede ser futura' };
     if (!lineas || !lineas.length) return { ok: false, error: 'Agrega al menos un producto' };
+    // los ajustes de inventario pueden ir en negativo (suman stock) o en positivo (restan stock); el resto de tipos solo resta
+    var esAjuste = tipo.trim().toUpperCase().indexOf('AJUSTE') === 0 || tipo.trim().toUpperCase().indexOf('INVENTARIO') === 0;
     var rows = [];
     for (var i = 0; i < lineas.length; i++) {
       var f = lineas[i], sku = str(f.sku), cant = entero(f.cant);
       if (!sku) return { ok: false, error: 'SKU vacío en la línea ' + (i + 1) };
-      if (cant === null || cant <= 0) return { ok: false, error: 'Cantidad inválida en la línea ' + (i + 1) };
+      if (cant === null || cant === 0 || (!esAjuste && cant < 0)) return { ok: false, error: 'Cantidad inválida en la línea ' + (i + 1) };
       rows.push({
         sede_id: sede, fecha: fecha, sku: sku, descripcion: str(f.desc), cantidad: cant, tipo: tipo,
         motivo: nulo(comun.motivo), observaciones: nulo(comun.obs), nro_factura: nulo(comun.nroFactura),

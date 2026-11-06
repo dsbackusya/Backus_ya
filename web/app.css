@@ -3182,6 +3182,7 @@ body.evc-abierto{overflow:hidden}
 .mt3-bd{display:inline-block;padding:2px 9px;border-radius:999px;font:600 11px var(--font-mono);background:var(--accent-s);color:var(--accent-h)}
 .mt3-bd.merma{background:var(--danger-bg);color:var(--danger)}
 .mt3-bd.nc{background:rgba(47,163,189,.12);color:#2FA3BD}
+.mt3-bd.ajuste{background:var(--warn-bg);color:var(--warn)}
 #mt-msg.err{color:var(--danger)}
 @media(max-width:860px){
   .fs-body.mt3-body{padding:14px}

@@ -365,6 +365,9 @@ function mtTipo(t,conservar){
   document.querySelectorAll('.mt3-tp').forEach(function(b){ b.classList.toggle('on',b.dataset.t===t); });
   _mtEl('mt-b-motivo').classList.remove('mt3-oculto');
   _mtEl('mt-b-destino').classList.toggle('mt3-oculto',t!=='TRASLADO'||_MTF.edit);
+  var cantEl=_mtEl('mt-cant');
+  if(t==='AJUSTE'){ cantEl.removeAttribute('min'); cantEl.placeholder='Unidades (+ suma, - resta)'; }
+  else { cantEl.setAttribute('min','1'); cantEl.placeholder='Unidades'; }
   _mtEl('mt-chips').innerHTML=(_MT_MOTIVOS[t]||[]).map(function(m,i){
     return '<button type="button" class="mt3-chip" onclick="mtElegirMotivo('+i+')">'+esc(m)+'</button>';
   }).join('');
@@ -468,25 +471,31 @@ function _mtYaEsta(sku){ return _MTF.lineas.some(function(l){ return l.sku===sku
 function mtInfo(){
   var b=_mtEl('mt-info'), p=_MTF.sel, btn=_mtEl('mt-btn-add');
   if(!p){ b.classList.remove('on'); btn.disabled=true; return; }
-  var c=Number(_mtEl('mt-cant').value)||0, ya=_mtYaEsta(p.sku);
+  var c=Number(_mtEl('mt-cant').value)||0, ya=_mtYaEsta(p.sku), aju=_MTF.tipo==='AJUSTE';
   var h='<span>Stock disponible: <b>'+fmt(p.stock)+' und.</b></span>';
   if(ya) h+='<span class="w">Ya está en la lista</span>';
+  else if(c<0) h+='<span>Quedaría en <b>'+fmt(p.stock-c)+'</b> (suma stock)</span>';
   else if(p.stock<=0) h+='<span class="w">Sin stock</span>';
   else if(c>p.stock) h+='<span class="w">Pide '+fmt(c)+', solo hay '+fmt(p.stock)+'</span>';
   else if(c>0) h+='<span>Quedaría en <b>'+fmt(p.stock-c)+'</b></span>';
   b.innerHTML=h; b.classList.add('on');
-  btn.disabled=!(c>0)||ya;
+  btn.disabled=!(aju?c!==0:c>0)||ya;
 }
 function mtAgregar(){
-  var p=_MTF.sel, c=Number(_mtEl('mt-cant').value)||0;
-  if(!p||c<=0||_mtYaEsta(p.sku)) return;
-  _MTF.lineas.push({sku:p.sku,d:p.desc,s:p.stock,c:Math.floor(c)});
+  var p=_MTF.sel, c=Number(_mtEl('mt-cant').value)||0, aju=_MTF.tipo==='AJUSTE';
+  if(!p||(aju?c===0:c<=0)||_mtYaEsta(p.sku)) return;
+  _MTF.lineas.push({sku:p.sku,d:p.desc,s:p.stock,c:c<0?Math.ceil(c):Math.floor(c)});
   clearTimeout(_MTF.timer); _MTF.seq++; _mtEl('ac-mt').classList.remove('open');
   _MTF.sel=null; _mtEl('mt-q').value=''; _mtEl('mt-cant').value='';
   mtInfo(); mtPintar(); _mtEl('mt-q').focus();
 }
 function mtQuitar(i){ _MTF.lineas.splice(i,1); mtInfo(); mtPintar(); }
-function mtCantLinea(i,v){ _MTF.lineas[i].c=v===''?NaN:Math.floor(Number(v)); if(!_MTF.edit&&isNaN(_MTF.lineas[i].c)) _MTF.lineas[i].c=0; mtPintar(true); }
+function mtCantLinea(i,v){
+  var n=v===''?NaN:Number(v);
+  _MTF.lineas[i].c=isNaN(n)?NaN:(n<0?Math.ceil(n):Math.floor(n));
+  if(!_MTF.edit&&isNaN(_MTF.lineas[i].c)) _MTF.lineas[i].c=0;
+  mtPintar(true);
+}
 
 function _mtPintarLineas(){
   _mtEl('mt-ln-vacio').classList.toggle('mt3-oculto',_MTF.lineas.length>0);
@@ -495,7 +504,7 @@ function _mtPintarLineas(){
     var inf=l.s===Infinity, mal=!inf&&l.c>l.s;
     return '<div class="mt3-ln"><div class="n"><b title="'+esc(l.d)+'">'+esc(l.d)+'</b><span>'+esc(l.sku)+'</span></div>'+
       '<div class="st'+(mal?' mal':'')+'">'+(inf?'—':fmt(l.s))+'</div>'+
-      '<input class="inp" type="number" '+(_MTF.edit?'':'min="1" ')+'value="'+l.c+'" oninput="mtCantLinea('+i+',this.value)"/>'+
+      '<input class="inp" type="number" '+((_MTF.edit||_MTF.tipo==='AJUSTE')?'':'min="1" ')+'value="'+l.c+'" oninput="mtCantLinea('+i+',this.value)"/>'+
       (_MTF.edit?'<span></span>':'<button type="button" class="x" title="Quitar" onclick="mtQuitar('+i+')">×</button>')+'</div>';
   }).join('');
 }
@@ -505,18 +514,18 @@ function mtPintar(sinLineas){
   if(!sinLineas) _mtPintarLineas();
   var t=_MTF.tipo||(_MTF.edit&&!_MTF.cambiado?_MTF.tipoOrig:''), tot=_MTF.lineas.reduce(function(a,l){ return a+(l.c||0); },0), td=_MTF.tipo==='TRASLADO'&&!_MTF.edit;
   var vacio='<span style="color:var(--text4)">—</span>';
-  _mtEl('mt-r-tipo').innerHTML=t?'<span class="mt3-bd '+(t==='MERMA'?'merma':t==='TRASLADO'?'':'nc')+'">'+esc(_MT_NOMBRE[t]||t)+'</span>':vacio;
+  _mtEl('mt-r-tipo').innerHTML=t?'<span class="mt3-bd '+(t==='MERMA'?'merma':t==='TRASLADO'?'':t==='AJUSTE'?'ajuste':'nc')+'">'+esc(_MT_NOMBRE[t]||t)+'</span>':vacio;
   _mtEl('mt-r-mot').innerHTML=_MTF.motivo?esc(_MTF.motivo):vacio;
   _mtEl('mt-r-dest-l').classList.toggle('mt3-oculto',!td);
   _mtEl('mt-r-dest').classList.toggle('mt3-oculto',!td);
   _mtEl('mt-r-dest').textContent=_MTF.dest||'—';
   var f=_mtEl('mt-fecha').value; _mtEl('mt-r-fecha').textContent=f?f.split('-').reverse().join('/'):'—';
   _mtEl('mt-r-n').textContent=_MTF.lineas.length; _mtEl('mt-r-tot').textContent=fmt(tot);
-  var exceso=_mtExceso().length, m, ok=false;
+  var exceso=_mtExceso().length, m, ok=false, aju=t==='AJUSTE';
   if(!t) m='Elige el tipo de movimiento';
   else if(td&&!_MTF.dest) m='Elige la sede destino';
   else if(!_MTF.lineas.length) m='Agrega al menos un producto';
-  else if(_MTF.lineas.some(function(l){ return _MTF.edit?!isFinite(l.c):l.c<=0; })) m=_MTF.edit?'Escribe una cantidad válida':'Hay productos sin cantidad';
+  else if(_MTF.lineas.some(function(l){ return _MTF.edit||aju?!isFinite(l.c)||l.c===0:l.c<=0; })) m=(_MTF.edit||aju)?'Escribe una cantidad válida (no puede ser 0)':'Hay productos sin cantidad';
   else{ ok=true; m=_MTF.lineas.length+' producto(s) · '+fmt(tot)+' und.'+(exceso?' · '+exceso+' superan el stock':''); }
   var msg=_mtEl('mt-msg'); msg.textContent=m; msg.className='en2-msg'+(exceso?' err':'');
   var btn=_mtEl('btn-mt-save'); if(!btn.dataset.ocupado) btn.disabled=!ok;
@@ -555,6 +564,7 @@ function guardarMT(){
   var rowNum=_mtEl('mt-row').value, btn=_mtEl('btn-mt-save');
   var tipoGuardar=(rowNum&&!_MTF.cambiado&&_MTF.tipoOrig)?_MTF.tipoOrig:_MTF.tipo;
   if(!tipoGuardar||!_MTF.lineas.length){ showToast('Completa el tipo y al menos un producto','err'); return; }
+  if(_MTF.lineas.some(function(l){ return !l.c||isNaN(l.c); })){ showToast('Hay una cantidad inválida (no puede ser 0)','err'); return; }
   var obs=_mtEl('mt-obs').value.trim();
   if(_MTF.dest) obs='Destino: '+_MTF.dest+(obs?' · '+obs:'');
   var comun={tipo:tipoGuardar,motivo:_MTF.motivo,obs:obs,fecha:_mtEl('mt-fecha').value,
