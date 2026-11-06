@@ -3122,10 +3122,36 @@ body.evc-abierto{overflow:hidden}
 #modal-confirm-msg{white-space:pre-line}
 
 /* ── REGISTRAR M-T ── */
-.fs-body.mt3-body{max-width:1120px;padding:24px 28px}
-.mt3-wrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
-.mt3-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:18px}
-.mt3-card + .mt3-card{margin-top:16px}
+.fs-body.mt3-body{max-width:760px;padding:24px 28px}
+.mt3-wrap{display:flex;flex-direction:column;gap:14px}
+.mt3-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:20px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 20px 40px -26px rgba(0,0,0,.6);animation:mt3in .2s cubic-bezier(.2,.7,.3,1)}
+@keyframes mt3in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* barra de progreso del wizard */
+.mt3-prog{display:flex;align-items:center;gap:0;margin-bottom:18px}
+.mt3-pd{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px}
+.mt3-pd.off{cursor:default}
+.mt3-pd i{width:24px;height:24px;border-radius:50%;background:var(--surface3);color:var(--text3);display:flex;align-items:center;justify-content:center;font:700 11px var(--font-mono);font-style:normal;flex:0 0 auto;transition:.2s}
+.mt3-pd span{font:700 13px var(--font-ui);color:var(--text4)}
+.mt3-pd.cur i{background:var(--accent);color:#fff}
+.mt3-pd.cur span{color:var(--text)}
+.mt3-pd.done i{background:var(--ok);color:#06251a}
+.mt3-pd.done span{color:var(--text2)}
+.mt3-pl{flex:1 1 auto;height:1px;background:var(--border2);margin:0 10px;transition:.3s}
+.mt3-pl.done{background:var(--ok)}
+
+/* resumen colapsado de un paso ya completado */
+.mt3-sum{all:unset;cursor:pointer;display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:var(--r3);padding:13px 16px}
+.mt3-sum b{font:700 13.5px var(--font-ui)}
+.mt3-sum span{font:500 12px var(--font-mono);color:var(--text3)}
+.mt3-sum em{margin-left:auto;font:700 12px var(--font-ui);font-style:normal;color:var(--accent)}
+
+/* recap final antes de guardar */
+.mt3-recap{margin-top:20px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);padding:16px;display:flex;flex-wrap:wrap;gap:18px}
+.mt3-recap>div span{display:block;font:700 10.5px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.mt3-recap>div b{font:700 13px var(--font-ui)}
+.mt3-recap-tot{margin-left:auto;text-align:right}
+.mt3-recap-tot b{font:800 20px var(--font-mono)}
 .mt3-oculto{display:none!important}
 .mt3-lbl{font:600 11px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
 .mt3-lbl.s{font-size:10.5px}
@@ -3170,14 +3196,6 @@ body.evc-abierto{overflow:hidden}
 .mt3-ext[open] summary::before{transform:rotate(90deg)}
 .mt3-ext summary small{font-weight:400;color:var(--text3)}
 .mt3-ext .mt3-g2{margin-top:14px}
-.mt3-res{position:sticky;top:0}
-.mt3-res h3{font:700 15px var(--font-display);margin:0 0 12px}
-.mt3-res dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 12px;font-size:13px}
-.mt3-res dt{color:var(--text3)}
-.mt3-res dd{margin:0;text-align:right;font-weight:600}
-.mt3-tot{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline}
-.mt3-tot b{font:700 26px var(--font-display)}
-.mt3-tot span{font-size:12px;color:var(--text3)}
 .mt3-nota{margin-top:12px;font-size:12px;color:var(--text3);line-height:1.45}
 .mt3-bd{display:inline-block;padding:2px 9px;border-radius:999px;font:600 11px var(--font-mono);background:var(--accent-s);color:var(--accent-h)}
 .mt3-bd.merma{background:var(--danger-bg);color:var(--danger)}
@@ -3186,8 +3204,6 @@ body.evc-abierto{overflow:hidden}
 #mt-msg.err{color:var(--danger)}
 @media(max-width:860px){
   .fs-body.mt3-body{padding:14px}
-  .mt3-wrap{grid-template-columns:1fr}
-  .mt3-res{position:static}
   .mt3-tipos{grid-template-columns:1fr 1fr}
 }
 @media(max-width:480px){

@@ -353,7 +353,7 @@ var _MT_MOTIVOS={
   'Nota de credito':['Devolución de cliente','Error de facturación','Producto en mal estado']
 };
 var _MT_NOMBRE={'MERMA':'Merma','TRASLADO':'Traslado','AJUSTE':'Ajuste','Nota de credito':'Nota de crédito'};
-var _MTF={tipo:'',tipoOrig:'',cambiado:false,motivo:'',dest:'',otro:false,sel:null,lineas:[],edit:false,destinos:null,res:[],seq:0,timer:0};
+var _MTF={tipo:'',tipoOrig:'',cambiado:false,motivo:'',dest:'',otro:false,sel:null,lineas:[],edit:false,destinos:null,res:[],seq:0,timer:0,step:1};
 
 function _mtFechaHoy(){ return new Date().toLocaleDateString('en-CA',{timeZone:'America/Lima'}); }
 function _mtEl(id){return document.getElementById(id);}
@@ -516,23 +516,97 @@ function mtPintar(sinLineas){
   var vacio='<span style="color:var(--text4)">—</span>';
   _mtEl('mt-r-tipo').innerHTML=t?'<span class="mt3-bd '+(t==='MERMA'?'merma':t==='TRASLADO'?'':t==='AJUSTE'?'ajuste':'nc')+'">'+esc(_MT_NOMBRE[t]||t)+'</span>':vacio;
   _mtEl('mt-r-mot').innerHTML=_MTF.motivo?esc(_MTF.motivo):vacio;
-  _mtEl('mt-r-dest-l').classList.toggle('mt3-oculto',!td);
-  _mtEl('mt-r-dest').classList.toggle('mt3-oculto',!td);
+  _mtEl('mt-r-dest-wrap').classList.toggle('mt3-oculto',!td);
   _mtEl('mt-r-dest').textContent=_MTF.dest||'—';
-  var f=_mtEl('mt-fecha').value; _mtEl('mt-r-fecha').textContent=f?f.split('-').reverse().join('/'):'—';
   _mtEl('mt-r-n').textContent=_MTF.lineas.length; _mtEl('mt-r-tot').textContent=fmt(tot);
-  var exceso=_mtExceso().length, m, ok=false, aju=t==='AJUSTE';
-  if(!t) m='Elige el tipo de movimiento';
-  else if(td&&!_MTF.dest) m='Elige la sede destino';
-  else if(!_MTF.lineas.length) m='Agrega al menos un producto';
-  else if(_MTF.lineas.some(function(l){ return _MTF.edit||aju?!isFinite(l.c)||l.c===0:l.c<=0; })) m=(_MTF.edit||aju)?'Escribe una cantidad válida (no puede ser 0)':'Hay productos sin cantidad';
-  else{ ok=true; m=_MTF.lineas.length+' producto(s) · '+fmt(tot)+' und.'+(exceso?' · '+exceso+' superan el stock':''); }
+  var exceso=_mtExceso().length, m, ok=false, aju=t==='AJUSTE', step=_MTF.step||1;
+  var cantInvalida=function(l){ return _MTF.edit||aju?!isFinite(l.c)||l.c===0:l.c<=0; };
+
+  if(_MTF.edit){
+    if(!t) m='Elige el tipo de movimiento';
+    else if(td&&!_MTF.dest) m='Elige la sede destino';
+    else if(!_MTF.lineas.length) m='Agrega al menos un producto';
+    else if(_MTF.lineas.some(cantInvalida)) m='Escribe una cantidad válida (no puede ser 0)';
+    else{ ok=true; m=_MTF.lineas.length+' producto(s) · '+fmt(tot)+' und.'+(exceso?' · '+exceso+' superan el stock':''); }
+  } else if(step===1){
+    if(!t) m='Elige el tipo de movimiento';
+    else if(td&&!_MTF.dest) m='Elige la sede destino';
+    else{ ok=true; m='Listo para continuar'; }
+  } else if(step===2){
+    if(!_MTF.lineas.length) m='Agrega al menos un producto';
+    else if(_MTF.lineas.some(cantInvalida)) m=aju?'Escribe una cantidad válida (no puede ser 0)':'Hay productos sin cantidad';
+    else{ ok=true; m=_MTF.lineas.length+' producto(s) · '+fmt(tot)+' und.'; }
+  } else {
+    ok=true; m=_MTF.lineas.length+' producto(s) · '+fmt(tot)+' und.'+(exceso?' · '+exceso+' superan el stock':'');
+  }
   var msg=_mtEl('mt-msg'); msg.textContent=m; msg.className='en2-msg'+(exceso?' err':'');
   var btn=_mtEl('btn-mt-save'); if(!btn.dataset.ocupado) btn.disabled=!ok;
+  _mtPintarPasos();
+}
+
+function _mtPintarPasos(){
+  var prog=_mtEl('mt-prog'), atras=_mtEl('mt-btn-atras'), btn=_mtEl('btn-mt-save');
+  var s1=_mtEl('mt-step-1'), s2=_mtEl('mt-step-2'), s3=_mtEl('mt-step-3');
+  var sum1=_mtEl('mt-sum-1'), sum2=_mtEl('mt-sum-2');
+  if(_MTF.edit){
+    prog.classList.add('mt3-oculto');
+    sum1.classList.add('mt3-oculto'); sum2.classList.add('mt3-oculto');
+    s1.classList.remove('mt3-oculto'); s2.classList.remove('mt3-oculto'); s3.classList.remove('mt3-oculto');
+    atras.classList.add('mt3-oculto');
+    return;
+  }
+  prog.classList.remove('mt3-oculto');
+  var step=_MTF.step||1;
+  s1.classList.toggle('mt3-oculto',step!==1);
+  s2.classList.toggle('mt3-oculto',step!==2);
+  s3.classList.toggle('mt3-oculto',step!==3);
+  sum1.classList.toggle('mt3-oculto',step<=1);
+  sum2.classList.toggle('mt3-oculto',step<=2);
+  if(step>1){
+    _mtEl('mt-sum-1-tipo').textContent=_MT_NOMBRE[_MTF.tipo]||_MTF.tipo||'—';
+    _mtEl('mt-sum-1-mot').textContent=_MTF.motivo||'Sin motivo';
+  }
+  if(step>2){
+    var tot=_MTF.lineas.reduce(function(a,l){ return a+(l.c||0); },0);
+    _mtEl('mt-sum-2-n').textContent=_MTF.lineas.length+' producto(s)';
+    _mtEl('mt-sum-2-tot').textContent=(tot>0?'+':'')+fmt(tot)+' und.';
+  }
+  var td=_MTF.tipo==='TRASLADO', tipoOk=!!_MTF.tipo&&(!td||!!_MTF.dest);
+  var prodOk=_MTF.lineas.length>0&&!_MTF.lineas.some(function(l){ return !isFinite(l.c)||l.c===0; });
+  function setDot(id,on,done){ var el=_mtEl(id); el.classList.toggle('cur',on); el.classList.toggle('done',!on&&done); }
+  setDot('mt-pd-1',step===1,tipoOk);
+  setDot('mt-pd-2',step===2,step>2&&prodOk);
+  setDot('mt-pd-3',step===3,false);
+  _mtEl('mt-pl-1').classList.toggle('done',step>1&&tipoOk);
+  _mtEl('mt-pl-2').classList.toggle('done',step>2&&prodOk);
+  atras.classList.toggle('mt3-oculto',step<=1);
+  btn.textContent=step<3?'Continuar':'Guardar movimiento';
+}
+
+function mtPrimario(){
+  if(_MTF.edit){ guardarMT(); return; }
+  var step=_MTF.step||1;
+  if(step===1){
+    if(!_MTF.tipo||(_MTF.tipo==='TRASLADO'&&!_MTF.dest)) return;
+    _MTF.step=2; mtPintar();
+  } else if(step===2){
+    if(!_MTF.lineas.length||_MTF.lineas.some(function(l){ return !isFinite(l.c)||l.c===0; })) return;
+    _MTF.step=3; mtPintar();
+  } else {
+    guardarMT();
+  }
+}
+function mtAtras(){
+  if(_MTF.edit) return;
+  _MTF.step=Math.max(1,(_MTF.step||1)-1); mtPintar();
+}
+function mtGotoPaso(n){
+  if(_MTF.edit||n>=(_MTF.step||1)) return;
+  _MTF.step=n; mtPintar();
 }
 
 function _mtReset(){
-  _MTF.tipo=''; _MTF.tipoOrig=''; _MTF.cambiado=false; _MTF.motivo=''; _MTF.dest=''; _MTF.otro=false; _MTF.sel=null; _MTF.lineas=[]; _MTF.edit=false; _MTF.res=[];
+  _MTF.tipo=''; _MTF.tipoOrig=''; _MTF.cambiado=false; _MTF.motivo=''; _MTF.dest=''; _MTF.otro=false; _MTF.sel=null; _MTF.lineas=[]; _MTF.edit=false; _MTF.res=[]; _MTF.step=1;
   document.querySelectorAll('.mt3-tp').forEach(function(b){ b.classList.remove('on'); });
   _mtEl('mt-b-motivo').classList.add('mt3-oculto'); _mtEl('mt-b-destino').classList.add('mt3-oculto'); _mtEl('mt-tipo-otro').classList.add('mt3-oculto');
   ['mt-motivo','mt-q','mt-cant','mt-obs','mt-nro-factura','mt-fecha-retiro','mt-dest-otro'].forEach(function(id){ _mtEl(id).value=''; });
