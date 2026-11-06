@@ -25,6 +25,7 @@ function _mtTipo(r){
   if(u==='MERMA') return 'MERMA';
   if(u==='TRASLADO') return 'TRASLADO';
   if(u==='NC'||u.indexOf('NOTA DE CRED')===0) return 'NC';
+  if(u.indexOf('AJUSTE')===0||u.indexOf('INVENTARIO')===0) return 'AJUSTE';
   return 'OTROS';
 }
 function _mtPend(r){ return String(r.estado||'').trim().toLowerCase()!=='retirado'; }
@@ -257,17 +258,18 @@ function _filterMT(){
   var mer=base.filter(function(r){return _mtTipo(r)==='MERMA';});
   var tra=base.filter(function(r){return _mtTipo(r)==='TRASLADO';});
   var nc =base.filter(function(r){return _mtTipo(r)==='NC';});
+  var aju=base.filter(function(r){return _mtTipo(r)==='AJUSTE';});
   var oth=base.filter(function(r){return _mtTipo(r)==='OTROS';});
 
   var el=document.getElementById('mt-kpis');
   if(el) el.innerHTML=_mtMoneyCard('Costo de merma',mer)+_mtNcCard(nc)+
     '<div class="sal2-card"><div class="sal2-k">Traslados</div><div class="sal2-v">'+fmt(_mtSum(tra,'cant'))+'<small>und.</small></div><div class="sal2-n">'+tra.length+(tra.length===1?' movimiento':' movimientos')+'</div></div>'+
-    '<div class="sal2-card"><div class="sal2-k">Registros</div><div class="sal2-v">'+base.length+'<small>mov.</small></div><div class="sal2-n">'+mer.length+' mermas · '+nc.length+' NC · '+tra.length+' trasl.'+(oth.length?' · '+oth.length+' otros':'')+'</div></div>';
+    '<div class="sal2-card"><div class="sal2-k">Registros</div><div class="sal2-v">'+base.length+'<small>mov.</small></div><div class="sal2-n">'+mer.length+' mermas · '+nc.length+' NC · '+tra.length+' trasl. · '+aju.length+' ajustes'+(oth.length?' · '+oth.length+' otros':'')+'</div></div>';
 
   var sg=function(k,txt,n){return '<button class="'+(_MT_TIPO===k?'on':'')+'" onclick="mtSetTipo(\''+k+'\')">'+txt+'<span>'+n+'</span></button>';};
   var sgt=document.getElementById('mt-tipo-seg');
   if(sgt) sgt.innerHTML='<button class="'+(_MT_TIPO===''?'on':'')+'" onclick="mtSetTipo(\'\')">Todos<span>'+base.length+'</span></button>'+
-    sg('MERMA','Mermas',mer.length)+sg('TRASLADO','Traslados',tra.length)+sg('NC','NC',nc.length)+((oth.length||_MT_TIPO==='OTROS')?sg('OTROS','Otros',oth.length):'');
+    sg('MERMA','Mermas',mer.length)+sg('TRASLADO','Traslados',tra.length)+sg('AJUSTE','Ajustes',aju.length)+sg('NC','NC',nc.length)+((oth.length||_MT_TIPO==='OTROS')?sg('OTROS','Otros',oth.length):'');
   var se=document.getElementById('mt-est-seg');
   if(se) se.innerHTML='<button class="'+(_MT_EST===''?'on':'')+'" onclick="mtSetEst(\'\')">Cualquier estado</button>'+
     '<button class="'+(_MT_EST==='pen'?'on':'')+'" onclick="mtSetEst(\'pen\')">Pendiente</button>'+
@@ -345,11 +347,12 @@ function exportMT(){
 
 /* ── REGISTRAR / EDITAR M-T ── */
 var _MT_MOTIVOS={
-  'MERMA':['Producto vencido','Roto en almacén','Roto en transporte','Faltante de inventario','Producto dañado','Ajuste de inventario'],
+  'MERMA':['Producto vencido','Roto en almacén','Roto en transporte','Faltante de inventario','Producto dañado'],
   'TRASLADO':['Reposición de stock','Pedido urgente','Devolución a sede'],
+  'AJUSTE':['Conteo físico','Diferencia de inventario','Corrección de sistema'],
   'Nota de credito':['Devolución de cliente','Error de facturación','Producto en mal estado']
 };
-var _MT_NOMBRE={'MERMA':'Merma','TRASLADO':'Traslado','Nota de credito':'Nota de crédito'};
+var _MT_NOMBRE={'MERMA':'Merma','TRASLADO':'Traslado','AJUSTE':'Ajuste','Nota de credito':'Nota de crédito'};
 var _MTF={tipo:'',tipoOrig:'',cambiado:false,motivo:'',dest:'',otro:false,sel:null,lineas:[],edit:false,destinos:null,res:[],seq:0,timer:0};
 
 function _mtFechaHoy(){ return new Date().toLocaleDateString('en-CA',{timeZone:'America/Lima'}); }
@@ -604,7 +607,7 @@ function editarMTRow(rowNum){
   _mtEl('fs-mt-title').textContent='Editar M-T';
   _mtEl('btn-mt-save').textContent='Guardar cambios';
   _MTF.tipoOrig=String(r.tipo||'').trim();
-  var canon=_mtTipo(r), boton={MERMA:'MERMA',TRASLADO:'TRASLADO',NC:'Nota de credito'}[canon];
+  var canon=_mtTipo(r), boton={MERMA:'MERMA',TRASLADO:'TRASLADO',AJUSTE:'AJUSTE',NC:'Nota de credito'}[canon];
   if(boton) mtTipo(boton,true);
   else {
     _mtEl('mt-b-motivo').classList.remove('mt3-oculto');
