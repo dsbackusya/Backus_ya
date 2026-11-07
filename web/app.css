@@ -4181,3 +4181,9 @@ select,.stk-sel{ height:38px !important; border-color:var(--border2) !important 
 .mta-det{margin-top:16px;padding:0}
 .mta-det .mta-fh{padding:14px 18px}
 .mta-det-xl .mta-k{font-size:15px}
+
+/* M-T: estado físico (buen / mal) del SKU junto a la merma pendiente */
+.mt3-rv{display:flex;gap:6px;justify-content:center;margin-top:5px;font:600 10px 'Inter',sans-serif}
+.mt3-rv i{font-style:normal;padding:2px 7px;border-radius:6px;border:1px solid}
+.mt3-rv .b{color:#4ADE9F;background:rgba(74,222,159,.12);border-color:rgba(74,222,159,.32)}
+.mt3-rv .m{color:#FF9CAE;background:rgba(255,124,146,.12);border-color:rgba(255,124,146,.32)}

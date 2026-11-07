@@ -56,7 +56,10 @@ function _mtBadgeTipo(t,raw){
 }
 function _mtBadgeEstado(r,t){
   if(t!=='MERMA'&&t!=='NC') return '<span class="mt2-bd n">—</span>';
-  return _mtPend(r)?'<span class="mt2-bd w">Pendiente</span>':'<span class="mt2-bd ok">Retirado</span>';
+  if(!_mtPend(r)) return '<span class="mt2-bd ok">Retirado</span>';
+  /* merma pendiente con revisión guardada: estado físico del SKU (buen / mal estado) */
+  var rv=(t==='MERMA'&&r.rev)?'<span class="mt3-rv"><i class="b">Buen '+fmt(r.rev.buen)+'</i><i class="m">Mal '+fmt(r.rev.mal)+'</i></span>':'';
+  return '<span class="mt2-bd w">Pendiente</span>'+rv;
 }
 
 function _mtDiaLabel(f){
@@ -91,8 +94,8 @@ function renderMT(r){
   var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
   var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   document.getElementById('mt-root').innerHTML=
-    '<div class="mta-tabs"><button id="mt-tab-reg" onclick="mtVista(\'reg\')">Registros</button><button id="mt-tab-an" onclick="mtVista(\'an\')">Análisis</button></div>'+
-    '<div id="mt-an" style="display:none"></div><div id="mt-reg">'+
+    '<div class="mta-tabs"><button id="mt-tab-reg" onclick="mtVista(\'reg\')">Registros</button><button id="mt-tab-an" onclick="mtVista(\'an\')">Análisis</button><button id="mt-tab-rev" onclick="mtVista(\'rev\')">Revisión</button></div>'+
+    '<div id="mt-an" style="display:none"></div><div id="mt-rev" style="display:none"></div><div id="mt-reg">'+
     '<div class="sal2-sum mt2-sum" id="mt-kpis"></div>'+
     '<div class="sal2-pnl">'+
     '<div class="sal2-fl">'+
@@ -113,11 +116,13 @@ function renderMT(r){
 var _MT_VISTA='reg', _MTA={ sede:'', sedes:null, d:null, n:0 };
 function mtVista(v){
   _MT_VISTA=v;
-  var reg=document.getElementById('mt-reg'), an=document.getElementById('mt-an'); if(!reg||!an) return;
-  reg.style.display=v==='an'?'none':''; an.style.display=v==='an'?'':'none';
-  document.getElementById('mt-tab-reg').classList.toggle('on',v!=='an');
+  var reg=document.getElementById('mt-reg'), an=document.getElementById('mt-an'), rev=document.getElementById('mt-rev'); if(!reg||!an||!rev) return;
+  reg.style.display=(v==='an'||v==='rev')?'none':''; an.style.display=v==='an'?'':'none'; rev.style.display=v==='rev'?'':'none';
+  document.getElementById('mt-tab-reg').classList.toggle('on',v!=='an'&&v!=='rev');
   document.getElementById('mt-tab-an').classList.toggle('on',v==='an');
+  document.getElementById('mt-tab-rev').classList.toggle('on',v==='rev');
   if(v==='an') mtAnCargar();
+  if(v==='rev') mtRevCargar();
 }
 function mtAnSede(id){ _MTA.sede=id; mtAnCargar(); }
 function mtAnCargar(){

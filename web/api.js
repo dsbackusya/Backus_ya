@@ -620,6 +620,14 @@
     var filas = await todas(function () {
       return filtroSede(sb.from('v_mt').select('*'), p).gte('fecha', rg.desde).lte('fecha', rg.hasta).order('id');
     });
+    // Revisión de estado (buen/mal) por SKU de las mermas pendientes. Si la tabla aún no existe, M-T sigue funcionando sin ella.
+    var revs = {};
+    try {
+      var rr = await todas(function () {
+        return filtroSede(sb.from('mt_revision_estado').select('sede_id,sku,buen_estado,mal_estado'), p).order('sede_id').order('sku');
+      });
+      rr.forEach(function (x) { revs[x.sede_id + '|' + x.sku] = { buen: num(x.buen_estado), mal: num(x.mal_estado) }; });
+    } catch (e) { revs = {}; }
     return {
       ok: true,
       rango: rg,
@@ -627,7 +635,8 @@
         return {
           _row: r.id, fecha: fmtFecha(r.fecha), sku: str(r.sku), desc: str(r.descripcion), cant: num(r.cantidad),
           tipo: str(r.tipo), motivo: str(r.motivo), obs: str(r.observaciones), estado: str(r.estado),
-          nroFactura: str(r.nro_factura), fechaRetiro: fmtFecha(r.fecha_retiro), costo: num(r.costo)
+          nroFactura: str(r.nro_factura), fechaRetiro: fmtFecha(r.fecha_retiro), costo: num(r.costo),
+          rev: revs[r.sede_id + '|' + r.sku] || null
         };
       })
     };
@@ -709,6 +718,60 @@
     var r = await sb.from('mt').delete().eq('id', Number(rowNum));
     if (r.error) throw r.error;
     return { ok: true };
+  });
+
+  /* ── Revisión de estado de las mermas pendientes (buen estado / mal estado por SKU) ── */
+  // Suma de lo pendiente (mermas sin factura de retiro) por SKU en una sede
+  async function pendientesMerma(sede, skus) {
+    var filas = await todas(function () {
+      var q = sb.from('v_mt').select('sku,descripcion,cantidad').eq('sede_id', sede).ilike('tipo', 'merma').eq('estado', 'Pendiente');
+      if (skus && skus.length) q = q.in('sku', skus);
+      return q.order('id');
+    });
+    var por = {};
+    filas.forEach(function (r) {
+      var k = str(r.sku), o = por[k] || (por[k] = { sku: k, desc: '', pend: 0 });
+      o.pend += num(r.cantidad);
+      if (!o.desc) o.desc = str(r.descripcion);
+    });
+    return por;
+  }
+  API.getMTRevision = guard(async function (p, sedeId) {
+    var sedes = await cargarSedes();
+    var sede = p.rol === 'store' ? p.sede_id : (Number(sedeId) || (sedes[0] && sedes[0].id));
+    if (!sede) return { ok: false, error: 'Selecciona una sede.' };
+    var por = await pendientesMerma(sede);
+    var rv = await todas(function () { return sb.from('mt_revision_estado').select('*').eq('sede_id', sede).order('sku'); });
+    var revs = {};
+    rv.forEach(function (x) { revs[x.sku] = x; });
+    var filas = Object.keys(por).map(function (k) { return por[k]; }).filter(function (o) { return o.pend !== 0; }).map(function (o) {
+      var r = revs[o.sku];
+      return { sku: o.sku, desc: o.desc, pend: o.pend, revisado: !!r, buen: r ? num(r.buen_estado) : null, mal: r ? num(r.mal_estado) : null, pendRev: r ? num(r.pendiente_al_revisar) : null };
+    }).sort(function (a, b) { return a.desc < b.desc ? -1 : a.desc > b.desc ? 1 : 0; });
+    return {
+      ok: true, sede: sede, sedeNombre: (sedes.find(function (s) { return s.id === sede; }) || {}).nombre || '',
+      sedes: p.rol === 'store' ? [] : sedes.map(function (s) { return { id: s.id, nombre: s.nombre }; }), data: filas
+    };
+  });
+  // Guarda buen/mal estado de varios SKU. Cada uno debe sumar exactamente lo pendiente (se vuelve a calcular aquí).
+  API.guardarMTRevision = guard(async function (p, sedeId, filas) {
+    var sede = p.rol === 'store' ? p.sede_id : exigirSede(p, { sheetId: sedeId });
+    if (!filas || !filas.length) return { ok: false, error: 'No hay cambios que guardar' };
+    var skus = filas.map(function (f) { return str(f.sku); });
+    var por = await pendientesMerma(sede, skus);
+    var rows = [];
+    for (var i = 0; i < filas.length; i++) {
+      var f = filas[i], sku = str(f.sku), buen = entero(f.buen), mal = entero(f.mal);
+      if (!sku) return { ok: false, error: 'SKU vacío en la fila ' + (i + 1) };
+      if (buen === null || mal === null || buen < 0 || mal < 0) return { ok: false, error: 'Cantidades inválidas en ' + sku };
+      var pend = por[sku] ? por[sku].pend : 0;
+      if (buen + mal !== pend) return { ok: false, error: sku + ': buen estado + mal estado (' + (buen + mal) + ') debe sumar lo pendiente (' + pend + '). Actualiza la pantalla si cambió.' };
+      rows.push({ sede_id: sede, sku: sku, descripcion: str(f.desc) || (por[sku] && por[sku].desc) || null, buen_estado: buen, mal_estado: mal,
+        pendiente_al_revisar: pend, revisado_por: p.usuario, revisado_at: new Date().toISOString() });
+    }
+    var r = await sb.from('mt_revision_estado').upsert(rows, { onConflict: 'sede_id,sku' });
+    if (r.error) throw r.error;
+    return { ok: true, guardados: rows.length };
   });
 
   // Pestaña Análisis de M-T: solo mermas, generado vs retirado (con factura), antigüedad, sedes, motivos y productos
