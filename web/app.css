@@ -2417,7 +2417,11 @@ input.filter-inp:focus{
 @media (max-width:520px){.ent-sum{grid-template-columns:1fr}}
 
 /* ── REGISTRAR ENTRADA (PC y celular) ── */
-#fs-entrada .fs-body{max-width:none;padding:34px 32px 60px}
+#fs-entrada .fs-body{max-width:none;padding:20px 24px;display:flex;flex-direction:column}
+#fs-entrada .en2-page{max-width:none;width:100%;margin:0;flex:1;display:flex}
+#fs-entrada .wz{flex:1;min-width:0}
+#fs-entrada .wz-pane{min-height:0}
+#fs-entrada .wz-step:not(#wz-s3){max-width:900px}
 .en2-page{max-width:1120px;margin:0 auto}
 .en2-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
 .en2-h1{font:700 26px var(--font-display);letter-spacing:-.01em;color:var(--text)}
