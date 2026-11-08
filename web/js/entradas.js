@@ -666,9 +666,9 @@ function _soles(n){
 function _archTotal(){ _archTotalInner(); entResumen(); }
 function _archTotalInner(){
   var el=document.getElementById('arch-total'); if(!el) return;
-  var th=document.getElementById('arch-th-monto');
   var conMonto=ARCH_ROWS.some(function(r){return typeof r.monto==='number';});
-  if(th) th.style.display=conMonto?'':'none';
+  var box=document.getElementById('arch-preview-box');
+  if(box) box.classList.toggle('pv-conmonto',conMonto);
   if(!conMonto){ el.style.display='none'; el.innerHTML=''; return; }
   var todo=0, sel=0, nSel=0;
   ARCH_ROWS.forEach(function(r){
@@ -697,37 +697,126 @@ function _archTotalInner(){
   el.innerHTML=html; el.style.display='block';
 }
 
+// Una fila necesita revisión si su SKU no está en el Stock o (en PDF) no se leyó la cantidad
+function _pvRev(r){ return !!r.noStock || (!!r.editable && !(r.cant>0)); }
+
+function _pvFila(r){
+  var editable=!!r.editable;
+  var sku=editable
+    ? '<div class="pv-sk"><input class="en2-in'+(r.noStock?' bad':'')+'" id="pv-sku-'+r.idx+'" value="'+esc(r.sku)+'" placeholder="SKU o nombre…" autocomplete="off" spellcheck="false"'+
+        ' oninput="pvSkuInput('+r.idx+')" onchange="editArch('+r.idx+',\'sku\',this.value,\'cant\')" onkeydown="pvSkuKey(event,'+r.idx+')" onfocus="this.select()"/>'+
+        '<div class="ac-list" id="ac-pv-'+r.idx+'"></div></div>'
+    : '<div class="pv-sk mono" style="font-size:13px;font-weight:600">'+esc(r.sku)+'</div>';
+  var cant=editable
+    ? '<input class="en2-in pv-u" id="pv-u-'+r.idx+'" type="number" min="0" inputmode="numeric" value="'+esc(r.cant)+'" placeholder="0"'+
+        ' oninput="pvCant('+r.idx+',this.value)" onblur="_pvRefrescar('+r.idx+')" onkeydown="pvCantKey(event,'+r.idx+')" onfocus="this.select()"/>'
+    : '<div class="r" style="font-weight:600">'+fmt(r.cant)+'</div>';
+  var rev=_pvRev(r);
+  return '<div class="pv-row'+(rev?' rev warn':'')+(r.incluir?'':' off')+'" id="prev-row-'+r.idx+'">'+
+    '<div class="pv-ckc"><input type="checkbox" class="pv-ck" '+(r.incluir?'checked':'')+' onchange="toggleArch('+r.idx+',this.checked)" aria-label="Incluir"/></div>'+
+    sku+
+    '<div class="pv-d"><span class="pv-n">#'+r.idx+'</span><span class="pv-d-t">'+esc(r.desc)+'</span>'+
+      '<div class="pv-av"'+(r.aviso?'':' style="display:none"')+'>'+esc(r.aviso||'')+'</div></div>'+
+    '<div class="pv-uc">'+cant+'</div>'+
+    '<div class="pv-m" id="pv-m-'+r.idx+'">'+(typeof r.monto==='number'?_soles(r.monto).replace('S/ ',''):'—')+'</div>'+
+  '</div>';
+}
+
+var PV_SOLO=false;
 function renderPreview(){
   document.getElementById('arch-preview-title').textContent=
     'Vista previa — '+ARCH_ROWS.length+' producto(s) encontrados';
-  var conMonto=ARCH_ROWS.some(function(r){return typeof r.monto==='number';});
-  var tbody=ARCH_ROWS.map(function(r){
-    // Las filas leídas de un PDF se pueden corregir aquí (SKU y cantidad); las de Excel se muestran tal cual
-    var skuCell=r.editable
-      ? '<input class="inp" value="'+esc(r.sku)+'" onchange="editArch('+r.idx+',\'sku\',this.value)" style="width:98px;padding:4px 6px;font-size:13px;font-family:var(--font-mono)"/>'
-      : esc(r.sku);
-    var cantCell=r.editable
-      ? '<input class="inp" type="number" min="0" value="'+esc(r.cant)+'" onchange="editArch('+r.idx+',\'cant\',this.value)" style="width:68px;padding:4px 6px;font-size:13px;text-align:right;font-weight:600"/>'
-      : fmt(r.cant);
-    return '<tr id="prev-row-'+r.idx+'">'+
-      '<td class="mono" style="font-size:11px;color:var(--text3)">'+r.idx+'</td>'+
-      '<td class="mono">'+skuCell+'</td>'+
-      '<td class="td-desc"'+(r.editable?' style="max-width:130px"':'')+'>'+esc(r.desc)+(r.aviso?'<div style="font-size:11px;color:var(--warn);white-space:normal">'+esc(r.aviso)+'</div>':'')+'</td>'+
-      '<td class="r" style="font-weight:600">'+cantCell+'</td>'+
-      (conMonto?'<td class="r mono" style="font-size:12px;color:var(--text2);white-space:nowrap">'+(typeof r.monto==='number'?_soles(r.monto).replace('S/ ',''):'—')+'</td>':'')+
-      '<td class="c"><input type="checkbox" '+(r.incluir?'checked':'')+ 
-        ' onchange="toggleArch('+r.idx+',this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"/></td>'+
-    '</tr>';
-  }).join('');
-  document.getElementById('arch-preview-tbody').innerHTML=tbody;
+  var list=document.getElementById('arch-preview-list');
+  list.innerHTML=ARCH_ROWS.map(_pvFila).join('');
+  // Al elegir un producto de la lista de sugerencias se verifica el SKU
+  ARCH_ROWS.forEach(function(r){
+    var inp=document.getElementById('pv-sku-'+r.idx);
+    if(inp) inp.addEventListener('acpick',function(){ editArch(r.idx,'sku',inp.value,'cant'); });
+  });
   document.getElementById('arch-preview').classList.remove('hidden');
+  _pvBarra();
   _archTotal();
+}
+
+// Barra superior: "Incluir todos" y el botón que filtra las filas por revisar
+function _pvBarra(){
+  var nRev=ARCH_ROWS.filter(_pvRev).length;
+  if(!nRev) PV_SOLO=false;
+  var box=document.getElementById('arch-preview-box'); if(box) box.classList.toggle('pv-solo',PV_SOLO);
+  var b=document.getElementById('pv-fil');
+  if(b){
+    b.style.display=nRev?'':'none';
+    b.classList.toggle('on',PV_SOLO);
+    b.textContent=PV_SOLO?'Ver todos':nRev+' por revisar';
+    b.title=PV_SOLO?'Mostrar todos los productos':'Mostrar solo los productos con SKU o cantidad por corregir';
+  }
+  var all=document.getElementById('pv-all');
+  if(all){
+    var n=ARCH_ROWS.filter(function(r){return r.incluir;}).length;
+    all.checked=n>0&&n===ARCH_ROWS.length; all.indeterminate=n>0&&n<ARCH_ROWS.length;
+  }
+}
+function pvFiltro(){ PV_SOLO=!PV_SOLO; _pvBarra(); }
+function pvTodos(v){
+  ARCH_ROWS.forEach(function(r){ r.incluir=!!v && (r.cant>0) && !r.noStock; });
+  renderPreview();
+}
+
+// Actualiza solo una fila (sin repintar la lista, para no perder el cursor mientras se escribe)
+function _pvRefrescar(idx,foco){
+  var r=ARCH_ROWS.find(function(x){return x.idx===idx;});
+  var el=document.getElementById('prev-row-'+idx);
+  if(!r||!el){ _pvBarra(); _archTotal(); return; }
+  var rev=_pvRev(r), act=document.activeElement;
+  // Si se está escribiendo en la fila, no se oculta del filtro "por revisar" hasta salir de ella
+  el.className='pv-row'+((rev||(PV_SOLO&&el.contains(act)&&el.classList.contains('rev')))?' rev':'')+(rev?' warn':'')+(r.incluir?'':' off');
+  var ck=el.querySelector('.pv-ck'); if(ck) ck.checked=!!r.incluir;
+  var t=el.querySelector('.pv-d-t'); if(t) t.textContent=r.desc;
+  var av=el.querySelector('.pv-av'); if(av){ av.textContent=r.aviso||''; av.style.display=r.aviso?'':'none'; }
+  var sk=document.getElementById('pv-sku-'+idx);
+  if(sk){ sk.classList.toggle('bad',!!r.noStock); if(act!==sk) sk.value=r.sku; }
+  var u=document.getElementById('pv-u-'+idx);
+  if(u&&act!==u) u.value=r.cant;
+  if(foco==='cant'&&u&&!(r.cant>0)){ u.focus(); u.select(); }
+  _pvBarra(); _archTotal();
 }
 
 function toggleArch(idx,val){
   var row=ARCH_ROWS.find(function(r){return r.idx===idx;});
   if(row)row.incluir=val;
-  _archTotal();
+  _pvRefrescar(idx);
+}
+
+// Cambios rápidos en la vista previa
+function pvSkuInput(idx){ acSearch('pv-sku-'+idx,'pv-nodesc','','ac-pv-'+idx); }
+function pvSkuKey(e,idx){
+  if(e.key!=='Enter') return;
+  e.preventDefault();
+  var inp=e.target, listId='ac-pv-'+idx, list=document.getElementById(listId), res=AC_CACHE[listId]||[];
+  if(list&&list.classList.contains('open')&&res.length){
+    // Enter elige la sugerencia (la del SKU exacto si existe, si no la primera)
+    var q=inp.value.trim(), i=res.findIndex(function(x){return String(x.sku)===q;});
+    acSelect(inp.id,'pv-nodesc','',listId,i<0?0:i);
+  } else {
+    clearTimeout(acTimers[listId]);
+    editArch(idx,'sku',inp.value,'cant');
+  }
+}
+function pvCant(idx,valor){
+  var row=ARCH_ROWS.find(function(r){return r.idx===idx;}); if(!row) return;
+  var n=Math.floor(Number(valor)); row.cant=(n>=0)?n:0;
+  if(row.cant>0){ if(!row.noStock) row.incluir=true; if(/cantidad/i.test(row.aviso||'')) row.aviso=''; }
+  else { row.incluir=false; if(!row.noStock) row.aviso='Falta la cantidad: escríbela'; }
+  _pvRefrescar(idx);
+}
+// Enter en la cantidad pasa a la cantidad de la fila siguiente que se vea
+function pvCantKey(e,idx){
+  if(e.key!=='Enter') return;
+  e.preventDefault();
+  var el=document.getElementById('prev-row-'+idx), sig=el&&el.nextElementSibling;
+  while(sig&&sig.offsetParent===null) sig=sig.nextElementSibling;
+  var u=sig&&sig.querySelector('.pv-u');
+  if(u){ u.focus(); u.select(); sig.scrollIntoView({block:'nearest'}); } else e.target.blur();
 }
 
 /* ── LEER LA OC DESDE UN PDF ──
@@ -872,27 +961,25 @@ async function leerPDFdeOC(file){
 function _archAplicarStock(row,mapa){
   var d=mapa[String(row.sku).trim()];
   if(d){
-    row.desc=d; row.aviso=row.cant>0?'':row.aviso; row.noStock=false;
+    row.desc=d; row.noStock=false;
+    row.aviso=row.cant>0?'':'Falta la cantidad: escríbela';
     if(row.cant>0) row.incluir=true;
   } else {
     row.desc=row.descOCR||row.desc; row.noStock=true;
-    row.aviso='No está en el Stock de tu sede: corrige el SKU, o marca ¿Incluir? si es un producto nuevo';
+    row.aviso='No está en el Stock de tu sede: busca el producto en el SKU, o marca el check si es un producto nuevo';
     row.incluir=false;
   }
 }
 
-function editArch(idx,campo,valor){
+function editArch(idx,campo,valor,foco){
   var row=ARCH_ROWS.find(function(r){return r.idx===idx;}); if(!row) return;
-  if(campo==='cant'){
-    var n=Math.floor(Number(valor)); row.cant=(n>=0)?n:0;
-    if(row.cant>0 && !row.noStock) row.incluir=true;
-    if(row.cant>0 && row.aviso && /cantidad/i.test(row.aviso)) row.aviso='';
-    renderPreview(); return;
-  }
-  row.sku=String(valor||'').trim();
+  if(campo==='cant'){ pvCant(idx,valor); return; }
+  var nuevo=String(valor||'').trim();
+  if(nuevo===row.sku && !row.noStock) return;   // sin cambios y ya verificado
+  row.sku=nuevo;
   google.script.run
-    .withSuccessHandler(function(s){ _archAplicarStock(row,(s&&s.ok&&s.data)||{}); renderPreview(); })
-    .withFailureHandler(function(){ renderPreview(); })
+    .withSuccessHandler(function(s){ _archAplicarStock(row,(s&&s.ok&&s.data)||{}); _pvRefrescar(idx,foco); })
+    .withFailureHandler(function(){ _pvRefrescar(idx); })
     .skusEnStock(S.token,[row.sku]);
 }
 

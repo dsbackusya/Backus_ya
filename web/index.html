@@ -447,12 +447,13 @@ window.addEventListener('load', function(){
                 <button type="button" class="btn btn-ghost btn-sm" onclick="clearFile()">Quitar archivo</button>
               </div>
               <div id="arch-total" style="display:none;margin-bottom:12px"></div>
-              <div class="table-wrap" style="max-height:340px;overflow-y:auto">
-                <table><thead><tr>
-                  <th>#</th><th>SKU</th><th>Descripción</th><th class="r">Cantidad</th><th class="r" id="arch-th-monto" style="display:none">Monto S/</th><th class="c">¿Incluir?</th>
-                </tr></thead>
-                <tbody id="arch-preview-tbody"></tbody>
-                </table>
+              <div id="arch-preview-box">
+                <div class="pv-bar">
+                  <label class="pv-all"><input type="checkbox" id="pv-all" onchange="pvTodos(this.checked)"/> Incluir todos</label>
+                  <button type="button" class="pv-fil" id="pv-fil" onclick="pvFiltro()" style="display:none"></button>
+                </div>
+                <div class="pv-hd"><span></span><span>SKU</span><span>Descripción</span><span class="r">Cantidad</span><span class="r pv-hm">Monto S/</span></div>
+                <div id="arch-preview-list" class="pv-list"></div>
               </div>
             </div>
             <div id="arch-err" class="err-msg" style="margin-top:12px"></div>
