@@ -288,7 +288,7 @@ function editarConteoRow(rowNum, packs, unds, sku, ean, producto, mult){
     // NO setear cnt-ean via .value directo — dispararía autoResolverEAN y borraría packs
     // El ean ya está en _cnt.ean; lo ponemos sin disparar eventos
     var eanEl=document.getElementById('cnt-ean');
-    if(eanEl){ eanEl.value=ean; }
+    if(eanEl){ eanEl.value=''; }
     document.getElementById('cnt-mult').value=mult;
     document.getElementById('cnt-producto-card').style.display='block';
     // Cambiar título del botón guardar para indicar edición
@@ -439,6 +439,7 @@ function limpiarFormConteo(){
   document.getElementById('cnt-manual-wrap').style.display='none';
   document.getElementById('cnt-total-display').textContent='0';
   _cntListo(0);
+  _cntBuscaUI();
   _cntVista();
 }
 
@@ -462,9 +463,9 @@ function resolverEAN(){
   var normEAN = /[eE]/.test(ean) ? Math.round(Number(ean)).toString() : ean.replace(/\.0+$/, '');
 
   function _buscarLocal() {
-    var found = _MCONTEO_EAN_IDX[normEAN];
+    var found = _MCONTEO_EAN_IDX[normEAN] || _MCONTEO_SKU_IDX[normEAN.toLowerCase()];
     if (!found) {
-      st.textContent = 'No encontrado: EAN ' + normEAN + ' no está en MCONTEO';
+      st.textContent = 'No encontrado: ' + normEAN + ' no está en MCONTEO';
       st.style.color = 'var(--danger)';
       document.getElementById('cnt-manual-wrap').style.display = 'block';
       _cntCamNoEncontrado();
@@ -521,6 +522,10 @@ function setProductoConteo(ean,sku,sap,producto,multiplicador,stock){
   document.getElementById('cnt-producto-nombre').textContent=producto;
   document.getElementById('cnt-sku-display').textContent=sku;
   var multUnd=document.getElementById('cnt-mult-und');if(multUnd)multUnd.textContent=mult;
+  var packSub=document.getElementById('cnt-pack-sub');if(packSub)packSub.textContent=mult+' unidades por pack';
+  var eanIn=document.getElementById('cnt-ean');if(eanIn)eanIn.value='';
+  var acL=document.getElementById('ac-cnt');if(acL)acL.classList.remove('open');
+  _cntBuscaUI();
   document.getElementById('cnt-producto-card').style.display='block';
   document.getElementById('cnt-manual-wrap').style.display='none';
   // Resetear packs solo si NO es una edición en curso
@@ -551,10 +556,65 @@ function limpiarProductoConteo(){
 
 // Wrapper delgado — delega en acSearch con handler de selección propio (acSelectConteo)
 function acSearchConteo(){
-  var inp=document.getElementById('cnt-sku-manual');
+  var inp=document.getElementById('cnt-ean');
   if(!inp)return;
   // Reutiliza acSearch: listId='ac-cnt', onSelectFn='acSelectConteo'
-  acSearch('cnt-sku-manual', null, null, 'ac-cnt', 'acSelectConteo');
+  acSearch('cnt-ean', null, null, 'ac-cnt', 'acSelectConteo');
+}
+
+// ── Campo único: SKU, nombre o código de barras ──
+function _cntBuscaUI(){
+  var inp=document.getElementById('cnt-ean'), box=document.getElementById('cnt-search');
+  if(box) box.classList.toggle('has', !!(inp && inp.value));
+}
+function cntEntrada(){
+  clearTimeout(_eanTimer);
+  _cntBuscaUI();
+  var inp=document.getElementById('cnt-ean'), ac=document.getElementById('ac-cnt');
+  var v=(inp.value||'').trim();
+  if(!v){
+    if(ac) ac.classList.remove('open');
+    var st=document.getElementById('cnt-ean-status'); if(st) st.textContent='';
+    document.getElementById('cnt-manual-wrap').style.display='none';
+    return;
+  }
+  if(_cnt && _cnt.sku) return;
+  // Solo dígitos: un código de barras o un SKU. Se resuelve solo si es largo (EAN) o si ya existe en el catálogo.
+  if(/^\d+$/.test(v) && v.length>=8){
+    var conocido = !_MCONTEO_LOCAL || _MCONTEO_EAN_IDX[v] || _MCONTEO_SKU_IDX[v.toLowerCase()];
+    if(v.length>=12 || conocido){
+      if(ac) ac.classList.remove('open');
+      _eanTimer=setTimeout(function(){ if(!_cnt.sku) resolverEAN(); },120);
+      return;
+    }
+  }
+  acSearchConteo();
+}
+function cntEnter(){
+  var v=(document.getElementById('cnt-ean').value||'').trim();
+  if(!v) return;
+  var ac=document.getElementById('ac-cnt');
+  if(!/^\d{8,}$/.test(v) && ac && ac.classList.contains('open') && (AC_CACHE['ac-cnt']||[]).length){ acSelectConteo(0); return; }
+  resolverEAN();
+}
+function cntLimpiarBusqueda(){
+  clearTimeout(_eanTimer);
+  var inp=document.getElementById('cnt-ean'); inp.value='';
+  document.getElementById('ac-cnt').classList.remove('open');
+  document.getElementById('cnt-ean-status').textContent='';
+  document.getElementById('cnt-manual-wrap').style.display='none';
+  _cntBuscaUI(); inp.focus();
+}
+function cntMover(id,d){
+  var el=document.getElementById(id); if(!el) return;
+  var v=Math.max(0,Math.min(99999,(Number(el.value)||0)+d));
+  el.value=v||'';
+  calcTotalConteo();
+}
+function cntIrHistorial(){
+  var h=document.getElementById('cnt-history-container');
+  if(h && h.style.display!=='none') h.scrollIntoView({behavior:'smooth',block:'start'});
+  else showToast('Aún no hay conteos en el historial','info');
 }
 
 function acSelectConteo(idx){
@@ -611,6 +671,12 @@ function calcTotalConteo(){
   var total=packs*mult+sueltas;
   document.getElementById('cnt-total-display').textContent=total;
   _cntListo(total);
+  var calcEl=document.getElementById('cnt-calc');
+  if(calcEl) calcEl.textContent=total>0 ? (packs+' × '+mult+' + '+sueltas) : '';
+  var btnG=document.getElementById('btn-guardar-siguiente');
+  if(btnG && !btnG.disabled && !_cnt._editRow) btnG.textContent=(_cnt.sku && total>0) ? ('Guardar '+total+' u y seguir') : 'Guardar y escanear siguiente';
+  var stW=document.getElementById('cnt-stock-wrap'), stD=document.getElementById('cnt-stock-display');
+  if(stW&&stD){ var hayStock=!(_cnt._stock==null||_cnt._stock===''); stW.style.display=hayStock?'':'none'; if(hayStock) stD.textContent=Number(_cnt._stock).toLocaleString('es-PE')+' u'; }
 
   // Progress bar vs stock — sumar conteos previos del mismo SKU en el buffer
   var stock=_cnt._stock;
@@ -619,9 +685,8 @@ function calcTotalConteo(){
   var hint=document.getElementById('cnt-progress-hint');
   if(bar&&label&&hint){
     if(stock==null||stock===undefined||stock===''){
-      label.textContent='— / — und.';
+      label.textContent='';
       bar.style.width='0%';
-      bar.style.background='var(--text4)';
       hint.textContent='';
     } else {
       var stockNum=Number(stock)||0;
@@ -651,22 +716,13 @@ function calcTotalConteo(){
       }
       var totalAcum=prevUnd+total;
       var labelPrev=prevUnd>0?' (+'+prevUnd+' prev)':'';
-      label.textContent=totalAcum+' / '+stockNum+' und.'+labelPrev;
+      label.textContent=totalAcum.toLocaleString('es-PE')+' / '+stockNum.toLocaleString('es-PE')+' u'+labelPrev;
       var pct=stockNum>0?Math.min(Math.round(totalAcum/stockNum*100),100):100;
       bar.style.width=pct+'%';
-      if(pct>=100){
-        bar.style.background='var(--ok)';
-        hint.style.color='var(--ok)';
-        hint.innerHTML=ICO('check',13)+'Stock cubierto'+(totalAcum>stockNum?' (+'+( totalAcum-stockNum)+' extra)':'');
-      } else if(pct>=60){
-        bar.style.background='var(--warn)';
-        hint.style.color='var(--warn)';
-        hint.textContent='Faltan '+(stockNum-totalAcum)+' und. para cubrir stock';
-      } else {
-        bar.style.background='var(--danger)';
-        hint.style.color='var(--danger)';
-        hint.textContent='Faltan '+(stockNum-totalAcum)+' und. para cubrir stock';
-      }
+      if(totalAcum===0) hint.textContent='Aún no has contado este producto';
+      else if(totalAcum===stockNum) hint.textContent='Coincide con el sistema';
+      else if(totalAcum<stockNum) hint.textContent='Faltan '+(stockNum-totalAcum).toLocaleString('es-PE')+' u';
+      else hint.textContent='Sobran '+(totalAcum-stockNum).toLocaleString('es-PE')+' u · revisa el conteo';
     }
   }
 }
@@ -734,6 +790,7 @@ function _renderConteoHistoryNow() {
   // Historial reciente de ESTE equipo (últimas 24 h), del más nuevo al más antiguo.
   // Los conteos que aún no llegaron al servidor (sin _row) se marcan y permiten editar o quitar.
   var items = _conteoBuffer || [];
+  var hd = document.getElementById('cnt-hdot'); if (hd) hd.classList.toggle('on', items.length > 0);
   if (items.length === 0) {
     container.style.display = 'none';
     list.innerHTML = '';

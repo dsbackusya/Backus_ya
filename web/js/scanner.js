@@ -312,7 +312,7 @@ function _cntCamIniciar(){
       if (!_cntCamAbierta() || !f2 || f2.classList.contains('cnt-det')) { stream.getTracks().forEach(function(t){ t.stop(); }); return; }
       _cntCam.stream = stream; _cntCam.activo = true; _cntCam.error = false;
       video.srcObject = stream;
-      msg.textContent = 'Apunta al código de barras';
+      msg.textContent = 'Centra el código de barras en el marco';
 
       var track = stream.getVideoTracks()[0];
       _cntCam.track = track;
