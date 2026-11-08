@@ -161,7 +161,7 @@ var _STOCK_ESTADO_FILTRO = ''; // '', 'con', 'sin', 'neg'
 
 
 /* ── LOADER — anillo lavanda + texto (único para todas las pantallas) ── */
-var _LD_NOM={dashboard:'dashboard',stock:'stock',entradas:'entradas',salidas:'salidas',mt:'mermas y traslados',cancelados:'cancelados',maestro:'maestro',mconteo:'maestro de conteo',conteo:'conteo',envases:'envases',documentos:'documentos',validacion:'validación'};
+var _LD_NOM={dashboard:'dashboard',stock:'stock',entradas:'entradas',salidas:'salidas',mt:'mermas y traslados',cancelados:'cancelados',maestro:'maestro',precios:'precios y SAP',mconteo:'maestro de conteo',conteo:'conteo',envases:'envases',documentos:'documentos',validacion:'validación'};
 function LD(txt){
   return '<div class="loading ld"><div class="ld-ring"></div><div class="ld-txt">'+esc(txt)+'<span class="ld-dots"></span></div></div>';
 }
@@ -235,7 +235,7 @@ function doLogout(){
   if(_sessionPingInterval){clearInterval(_sessionPingInterval);_sessionPingInterval=null;}
   if(window.TadaRealtime) TadaRealtime.detener();
   S={};DATA={stock:[],salidas:[],entradas:[],mt:[],conteo:[],cancelados:[],oc:[]};window.sal_rango=null;window.ent_rango=null;window.cnt_rango=null;window.mt_rango=null;window.canc_rango=null;
-  PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,mconteo:false,conteo:false,envases:false,documentos:false,validacion:false,oc:false};
+  PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,precios:false,mconteo:false,conteo:false,envases:false,documentos:false,validacion:false,oc:false};
   clearSession();
   document.getElementById('s-app').classList.remove('active');
   document.getElementById('s-login').classList.add('active');
@@ -328,6 +328,7 @@ function initApp(){
   var esAdmin=S.rol==='admin'||S.rol==='invitado';
   document.querySelectorAll('.sb-store-only').forEach(function(el){ el.style.display=esAdmin?'none':''; });
   document.querySelectorAll('.sb-admin-only').forEach(function(el){ el.style.display=esAdmin?'':'none'; });
+  var _np=document.getElementById('nav-precios'); if(_np) _np.style.display=(S.rol==='admin')?'':'none';
   if(esAdmin){ navTo('dashboard',document.getElementById('nav-dashboard')); }
   else { navTo('stock',document.getElementById('nav-stock')); }
 }
@@ -335,8 +336,8 @@ function initApp(){
 /* ── AUTO-RESTORE SESSION ON LOAD ── */
 
 /* NAV state — declarado ANTES del auto-restore para evitar undefined si GAS responde rápido */
-var PAGE_TITLES={'dashboard':'Dashboard','stock':'Stock Actual','entradas':'Entradas','salidas':'Salidas','mt':'Mermas & Traslados','cancelados':'Pedidos Cancelados','maestro':'Maestro de Productos (Bees)','mconteo':'Maestro de Conteo','conteo':'Conteo de Inventario','envases':'Control de Envases','documentos':'Documentos de despacho','validacion':'Validación de Inventario'};
-var PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,mconteo:false,conteo:false,envases:false,documentos:false,validacion:false,oc:false};
+var PAGE_TITLES={'dashboard':'Dashboard','stock':'Stock Actual','entradas':'Entradas','salidas':'Salidas','mt':'Mermas & Traslados','cancelados':'Pedidos Cancelados','maestro':'Maestro de Productos (Bees)','precios':'Maestro · Precios y SAP','mconteo':'Maestro de Conteo','conteo':'Conteo de Inventario','envases':'Control de Envases','documentos':'Documentos de despacho','validacion':'Validación de Inventario'};
+var PAGE_LOADED={dashboard:false,stock:false,entradas:false,salidas:false,mt:false,cancelados:false,maestro:false,precios:false,mconteo:false,conteo:false,envases:false,documentos:false,validacion:false,oc:false};
 
 
 var CURRENT_PAGE = '';
@@ -344,7 +345,7 @@ var CURRENT_PAGE = '';
 function navTo(name,btn){
   CURRENT_PAGE = name;
   document.body.classList.toggle('pg-stock', name==='stock');
-  ['dashboard','stock','entradas','salidas','mt','cancelados','maestro','mconteo','conteo','envases','documentos','validacion'].forEach(function(n){
+  ['dashboard','stock','entradas','salidas','mt','cancelados','maestro','precios','mconteo','conteo','envases','documentos','validacion'].forEach(function(n){
     document.getElementById('p-'+n).classList.remove('active');
     document.getElementById('nav-'+n).classList.remove('active');
   });
@@ -398,6 +399,11 @@ function renderTopbarActions(name){
     el.innerHTML=btnRefresh; // Exportar vive en el panel de filtros
   } else if(name==='maestro'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMaestroForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar al maestro</span></button>'+btnRefresh;
+  } else if(name==='precios'){
+    var icoImp='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+    el.innerHTML='<button class="btn btn-ghost btn-sm tb-btn-icon" title="Exportar" onclick="prExportar(false)">'+icoExport+'<span class="tb-btn-label"> Exportar</span></button>'+
+      '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Importar Excel" onclick="prAbrirImportar()">'+icoImp+'<span class="tb-btn-label"> Importar Excel</span></button>'+
+      '<button class="btn btn-primary btn-sm" onclick="prNuevo()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar producto</span></button>'+btnRefresh;
   } else if(name==='mconteo'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMConteoForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar producto</span></button>'+btnRefresh;
   } else if(name==='conteo'){
@@ -478,6 +484,7 @@ function loadPage(name){
   if(name==='mt')         loadMT();
   if(name==='cancelados') loadCancelados();
   if(name==='maestro')    loadMaestro();
+  if(name==='precios')    loadPrecios();
   if(name==='mconteo')    loadMconteo();
   if(name==='conteo')     loadConteo();
   if(name==='envases')    loadEnvases();

@@ -135,6 +135,9 @@ window.addEventListener('load', function(){
       <button class="sb-item" id="nav-dashboard" data-tip="Dashboard" onclick="navTo('dashboard',this)">
         <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span class="sb-item-label">Dashboard</span>
       </button>
+      <button class="sb-item sb-admin-only" id="nav-precios" data-tip="Maestro · Precios y SAP" style="display:none" onclick="navTo('precios',this)">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></span><span class="sb-item-label">Precios y SAP</span>
+      </button>
       <div class="sb-section sb-store-only">Inventario</div>
       <button class="sb-item active sb-store-only" id="nav-stock" data-tip="Stock" onclick="navTo('stock',this)">
         <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg></span><span class="sb-item-label">Stock</span>
@@ -258,6 +261,11 @@ window.addEventListener('load', function(){
       <!-- MAESTRO -->
       <div id="p-maestro" class="page">
         <div id="maestro-root"><div class="loading ld"><div class="ld-ring"></div><div class="ld-txt">Cargando maestro<span class="ld-dots"></span></div></div></div>
+      </div>
+
+      <!-- MAESTRO · PRECIOS Y SAP (solo administrador) -->
+      <div id="p-precios" class="page">
+        <div id="precios-root"><div class="loading ld"><div class="ld-ring"></div><div class="ld-txt">Cargando precios y SAP<span class="ld-dots"></span></div></div></div>
       </div>
 
       <!-- CONTEO -->
@@ -775,6 +783,7 @@ window.addEventListener('load', function(){
 <script src="js/comun.js"></script>
 <script src="js/cancelados.js"></script>
 <script src="js/maestro.js"></script>
+<script src="js/precios.js"></script>
 <script src="js/mconteo.js"></script>
 <script src="js/scanner.js"></script>
 <script src="js/conteo.js"></script>
@@ -979,6 +988,31 @@ window.addEventListener('load', function(){
     <button class="btn btn-primary hidden" id="btn-sku-save" onclick="guardarSKU(false)" disabled>Guardar SKU</button>
   </div>
 </div>
+<div id="pr-layer"></div>
+<div id="pr-toast"></div>
+
+<!-- ══ IMPORTAR PRECIOS Y SAP (asistente de 2 pasos) ══ -->
+<div class="fscreen" id="fs-precios">
+  <div class="fs-header">
+    <button class="btn btn-ghost btn-sm" onclick="piCerrar()"><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Volver</button>
+    <div class="fs-title">Importar precios y SAP</div>
+  </div>
+  <div class="fs-body">
+    <div class="wz">
+      <aside class="wz-rail" id="pi-rail"></aside>
+      <section class="wz-pane" id="pi-pane">
+        <div class="wz-ph" id="pi-ph"><div class="wz-eb" id="pi-eb"></div><h2 id="pi-t"></h2><p id="pi-s"></p></div>
+        <div class="wz-pb">
+          <div id="pi-pb"></div>
+          <div id="pi-s3" class="hidden"></div>
+          <div id="pi-err" class="err-msg" style="margin-top:12px"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+  <div class="fs-footer" id="pi-footer"></div>
+</div>
+
 <!-- ══ FORM: MAESTRO ══ -->
 <div class="fscreen" id="fs-maestro">
   <div class="fs-header">

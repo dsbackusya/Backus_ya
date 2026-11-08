@@ -352,6 +352,59 @@
     return { ok: true, existe: true, desc: str(r.data.descripcion), sap: /^[0-9]+$/.test(sap) ? sap : '', precio: r.data.precio === null ? '' : String(r.data.precio) };
   });
 
+  /* ── MAESTRO DE PRECIOS Y SAP (solo administrador): catálogo global maestro_sku ── */
+  // Todo el Maestro + stock por tienda (para valorizar) + productos de las tiendas que aún no están en el Maestro.
+  API.getMaestroPrecios = guard(async function (p) {
+    if (p.rol !== 'admin') return { ok: false, error: 'Solo el administrador puede ver el Maestro de precios.' };
+    var sedes = (await cargarSedes()).slice().sort(function (a, b) { return a.id - b.id; });
+    var res = await Promise.all([
+      todas(function () { return sb.from('maestro_sku').select('sku,descripcion,cod_sap,precio').order('sku'); }),
+      todas(function () { return sb.from('v_stock').select('sede_id,sku,descripcion,stock_actual').order('sku'); })
+    ]);
+    var stk = {};
+    res[1].forEach(function (r) {
+      var k = str(r.sku), o = stk[k] || (stk[k] = { desc: str(r.descripcion), por: {} });
+      o.por[r.sede_id] = (o.por[r.sede_id] || 0) + num(r.stock_actual);
+    });
+    function fila(sku, desc, sap, precio, nuevo) {
+      var o = stk[sku];
+      return { sku: sku, desc: desc, sap: sap, precio: precio,
+        stock: sedes.map(function (s) { return o ? (o.por[s.id] || 0) : 0; }),
+        enTiendas: sedes.map(function (s) { return !!(o && (s.id in o.por)); }), nuevo: !!nuevo };
+    }
+    var enMaestro = {};
+    var data = res[0].map(function (r) {
+      var k = str(r.sku); enMaestro[k] = true;
+      return fila(k, str(r.descripcion), str(r.cod_sap), r.precio === null ? null : num(r.precio), false);
+    });
+    var sin = Object.keys(stk).filter(function (k) { return !enMaestro[k]; }).map(function (k) { return fila(k, stk[k].desc, '', null, true); });
+    return { ok: true, data: data, sinMaestro: sin, sedes: sedes.map(function (s) { return { id: s.id, nombre: s.nombre }; }) };
+  });
+
+  // filas: [{ sku, desc?, sap?, precio? }]  (clave ausente = no se toca; null = se borra). recalcular = recalcular el costo de las mermas ya registradas.
+  API.guardarMaestroPrecios = guard(async function (p, filas, recalcular) {
+    if (p.rol !== 'admin') return { ok: false, error: 'Solo el administrador puede actualizar el Maestro.' };
+    var lista = (filas || []).map(function (f) {
+      var o = { sku: str(f.sku) };
+      if ('desc' in f) o.desc = str(f.desc);
+      if ('sap' in f) o.sap = (f.sap === null || str(f.sap) === '') ? null : str(f.sap);
+      if ('precio' in f) o.precio = (f.precio === null || f.precio === '' || f.precio === undefined) ? null : Number(f.precio);
+      return o;
+    });
+    if (!lista.length) return { ok: true, insertados: 0, actualizados: 0, mermas: 0 };
+    var r = await sb.rpc('maestro_aplicar', { p_filas: lista, p_recalcular: !!recalcular });
+    if (r.error) return { ok: false, error: r.error.message };
+    return { ok: true, insertados: r.data.insertados, actualizados: r.data.actualizados, mermas: r.data.mermas };
+  });
+
+  // Cuántas mermas (M-T) hay registradas con ese SKU en todas las tiendas: para avisar antes de recalcular su costo.
+  API.contarMermasSKU = guard(async function (p, sku) {
+    if (p.rol !== 'admin') return { ok: false, error: 'Solo el administrador.' };
+    var r = await sb.from('mt').select('id', { count: 'exact', head: true }).eq('sku', str(sku));
+    if (r.error) throw r.error;
+    return { ok: true, n: r.count || 0 };
+  });
+
   API.buscarSKU = guard(async function (p, query) {
     var q = String(query || '').replace(/[,()*%\\]/g, ' ').trim();
     if (!q) return { ok: true, results: [] };
