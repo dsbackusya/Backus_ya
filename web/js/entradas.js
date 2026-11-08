@@ -496,13 +496,34 @@ function entResumen(){
 }
 
 /* ── ASISTENTE (4 pasos): 1 Origen · 2 Factura · 3 Productos · 4 Confirmar ── */
-var WZ={paso:1,origen:null};
+var WZ={paso:1,origen:null,leyendo:false,run:0,dir:1,pi:0,fin:false};
 var WZ_NOM=['Origen','Datos de la factura','Productos','Confirmar'];
+var _wzEl=function(id){return document.getElementById(id);};
+function _wzReducido(){ return !!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches); }
+function _wzEspera(ms){ return new Promise(function(ok){ setTimeout(ok,ms); }); }
+function _numFmt2(n){ return Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function _numFmt0(n){ return fmt(Math.round(n)); }
+
+// Número que "cuenta" hasta su valor. Usa setInterval (no requestAnimationFrame) para no congelarse en segundo plano.
+function countTo(el,to,fmtFn,ms){
+  if(!el) return;
+  clearInterval(el._iv);
+  var from=Number(el.dataset.v||0); fmtFn=fmtFn||_numFmt2; ms=ms||650;
+  el.dataset.v=to;
+  if(from===to||_wzReducido()){ el.textContent=fmtFn(to); return; }
+  var t0=performance.now();
+  el._iv=setInterval(function(){
+    var p=Math.min(1,(performance.now()-t0)/ms), e=1-Math.pow(1-p,4);
+    el.textContent=fmtFn(from+(to-from)*e);
+    if(p>=1||!el.isConnected){ clearInterval(el._iv); el.textContent=fmtFn(to); }
+  },16);
+}
 
 function wzOrigen(o){
   WZ.origen=o;
   switchEntradaTab(o);
-  if(o==='manual') wzIr(2);   // escribir a mano no necesita archivo: se pasa directo a la factura
+  if(o==='manual') wzIr(2);                        // escribir a mano no necesita archivo: directo a la factura
+  else _ocrCargarLibs().catch(function(){});       // mientras eliges el archivo ya se va precargando el lector
 }
 
 // ¿Se puede salir de este paso hacia adelante? → {ok, msg}
@@ -510,7 +531,7 @@ function wzValido(p){
   var c=_entCuenta();
   if(p===1){
     if(!WZ.origen) return {ok:false,msg:'Elige cómo cargar los productos'};
-    if(WZ.origen==='archivo'&&!ARCH_ROWS.length) return {ok:false,msg:'Sube la orden de compra o el Excel para continuar'};
+    if(WZ.origen==='archivo'&&(WZ.leyendo||!ARCH_ROWS.length)) return {ok:false,msg:'Sube la orden de compra o el Excel para continuar'};
     return {ok:true,msg:''};
   }
   if(p===2){
@@ -518,6 +539,7 @@ function wzValido(p){
   }
   if(p===3){
     if(c.incompletas) return {ok:false,msg:'Completa SKU y unidades de cada fila, o quita las incompletas'};
+    if(WZ.origen==='archivo'&&ARCH_ROWS.some(_pvRev)) return {ok:false,msg:'Resuelve los productos por revisar'};
     if(!c.n) return {ok:false,msg:WZ.origen==='archivo'?'Marca al menos un producto':'Agrega al menos un producto'};
     return {ok:true,msg:''};
   }
@@ -528,13 +550,23 @@ function _wzPuedeIr(k){
   for(var j=1;j<k;j++){ if(!wzValido(j).ok) return false; }
   return true;
 }
+// Anima el cambio de paso (se desliza según vayas adelante o atrás)
+function _wzAnimar(){
+  var p=document.querySelector('#fs-entrada .wz-pane'); if(!p) return;
+  p.classList.remove('in-fwd','in-back'); void p.offsetWidth;
+  p.classList.add(WZ.dir>0?'in-fwd':'in-back');
+}
 function wzIr(k){
-  if(k<1||k>4||!_wzPuedeIr(k)) return;
-  WZ.paso=k;
+  if(k<1||k>4||WZ.fin||!_wzPuedeIr(k)) return;
+  var cambia=k!==WZ.paso;
+  WZ.dir=k>=WZ.paso?1:-1; WZ.paso=k;
   if(k===4) wzResumen();
+  if(k===1) wzDonePintar();
+  if(cambia) _wzAnimar();
   wzActualizar();
   var pb=document.querySelector('#fs-entrada .fs-body'); if(pb) pb.scrollTop=0;
-  if(k===2) setTimeout(function(){var e=document.getElementById('ent-factura'); if(e&&!e.value) e.focus();},80);
+  if(k===2) setTimeout(function(){var e=_wzEl('ent-factura'); if(e&&!e.value) e.focus({preventScroll:true});},450);
+  if(k===1) setTimeout(function(){var b=_wzEl('wz-cta'); if(b&&b.offsetParent) b.focus({preventScroll:true});},450);
 }
 function wzSiguiente(){ if(wzValido(WZ.paso).ok) wzIr(WZ.paso+1); }
 function wzAtras(){ if(WZ.paso>1) wzIr(WZ.paso-1); else closeFS('fs-entrada'); }
@@ -544,6 +576,7 @@ function _wzResumenPaso(k){
   if(k===1){
     if(!WZ.origen) return 'Elige cómo cargar';
     if(WZ.origen==='manual') return 'Escribir a mano';
+    if(WZ.leyendo) return 'Leyendo el archivo…';
     if(!ARCH_ROWS.length) return 'Sube la OC o el Excel';
     var oc=(document.getElementById('ent-oc').value||'').trim();
     return (oc||'Archivo')+' · '+ARCH_ROWS.length+' productos';
@@ -552,7 +585,7 @@ function _wzResumenPaso(k){
   if(k===3){
     if(WZ.origen==='archivo'){
       var rev=ARCH_ROWS.filter(_pvRev).length;
-      return c.n?(c.n+' de '+ARCH_ROWS.length+' incluidos'+(rev?' · '+rev+' por revisar':'')):'Revisa los productos';
+      return rev?(rev+' por resolver'):(c.n?(c.n+' productos listos'):'Revisa los productos');
     }
     return c.n?(c.n+(c.n===1?' producto':' productos')+' · '+fmt(c.u)+' u.'):'Agrega los productos';
   }
@@ -565,58 +598,83 @@ function _wzTxtGuardar(){
   return WZ.origen==='archivo'?'Importar '+n+(n===1?' producto':' productos'):'Guardar entrada';
 }
 
-// Repinta el riel de pasos, el encabezado, los pasos visibles y la barra de botones
+// Riel de pasos: se construye una vez y luego solo se actualizan clases y textos (así animan las transiciones)
+var _WZ_CHK='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+function _wzRailUpd(){
+  var rail=_wzEl('wz-rail'); if(!rail) return;
+  if(!rail.dataset.built){
+    rail.dataset.built='1';
+    rail.innerHTML='<h4>Asistente · 4 pasos</h4>'+WZ_NOM.map(function(n,i){
+      var k=i+1;
+      return '<button type="button" class="wz-stp" id="wz-stp-'+k+'" onclick="wzIr('+k+')"><span class="wz-dot" id="wz-dot-'+k+'">'+k+'</span><span class="wz-ln"><i></i></span><span class="wz-tx"><strong>'+n+'</strong><small id="wz-sm-'+k+'"></small></span></button>';
+    }).join('');
+  }
+  for(var k=1;k<=4;k++){
+    var b=_wzEl('wz-stp-'+k), hecho=WZ.fin||(k<WZ.paso&&wzValido(k).ok), on=!WZ.fin&&k===WZ.paso;
+    b.classList.toggle('on',on); b.classList.toggle('done',hecho);
+    b.disabled=WZ.fin||!_wzPuedeIr(k);
+    var dot=_wzEl('wz-dot-'+k);
+    if((dot.dataset.d==='1')!==hecho){ dot.dataset.d=hecho?'1':'0'; dot.innerHTML=hecho?_WZ_CHK:k; }
+    var sm=_wzEl('wz-sm-'+k), tx=_wzResumenPaso(k);
+    if(sm.textContent!==tx) sm.textContent=tx;
+  }
+}
+
+// Paso 1: una de tres vistas (soltar archivo · leyendo · listo)
+function wzVista(){
+  var arch=WZ.origen==='archivo';
+  var v=WZ.leyendo?'read':(ARCH_ROWS.length?'done':'drop');
+  ['drop','read','done'].forEach(function(k){ _wzEl('wz-v-'+k).classList.toggle('hidden',v!==k); });
+  var ch=_wzEl('wz-ch');
+  ch.classList.toggle('gone',WZ.leyendo);
+  ch.classList.toggle('compact',arch);
+}
+
+// Repinta el riel, el encabezado, el paso visible y la barra de botones (barato: se llama en cada cambio)
 function wzActualizar(){
   // si se quitó el archivo estando más adelante, se vuelve al paso 1
-  if(WZ.origen==='archivo'&&!ARCH_ROWS.length&&WZ.paso>=3) WZ.paso=1;
-  var rail=document.getElementById('wz-rail'); if(!rail) return;
-  var chk='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-  rail.innerHTML='<h4>Asistente · 4 pasos</h4>'+WZ_NOM.map(function(n,i){
-    var k=i+1, hecho=k<WZ.paso&&wzValido(k).ok, c=k===WZ.paso?' on':(hecho?' done':'');
-    return '<button type="button" class="wz-stp'+c+'" '+(_wzPuedeIr(k)?'':'disabled')+' onclick="wzIr('+k+')">'+
-      '<span class="wz-dot">'+(hecho?chk:k)+'</span><span class="wz-tx"><strong>'+n+'</strong><small>'+esc(_wzResumenPaso(k))+'</small></span></button>';
-  }).join('');
-
+  if(WZ.origen==='archivo'&&!ARCH_ROWS.length&&!WZ.leyendo&&WZ.paso>=3&&!WZ.fin) WZ.paso=1;
+  if(!_wzEl('wz-rail')) return;
+  _wzRailUpd();
+  var fin=WZ.fin, v=wzValido(WZ.paso), c=_entCuenta();
   var T=[
     ['Origen de los productos','Sube la orden de compra y leemos todo por ti, o escríbelos a mano.'],
-    ['Datos de la factura',WZ.origen==='archivo'&&(document.getElementById('ent-oc').value||'').trim()?'La OC ya está completada con los datos del archivo. Falta la factura.':'Escribe la factura y completa lo que necesites.'],
-    ['Productos recibidos',WZ.origen==='archivo'?'Revisa lo leído: corrige SKU o cantidades y desmarca lo que no llegó.':'Busca cada producto por SKU o nombre y escribe las unidades.'],
+    ['Datos de la factura',WZ.origen==='archivo'&&(document.getElementById('ent-oc').value||'').trim()?'Lo del archivo ya está completado. Falta la factura.':'Escribe la factura y completa lo que necesites.'],
+    ['Productos recibidos',WZ.origen==='archivo'?'Resuelve lo pendiente y desmarca lo que no llegó.':'Busca cada producto por SKU o nombre y escribe las unidades.'],
     ['Confirma y guarda','Revisa el resumen. Puedes editar cualquier sección antes de guardar.']
   ][WZ.paso-1];
-  document.getElementById('wz-eb').textContent='Paso '+WZ.paso+' de 4';
-  document.getElementById('wz-t').textContent=T[0];
-  document.getElementById('wz-s').textContent=T[1];
-  for(var k=1;k<=4;k++) document.getElementById('wz-s'+k).classList.toggle('hidden',k!==WZ.paso);
-  // tarjetas de origen y zonas de paso 1
-  document.getElementById('ent-m-archivo').classList.toggle('sel',WZ.origen==='archivo');
-  document.getElementById('ent-m-manual').classList.toggle('sel',WZ.origen==='manual');
-  document.getElementById('wz-s1-arch').classList.toggle('hidden',WZ.origen!=='archivo');
-  document.getElementById('wz-s1-man').classList.toggle('hidden',WZ.origen!=='manual');
+  document.querySelector('#fs-entrada .wz-ph').classList.toggle('hidden',fin);
+  _wzEl('wz-eb').textContent='Paso '+WZ.paso+' de 4';
+  _wzEl('wz-t').textContent=T[0];
+  _wzEl('wz-s').textContent=T[1];
+  for(var k=1;k<=5;k++) _wzEl('wz-s'+k).classList.toggle('hidden',k!==(fin?5:WZ.paso));
+  _wzEl('ent-m-archivo').classList.toggle('sel',WZ.origen==='archivo');
+  _wzEl('ent-m-manual').classList.toggle('sel',WZ.origen==='manual');
+  _wzEl('wz-s1-arch').classList.toggle('hidden',WZ.origen!=='archivo');
+  _wzEl('wz-s1-man').classList.toggle('hidden',WZ.origen!=='manual');
+  wzVista();
 
-  var v=wzValido(WZ.paso);
-  var back=document.getElementById('btn-ent-back'), nx=document.getElementById('btn-ent-next'), sv=document.getElementById('btn-ent-save');
+  _wzEl('ent-footer').classList.toggle('hidden',fin);
+  var back=_wzEl('btn-ent-back'), nx=_wzEl('btn-ent-next'), sv=_wzEl('btn-ent-save');
   back.innerHTML=WZ.paso>1?'← Atrás':'Cancelar <span class="en2-kb">Esc</span>';
-  nx.classList.toggle('hidden',WZ.paso===4);
+  // en el paso 1 no hay "Siguiente": el botón grande de la vista final hace de Continuar
+  nx.classList.toggle('hidden',WZ.paso===4||WZ.paso===1);
   sv.classList.toggle('hidden',WZ.paso!==4);
   nx.disabled=!v.ok;
   if(sv.textContent.indexOf('...')<0){
     sv.textContent=_wzTxtGuardar();
-    var listo=!!(document.getElementById('ent-factura').value||'').trim()&&_entCuenta().n>0;
-    sv.disabled=!listo;
+    sv.disabled=!((document.getElementById('ent-factura').value||'').trim()&&c.n>0);
   }
-  var msg=document.getElementById('ent-msg');
+  var msg=_wzEl('ent-msg');
   if(msg){
-    var c=_entCuenta();
-    if(WZ.paso===4) msg.innerHTML='<b>'+c.n+'</b> '+(c.n===1?'producto':'productos')+' · <b>'+fmt(c.u)+'</b> unidades';
-    else if(!v.ok) msg.textContent='';   // el botón Siguiente deshabilitado ya indica que falta algo
-    else msg.innerHTML=c.n?'<b>'+c.n+'</b> '+(c.n===1?'producto':'productos')+' · <b>'+fmt(c.u)+'</b> unidades':'';
-    msg.style.color=(WZ.paso!==4&&!v.ok)?'var(--text3)':'';
+    var txt=(WZ.paso>1&&(v.ok||WZ.paso===4)&&c.n)?'<b>'+c.n+'</b> '+(c.n===1?'producto':'productos')+' · <b>'+fmt(c.u)+'</b> unidades':'';
+    if(msg._t!==txt){ msg._t=txt; msg.innerHTML=txt; }
   }
 }
 
-// Paso 4: resumen con enlaces para editar cada sección
+// Paso 4: resumen con enlaces para editar cada sección y total que cuenta hacia arriba
 function wzResumen(){
-  var el=document.getElementById('wz-resumen'); if(!el) return;
+  var el=_wzEl('wz-resumen'); if(!el) return;
   var g=function(id){return (document.getElementById(id)||{}).value||'';};
   var c=_entCuenta();
   function kv(k,v){ return '<div class="wz-kv"><span>'+k+'</span><b>'+(v?esc(v):'—')+'</b></div>'; }
@@ -627,15 +685,16 @@ function wzResumen(){
     '<div class="wz-rc"><div class="wz-rt"><span>Origen</span><button type="button" onclick="wzIr(1)">Editar</button></div>'+origen+'</div>'+
     '<div class="wz-rc"><div class="wz-rt"><span>Factura</span><button type="button" onclick="wzIr(2)">Editar</button></div>'+
       kv('Referencia',g('ent-factura'))+kv('Fecha de ingreso',g('ent-fecha'))+kv('Dynamics',g('ent-dynamics'))+kv('Responsable',g('ent-responsable'))+'</div>';
-  var conMonto=WZ.origen==='archivo'&&ARCH_ROWS.some(function(r){return typeof r.monto==='number';});
+  var conMonto=WZ.origen==='archivo'&&ARCH_ROWS.some(function(r){return typeof r.monto==='number';}), valor=0, esMonto=false;
   if(conMonto){
     var sel=0; ARCH_ROWS.forEach(function(r){ if(r.incluir&&typeof r.monto==='number') sel+=r.monto; });
-    sel=Math.round(sel*100)/100;
+    sel=Math.round(sel*100)/100; valor=sel; esMonto=true;
     var t=ARCH_TOT||{}, cuadra=t.sub&&Math.abs(sel-t.sub)<0.05;
-    h+='<div class="wz-tot"><div><small>Total a importar (sin impuestos)</small><b>'+_soles(sel)+'</b></div>'+
+    h+='<div class="wz-tot"><div><small>Total a importar (sin impuestos)</small><b class="num">S/ <span id="wz-tv" data-v="0">0.00</span></b></div>'+
        '<div class="r"><small>'+c.n+' productos · '+fmt(c.u)+' u.</small><b>'+(t.sub?(cuadra?'Cuadra con la OC ✓':'Subtotal OC '+_soles(t.sub)):'')+'</b></div></div>';
   } else {
-    h+='<div class="wz-tot"><div><small>Se sumará al stock de la sede</small><b>'+fmt(c.u)+' unidades</b></div><div class="r"><small>Productos</small><b>'+c.n+'</b></div></div>';
+    valor=c.u;
+    h+='<div class="wz-tot"><div><small>Se sumará al stock de la sede</small><b class="num"><span id="wz-tv" data-v="0">0</span> unidades</b></div><div class="r"><small>Productos</small><b>'+c.n+'</b></div></div>';
   }
   if(WZ.origen==='archivo'){
     var om=ARCH_ROWS.filter(function(r){return !r.incluir;});
@@ -645,22 +704,119 @@ function wzResumen(){
   }
   h+='</div>';
   el.innerHTML=h;
-  document.getElementById('ent-err4').textContent='';
+  _wzEl('ent-err4').textContent='';
+  setTimeout(function(){ countTo(_wzEl('wz-tv'),valor,esMonto?_numFmt2:_numFmt0,1000); },350);
 }
 
-// Resalta de dónde vino lo leído del archivo (paso 1)
-function _wzFound(){
-  var el=document.getElementById('wz-found'); if(!el) return;
+/* ── Paso 1 · lectura del archivo: escenario a todo el ancho con el texto real que se va leyendo ── */
+var WZ_Q=[], WZ_QT=null, WZ_N=0, WZ_EXP=0, _ocrWorkerAct=null;
+function wzLeerInicio(tipo,nombre){
+  WZ.run++; WZ.leyendo=true; WZ_Q=[]; WZ_N=0; WZ_EXP=0; clearInterval(WZ_QT); WZ_QT=null;
+  var xl=tipo==='xlsx', n=esc(nombre||'archivo');
+  _wzEl('wz-v-read').innerHTML='<div class="wz-rstage" id="wz-rst">'+
+    '<div class="wz-rhead"><div><div class="wz-rt1">Leyendo '+n+'</div><div class="wz-big num"><span id="wz-cnt">0</span><small>productos encontrados</small></div></div>'+
+      '<div class="wz-pw"><div class="wz-pbar"><i id="wz-pgb"></i></div><div class="wz-rmsg" id="wz-st-msg">Preparando el lector…</div></div>'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="wzCancelarLectura()">Cancelar</button></div>'+
+    '<div class="wz-docbox"><div class="wz-beam" id="wz-beam"></div>'+
+      '<div class="wz-dh"><span class="wz-nm"><i class="'+(xl?'xl':'')+'">'+(xl?'XLS':'PDF')+'</i>'+n+'</span><span class="wz-pg" id="wz-pgi">'+(xl?'Hoja 1':'')+'</span></div>'+
+      '<div class="wz-paper'+(xl?' xl':'')+'" id="wz-paper"><div class="wz-ph1">'+(xl?'<b>Hoja1</b><span id="wz-doc-oc">&nbsp;</span>':'<b>Orden de compra</b><span id="wz-doc-oc">&nbsp;</span>')+'</div><div id="wz-dl"></div></div>'+
+    '</div></div>';
+  wzActualizar();
+  return WZ.run;
+}
+function wzStageMsg(txt){ var m=_wzEl('wz-st-msg'); if(m&&txt) m.textContent=txt; }
+function wzStagePag(i,n){
+  var b=_wzEl('wz-pgb'); if(b) b.style.width=Math.round(i/n*100)+'%';
+  var g=_wzEl('wz-pgi'); if(g&&n) g.textContent='Pág. '+Math.max(1,Math.min(n,i+(i<n?1:0)))+' de '+n;
+}
+function _wzLinea(it){
+  var q=it.cant>0?_numFmt2(it.cant):'—', m=typeof it.monto==='number'?_numFmt2(it.monto):'';
+  return '<div class="wz-dl'+(it.cant>0?'':' sq')+'"><span>'+esc(it.linea)+'</span><span>'+esc(it.sku)+'</span><span class="d">'+esc(it.desc)+'</span><span class="q">'+q+'</span><span class="m">'+m+'</span></div>';
+}
+// Las líneas entran por tandas pequeñas: se ve fluido y no bloquea la pantalla con listas largas
+function _wzDrain(){
+  var dl=_wzEl('wz-dl');
+  if(!dl||!WZ.leyendo||!WZ_Q.length){ clearInterval(WZ_QT); WZ_QT=null; return; }
+  var n=Math.max(1,Math.ceil(WZ_Q.length/40)), lote=WZ_Q.splice(0,n), h='';
+  lote.forEach(function(it){ h+=_wzLinea(it); });
+  WZ_N+=lote.length;
+  dl.insertAdjacentHTML('beforeend',h);
+  var c=_wzEl('wz-cnt'); if(c) c.textContent=WZ_N;
+  if(WZ_EXP){ var b=_wzEl('wz-pgb'); if(b) b.style.width=Math.round(WZ_N/WZ_EXP*100)+'%'; }
+  var sc=_wzEl('wz-paper'); if(sc) sc.scrollTop=sc.scrollHeight;
+}
+function wzStageAdd(items,run){
+  if(run!==WZ.run||!items.length) return;
+  WZ_Q=WZ_Q.concat(items);
+  if(!WZ_QT) WZ_QT=setInterval(_wzDrain,45);
+}
+function _wzEsperarCola(run){
+  return new Promise(function(ok){ (function chk(){ if(!WZ_Q.length||run!==WZ.run) ok(); else setTimeout(chk,40); })(); });
+}
+// Sello "leído" → el escenario se desvanece → queda el resumen y el botón Continuar
+async function wzFinLectura(run){
+  await _wzEsperarCola(run); if(run!==WZ.run) return;
+  var bm=_wzEl('wz-beam'); if(bm) bm.remove();
+  var box=document.querySelector('#wz-rst .wz-docbox');
+  if(box) box.insertAdjacentHTML('beforeend','<div class="wz-stamp"><div class="wz-sc"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div><b>'+ARCH_ROWS.length+' productos leídos</b></div>');
+  var rd=_wzReducido();
+  await _wzEspera(rd?250:1100); if(run!==WZ.run) return;
+  var st=_wzEl('wz-rst'); if(st) st.classList.add('out');
+  await _wzEspera(rd?0:480); if(run!==WZ.run) return;
+  WZ.leyendo=false;
+  wzDonePintar();
+  var d=_wzEl('wz-v-done'); d.classList.remove('wz-reveal'); void d.offsetWidth; d.classList.add('wz-reveal');
+  _wzEl('wz-v-read').innerHTML='';
+  wzActualizar();
+  var b=_wzEl('wz-cta'); if(b) b.focus({preventScroll:true});
+}
+// Algo salió mal al leer: se vuelve a la zona de soltar archivo y se muestra el motivo
+function wzLeerFallo(run,msg){
+  if(run!==WZ.run) return;
+  WZ.run++; WZ.leyendo=false; clearInterval(WZ_QT); WZ_QT=null; WZ_Q=[];
+  _wzEl('wz-v-read').innerHTML='';
+  clearFile();
+  _wzEl('arch-err').textContent=msg;
+}
+function wzCancelarLectura(){
+  WZ.run++; WZ.leyendo=false; clearInterval(WZ_QT); WZ_QT=null; WZ_Q=[];
+  if(_ocrWorkerAct){ try{ _ocrWorkerAct.terminate(); }catch(e){} _ocrWorkerAct=null; }
+  _wzEl('wz-v-read').innerHTML='';
+  clearFile();
+}
+
+// Vista final del paso 1: archivo leído + datos detectados + botón Continuar
+function wzDonePintar(){
+  var el=_wzEl('wz-v-done'); if(!el) return;
   if(!ARCH_ROWS.length){ el.innerHTML=''; return; }
-  var oc=(document.getElementById('ent-oc').value||'').trim(), t=ARCH_TOT||{};
-  el.innerHTML=(ARCH_FILE?'<span class="wz-file">'+esc(ARCH_FILE)+'</span>':'')+
-    (oc?'<span>✓ '+esc(oc)+'</span>':'')+'<span>✓ '+ARCH_ROWS.length+' productos</span>'+
-    (t.sub?'<span>✓ Subtotal '+_soles(t.sub)+'</span>':'');
+  var pdf=/\.pdf$/i.test(ARCH_FILE), oc=(document.getElementById('ent-oc').value||'').trim(), t=ARCH_TOT||{};
+  var pe=ARCH_ROWS.filter(_pvRev).length;
+  el.innerHTML='<div class="wz-fl"><div class="wz-fi'+(pdf?'':' xl')+'">'+(pdf?'PDF':'XLS')+'</div><div class="wz-flm"><div class="wz-fn">'+esc(ARCH_FILE||'Archivo')+'</div><div class="wz-fs">'+ARCH_ROWS.length+' líneas leídas</div></div>'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="clearFile()">Cambiar</button></div>'+
+    '<div class="wz-found">'+(oc?'<span>✓ '+esc(oc)+'</span>':'')+'<span>✓ '+ARCH_ROWS.length+' productos</span>'+(t.sub?'<span>✓ Subtotal '+_soles(t.sub)+'</span>':'')+'</div>'+
+    (pe?'<div class="wz-warnbox">⚠ '+pe+(pe===1?' línea necesita':' líneas necesitan')+' tu revisión. Las verás en el paso 3.</div>':'')+
+    '<div class="wz-cta1"><button type="button" class="btn btn-primary wz-big" id="wz-cta" onclick="wzIr(2)">Continuar con los datos de la factura →</button><span class="wz-kbd">Enter</span></div>';
+}
+
+// Pantalla de éxito después de guardar
+function wzExito(n,u,fac,monto){
+  WZ.fin=true; WZ.dir=1;
+  _wzEl('wz-s5').innerHTML='<div class="wz-okc"><svg viewBox="0 0 100 100"><circle class="halo" cx="50" cy="50" r="46"/><circle class="c1" cx="50" cy="50" r="46"/><path class="c2" d="M30 52l14 14 27-30"/></svg>'+
+    '<h2>Entrada registrada</h2><p><b class="num">'+n+'</b> '+(n===1?'producto':'productos')+' · <b class="num">'+fmt(u)+'</b> unidades sumadas al stock.</p>'+
+    '<p class="num" style="font-size:13px">Factura '+esc(fac)+(monto?' · '+_soles(monto):'')+'</p>'+
+    '<div class="acts"><button type="button" class="btn" onclick="abrirEntrada()">Registrar otra entrada</button><button type="button" class="btn btn-primary" onclick="closeFS(\'fs-entrada\')">Ir a Entradas</button></div></div>';
+  _wzAnimar();
+  wzActualizar();
 }
 
 var ARCH_FILE='';   // nombre del archivo cargado
 function abrirEntrada(){
-  WZ.paso=1; WZ.origen=null;
+  // invalida cualquier lectura en curso y reinicia el asistente
+  WZ.run++; WZ.leyendo=false; WZ.fin=false; WZ.paso=1; WZ.origen=null; WZ.pi=0; WZ.dir=1;
+  clearInterval(WZ_QT); WZ_QT=null; WZ_Q=[];
+  if(_ocrWorkerAct){ try{ _ocrWorkerAct.terminate(); }catch(e){} _ocrWorkerAct=null; }
+  _wzEl('wz-v-read').innerHTML=''; _wzEl('wz-s5').innerHTML='';
+  var pn=document.querySelector('#fs-entrada .wz-pane'); if(pn) pn.classList.remove('in-fwd','in-back');
   switchEntradaTab('manual');
   ['ent-factura','ent-proveedor','ent-oc','ent-fvenc'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.value='';
@@ -760,8 +916,8 @@ document.addEventListener('keydown',function(e){
   var fs=document.getElementById('fs-entrada');
   if(!fs||!fs.classList.contains('open')) return;
   if(e.key==='Escape'){ closeFS('fs-entrada'); return; }
-  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
-    var b=document.getElementById(WZ.paso===4?'btn-ent-save':'btn-ent-next');
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&!WZ.fin){
+    var b=document.getElementById(WZ.paso===4?'btn-ent-save':(WZ.paso===1?'wz-cta':'btn-ent-next'));
     if(b&&!b.disabled){ e.preventDefault(); b.click(); }
   }
 });
@@ -784,7 +940,10 @@ function handleFileSelect(file){
   if(!file.name.match(/\.xlsx?$/i)){err.textContent='Solo se aceptan archivos .xlsx, .xls o .pdf';return;}
 
   var reader=new FileReader();
+  var run=wzLeerInicio('xlsx',file.name);
+  wzStageMsg('Leyendo la hoja de cálculo…');
   reader.onload=function(e){
+    if(run!==WZ.run) return;
     try{
       var data=new Uint8Array(e.target.result);
       var wb=XLSX.read(data,{type:'array'});
@@ -816,10 +975,15 @@ function handleFileSelect(file){
         ARCH_ROWS.push(fila);
       });
 
-      if(!ARCH_ROWS.length){err.textContent='No se encontraron productos en el archivo';return;}
+      if(!ARCH_ROWS.length){ wzLeerFallo(run,'No se encontraron productos en el archivo'); return; }
+      wzStageMsg('Reconociendo SKU, cantidades y montos…');
+      WZ_EXP=ARCH_ROWS.length;
+      wzStageAdd(ARCH_ROWS.map(function(r){return {linea:r.idx,sku:r.sku,desc:r.desc,cant:r.cant,monto:r.monto};}),run);
       renderPreview();
-    }catch(ex){err.textContent='Error leyendo archivo: '+ex.message;}
+      wzFinLectura(run);
+    }catch(ex){ wzLeerFallo(run,'Error leyendo archivo: '+ex.message); }
   };
+  reader.onerror=function(){ wzLeerFallo(run,'No se pudo leer el archivo'); };
   reader.readAsArrayBuffer(file);
 }
 
@@ -827,43 +991,58 @@ function _soles(n){
   return 'S/ '+Number(n||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
-// Monto de la OC: baja al desmarcar productos. Solo aparece si el archivo trae montos (el PDF de la OC los trae).
+// Resumen del paso 3: monto y unidades que "cuentan" al cambiar la selección + cuadre con el subtotal de la OC.
 function _archTotal(){ _archTotalInner(); entResumen(); }
 function _archTotalInner(){
   var el=document.getElementById('arch-total'); if(!el) return;
   var conMonto=ARCH_ROWS.some(function(r){return typeof r.monto==='number';});
   var box=document.getElementById('arch-preview-box');
   if(box) box.classList.toggle('pv-conmonto',conMonto);
-  if(!conMonto){ el.style.display='none'; el.innerHTML=''; return; }
-  var todo=0, sel=0, nSel=0;
+  if(!ARCH_ROWS.length){ el.style.display='none'; el.innerHTML=''; return; }
+  if(!el.firstChild){
+    el.innerHTML='<div class="wz-strip">'+
+      '<div id="st-mb"><small>Monto a importar</small><div class="wz-v num">S/ <span id="st-m" data-v="0">0.00</span></div><div class="wz-sub" id="st-imp"></div></div>'+
+      '<div><small>Unidades</small><div class="wz-v2 num" id="st-u" data-v="0">0</div><div class="wz-sub" id="st-n"></div></div>'+
+      '<div id="st-cb"><small>Cuadre con la OC</small><div class="wz-v3 num" id="st-c"></div><div class="wz-rb" id="st-rb"><i></i></div></div></div>'+
+      '<div class="wz-warn" id="st-w" style="display:none"></div>';
+  }
+  el.style.display='block';
+  var todo=0, sel=0, nSel=0, und=0;
   ARCH_ROWS.forEach(function(r){
-    if(typeof r.monto!=='number') return;
-    todo+=r.monto;
-    if(r.incluir){ sel+=r.monto; nSel++; }
+    if(typeof r.monto==='number'){ todo+=r.monto; if(r.incluir) sel+=r.monto; }
+    if(r.incluir){ nSel++; und+=Number(r.cant)||0; }
   });
   todo=Math.round(todo*100)/100; sel=Math.round(sel*100)/100;
-  var quita=Math.round((todo-sel)*100)/100;
-  var t=ARCH_TOT||{};
-  var html='<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px 16px">'+
-    '<div><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)">Monto a importar (sin impuestos)</div>'+
-      '<div style="font-size:26px;font-weight:700;letter-spacing:-.02em;color:var(--text)">'+_soles(sel)+'</div>'+
-      '<div style="font-size:12px;color:var(--text2)">'+nSel+' de '+ARCH_ROWS.length+' productos'+(quita>0.004?' · <span style="color:var(--warn)">− '+_soles(quita)+' sin incluir</span>':'')+'</div></div>';
-  if(t.total && t.sub){
-    var exacto=Math.abs(sel-t.sub)<0.005;
-    var est=exacto? t.total : Math.round(sel*(t.total/t.sub)*100)/100;
-    html+='<div style="text-align:right"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)">Total con impuestos'+(exacto?'':' (aprox.)')+'</div>'+
-      '<div style="font-size:18px;font-weight:600;color:var(--text)">'+(exacto?'':'≈ ')+_soles(est)+'</div>'+
-      '<div style="font-size:12px;color:var(--text2)">OC completa: '+_soles(t.total)+'</div></div>';
-  }
-  html+='</div>';
+  var quita=Math.round((todo-sel)*100)/100, t=ARCH_TOT||{};
+  document.getElementById('st-mb').style.display=conMonto?'':'none';
+  countTo(document.getElementById('st-m'),sel,_numFmt2,650);
+  countTo(document.getElementById('st-u'),und,_numFmt0,650);
+  document.getElementById('st-n').innerHTML=nSel+' de '+ARCH_ROWS.length+' productos'+(quita>0.004?' · <b>− '+_soles(quita)+' sin incluir</b>':'');
+  var imp=document.getElementById('st-imp');
+  if(t.total&&t.sub){
+    var exacto=Math.abs(sel-t.sub)<0.005, est=exacto?t.total:Math.round(sel*(t.total/t.sub)*100)/100;
+    imp.textContent=(exacto?'':'≈ ')+_soles(est)+' con impuestos';
+  } else imp.textContent='';
+  var cb=document.getElementById('st-cb'), rb=document.getElementById('st-rb');
+  if(conMonto&&t.sub){
+    var dif=Math.round((t.sub-sel)*100)/100, cuadra=Math.abs(dif)<0.05;
+    cb.style.display='';
+    document.getElementById('st-c').textContent=cuadra?'Cuadra ✓':(dif>0?'Faltan ':'Sobran ')+_soles(Math.abs(dif));
+    rb.classList.toggle('w',!cuadra);
+    rb.firstChild.style.width=Math.min(100,sel/t.sub*100)+'%';
+  } else cb.style.display='none';
+  var w=document.getElementById('st-w');
   if(t.sub && Math.abs(todo-t.sub)>0.05){
-    html+='<div style="font-size:12px;color:var(--warn);margin-top:6px">'+ICO('warn',13)+'La suma de las líneas ('+_soles(todo)+') no coincide con el subtotal del PDF ('+_soles(t.sub)+'). Puede que algún monto se leyó mal: revisa la columna Monto.</div>';
-  }
-  el.innerHTML=html; el.style.display='block';
+    w.innerHTML=ICO('warn',13)+'La suma de las líneas ('+_soles(todo)+') no coincide con el subtotal del PDF ('+_soles(t.sub)+'). Puede que algún monto se leyó mal: revisa la columna Monto.';
+    w.style.display='';
+  } else w.style.display='none';
 }
 
 // Una fila necesita revisión si su SKU no está en el Stock o (en PDF) no se leyó la cantidad
-function _pvRev(r){ return !!r.noStock || (!!r.editable && !(r.cant>0)); }
+function _pvRev(r){
+  if(r.omit) return false;
+  return (!!r.noStock&&!r.nuevo) || (!!r.editable && !(r.cant>0));
+}
 
 function _pvFila(r){
   var editable=!!r.editable;
@@ -901,7 +1080,7 @@ function renderPreview(){
   document.getElementById('arch-preview').classList.remove('hidden');
   _pvBarra();
   _archTotal();
-  _wzFound();
+  wzDonePintar();
 }
 
 // Barra superior: "Incluir todos" y el botón que filtra las filas por revisar
@@ -921,19 +1100,23 @@ function _pvBarra(){
     var n=ARCH_ROWS.filter(function(r){return r.incluir;}).length;
     all.checked=n>0&&n===ARCH_ROWS.length; all.indeterminate=n>0&&n<ARCH_ROWS.length;
   }
+  _pvFocus();
 }
 function pvFiltro(){ PV_SOLO=!PV_SOLO; _pvBarra(); }
 function pvTodos(v){
-  ARCH_ROWS.forEach(function(r){ r.incluir=!!v && (r.cant>0) && !r.noStock; });
+  ARCH_ROWS.forEach(function(r){
+    r.incluir=!!v && (r.cant>0) && (!r.noStock||r.nuevo);
+    if(r.incluir) r.omit=false;
+  });
   renderPreview();
 }
 
 // Actualiza solo una fila (sin repintar la lista, para no perder el cursor mientras se escribe)
-function _pvRefrescar(idx,foco){
+function _pvRefrescar(idx,foco,destello){
   var r=ARCH_ROWS.find(function(x){return x.idx===idx;});
   var el=document.getElementById('prev-row-'+idx);
   if(!r||!el){ _pvBarra(); _archTotal(); return; }
-  var rev=_pvRev(r), act=document.activeElement;
+  var rev=_pvRev(r), act=document.activeElement, eraRev=el.classList.contains('rev');
   // Si se está escribiendo en la fila, no se oculta del filtro "por revisar" hasta salir de ella
   el.className='pv-row'+((rev||(PV_SOLO&&el.contains(act)&&el.classList.contains('rev')))?' rev':'')+(rev?' warn':'')+(r.incluir?'':' off');
   var ck=el.querySelector('.pv-ck'); if(ck) ck.checked=!!r.incluir;
@@ -944,13 +1127,117 @@ function _pvRefrescar(idx,foco){
   var u=document.getElementById('pv-u-'+idx);
   if(u&&act!==u) u.value=r.cant;
   if(foco==='cant'&&u&&!(r.cant>0)){ u.focus(); u.select(); }
+  if((destello||eraRev)&&!rev&&r.incluir){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
   _pvBarra(); _archTotal();
 }
 
 function toggleArch(idx,val){
-  var row=ARCH_ROWS.find(function(r){return r.idx===idx;});
-  if(row)row.incluir=val;
+  var row=ARCH_ROWS.find(function(r){return r.idx===idx;}); if(!row) return;
+  if(val&&row.editable&&!(row.cant>0)){            // sin cantidad no se puede incluir
+    _pvRefrescar(idx);
+    var u=document.getElementById('pv-u-'+idx); if(u){ u.focus(); u.select(); }
+    return;
+  }
+  if(val&&row.noStock&&!row.nuevo){ row.nuevo=true; row.aviso='Producto nuevo: no está en tu Stock'; }   // marcar un SKU desconocido = es un producto nuevo
+  if(!val&&row.nuevo){ row.nuevo=false; row.aviso=_PV_AVISO_STOCK; }
+  if(val) row.omit=false;
+  row.incluir=val;
   _pvRefrescar(idx);
+}
+
+// ── Tarjeta de pendientes (paso 3): una línea a la vez, con sugerencias ──
+var _PV_AVISO_STOCK='No está en el Stock de tu sede: busca el producto en el SKU, o marca el check si es un producto nuevo';
+var _pvFocusSig='';
+function pvFocoNav(d){
+  var n=ARCH_ROWS.filter(_pvRev).length; if(!n) return;
+  WZ.pi=(WZ.pi+d+n)%n; _pvFocusSig=''; _pvFocus();
+}
+function _pvFocus(){
+  var el=document.getElementById('arch-focus'); if(!el) return;
+  var P=ARCH_ROWS.filter(_pvRev);
+  if(!P.length){
+    var sig0='ok:'+ARCH_ROWS.length;
+    if(sig0===_pvFocusSig) return; _pvFocusSig=sig0;
+    el.innerHTML=ARCH_ROWS.length?'<div class="wz-allok"><span style="color:var(--ok)">'+_WZ_CHK+'</span><div><b>Todos los productos están verificados.</b> Revisa la lista y desmarca lo que no llegó.</div></div>':'';
+    return;
+  }
+  if(WZ.pi>=P.length) WZ.pi=0;
+  var r=P[WZ.pi], sinStock=!!r.noStock&&!r.nuevo;
+  var sig=r.idx+':'+(sinStock?'s':'c')+':'+P.length+':'+WZ.pi+':'+(r.sug?r.sug.length:'-');
+  if(sig===_pvFocusSig) return; _pvFocusSig=sig;
+  var h='<div class="wz-focus"><div class="wz-ft"><span>Pendiente '+(WZ.pi+1)+' de '+P.length+'</span>'+
+    (P.length>1?'<div class="wz-fnav"><button type="button" onclick="pvFocoNav(-1)" aria-label="Anterior">‹</button><button type="button" onclick="pvFocoNav(1)" aria-label="Siguiente">›</button></div>':'')+'</div>';
+  if(sinStock){
+    h+='<h3>El SKU '+esc(r.sku)+' no está en tu Stock</h3><p>Línea '+r.idx+' · '+esc(r.descOCR||r.desc)+'</p><div class="wz-opts">';
+    if(r.sug&&r.sug.length) h+=r.sug.map(function(x,k){ return '<button type="button" class="wz-op" onclick="pvUsarSug('+r.idx+','+k+')"><code>'+esc(x.sku)+'</code>'+esc(x.desc)+'</button>'; }).join('');
+    else if(!r.sug) h+='<span class="wz-busca">Buscando coincidencias…</span>';
+    h+='<button type="button" class="wz-op g" onclick="pvIrFila('+r.idx+')">Buscar otro…</button>'+
+       '<button type="button" class="wz-op g" onclick="pvNuevo('+r.idx+')">Es un producto nuevo</button>'+
+       '<button type="button" class="wz-op g" onclick="pvOmitir('+r.idx+')">Omitir esta línea</button></div>';
+  } else {
+    h+='<h3>No se pudo leer la cantidad</h3><p>Línea '+r.idx+' · '+esc(r.desc)+'</p><div class="wz-opts">'+
+       '<input class="en2-in" id="fc-cant" type="number" min="1" inputmode="numeric" placeholder="Unidades" onkeydown="if(event.key===\'Enter\'){event.preventDefault();pvFocoCant('+r.idx+')}"/>'+
+       '<button type="button" class="wz-op" onclick="pvFocoCant('+r.idx+')">Aplicar</button>'+
+       '<button type="button" class="wz-op g" onclick="pvOmitir('+r.idx+')">Omitir esta línea</button></div>';
+  }
+  el.innerHTML=h+'</div>';
+  if(sinStock&&!r.sug) _pvSugerir(r);
+}
+// Busca productos parecidos: por las palabras de la descripción y por el comienzo del SKU (errores típicos del OCR)
+function _pvSugerir(r){
+  if(r.sug||r.sugBusy) return;
+  r.sugBusy=true;
+  var desc=String(r.descOCR||r.desc||'').toUpperCase();
+  var pal=desc.replace(/[^A-ZÑÁÉÍÓÚ0-9 ]/g,' ').split(/\s+/).filter(function(w){ return w.length>=4&&!/^\d+$/.test(w); });
+  var uniq=[]; pal.forEach(function(w){ if(uniq.indexOf(w)<0) uniq.push(w); });
+  var consultas=uniq.slice().sort(function(a,b){return b.length-a.length;}).slice(0,3);
+  var pre=String(r.sku||'').slice(0,6); if(pre.length>=5) consultas.push(pre);
+  if(!consultas.length){ r.sug=[]; r.sugBusy=false; _pvFocusSig=''; _pvFocus(); return; }
+  var faltan=consultas.length, mapa={};
+  function listo(){
+    if(--faltan) return;
+    var ranked=Object.keys(mapa).map(function(k){
+      var x=mapa[k], d=String(x.desc||'').toUpperCase(), pts=0;
+      uniq.forEach(function(w){ if(d.indexOf(w)>-1) pts++; });
+      if(pre.length>=5&&String(x.sku).indexOf(pre)===0) pts+=2;
+      return {x:x,pts:pts};
+    }).filter(function(o){return o.pts>0;}).sort(function(a,b){return b.pts-a.pts;});
+    var corte=ranked.length?Math.max(1,ranked[0].pts-2):1;       // solo las que se parecen casi tanto como la mejor
+    r.sug=ranked.filter(function(o){return o.pts>=corte;}).slice(0,4).map(function(o){return o.x;});
+    r.sugBusy=false; _pvFocusSig=''; _pvFocus();
+  }
+  consultas.forEach(function(q){
+    google.script.run
+      .withSuccessHandler(function(res){ ((res&&res.results)||[]).forEach(function(x){ mapa[x.sku]=x; }); listo(); })
+      .withFailureHandler(function(){ listo(); })
+      .buscarSKU(S.token,q);
+  });
+}
+function pvUsarSug(idx,k){
+  var r=ARCH_ROWS.find(function(x){return x.idx===idx;}); if(!r||!r.sug||!r.sug[k]) return;
+  editArch(idx,'sku',r.sug[k].sku,'cant',true);
+}
+function pvIrFila(idx){
+  var e=document.getElementById('pv-sku-'+idx);
+  if(e){ e.scrollIntoView({block:'center',behavior:_wzReducido()?'auto':'smooth'}); e.focus(); e.select(); }
+}
+function pvNuevo(idx){
+  var r=ARCH_ROWS.find(function(x){return x.idx===idx;}); if(!r) return;
+  r.nuevo=true; r.omit=false; r.incluir=r.cant>0;
+  r.aviso=r.cant>0?'Producto nuevo: no está en tu Stock':'Falta la cantidad: escríbela';
+  _pvRefrescar(idx,null,true);
+}
+function pvOmitir(idx){
+  var r=ARCH_ROWS.find(function(x){return x.idx===idx;}); if(!r) return;
+  r.omit=true; r.incluir=false; r.aviso='Línea omitida: no se importará';
+  _pvRefrescar(idx);
+}
+function pvFocoCant(idx){
+  var e=document.getElementById('fc-cant'), v=Math.floor(Number(e&&e.value));
+  if(!(v>0)){ if(e){ e.focus(); } return; }
+  var r=ARCH_ROWS.find(function(x){return x.idx===idx;}); if(r) r.omit=false;
+  pvCant(idx,v);
+  _pvRefrescar(idx,null,true);
 }
 
 // Cambios rápidos en la vista previa
@@ -971,8 +1258,8 @@ function pvSkuKey(e,idx){
 function pvCant(idx,valor){
   var row=ARCH_ROWS.find(function(r){return r.idx===idx;}); if(!row) return;
   var n=Math.floor(Number(valor)); row.cant=(n>=0)?n:0;
-  if(row.cant>0){ if(!row.noStock) row.incluir=true; if(/cantidad/i.test(row.aviso||'')) row.aviso=''; }
-  else { row.incluir=false; if(!row.noStock) row.aviso='Falta la cantidad: escríbela'; }
+  if(row.cant>0){ if(!row.noStock||row.nuevo) row.incluir=true; if(/cantidad/i.test(row.aviso||'')) row.aviso=''; }
+  else { row.incluir=false; if(!row.noStock||row.nuevo) row.aviso='Falta la cantidad: escríbela'; }
   _pvRefrescar(idx);
 }
 // Enter en la cantidad pasa a la cantidad de la fila siguiente que se vea
@@ -989,11 +1276,7 @@ function pvCantKey(e,idx){
    Los PDF de la OC son imágenes (sin texto), así que se leen con OCR en el propio navegador
    (pdf.js dibuja cada página y Tesseract la lee). Todo se descarga solo la primera vez que se usa.
    El resultado va a la misma vista previa que el Excel, donde se puede corregir antes de importar. */
-function _archEstado(txt){
-  var el=document.getElementById('arch-ocr-estado'); if(!el) return;
-  el.style.display=txt?'block':'none';
-  el.textContent=txt||'';
-}
+function _archEstado(txt){ wzStageMsg(txt); }   // el estado se muestra dentro del escenario de lectura
 function _ocrScript(src){
   return new Promise(function(ok,ko){
     var s=document.createElement('script'); s.src=src;
@@ -1068,31 +1351,43 @@ function _parsearOCTexto(paginas){
 }
 
 async function leerPDFdeOC(file){
-  var err=document.getElementById('arch-err');
   var worker=null;
+  var run=wzLeerInicio('pdf',file.name);
+  var vivo=function(){ return run===WZ.run; };
   try{
     _archEstado('Preparando el lector de PDF… (la primera vez descarga unos 7 MB)');
-    await _ocrCargarLibs();
-    var buf=await file.arrayBuffer();
-    var pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+    await _ocrCargarLibs(); if(!vivo()) return;
+    var buf=await file.arrayBuffer(); if(!vivo()) return;
+    var pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise; if(!vivo()) return;
     var base=new URL('vendor/ocr/',location.href).href;
     worker=await Tesseract.createWorker('eng',1,{workerPath:base+'worker.min.js',corePath:base,langPath:base,gzip:true});
-    var paginas=[];
-    for(var i=1;i<=pdf.numPages;i++){
-      _archEstado('Leyendo el PDF… página '+i+' de '+pdf.numPages);
+    _ocrWorkerAct=worker;
+    if(!vivo()){ try{ await worker.terminate(); }catch(e){} return; }
+    var paginas=[], n=pdf.numPages;
+    for(var i=1;i<=n;i++){
+      _archEstado('Leyendo el PDF… página '+i+' de '+n);
+      wzStagePag(i-1,n);
       var pg=await pdf.getPage(i);
       var vp=pg.getViewport({scale:2.5});
       var cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height;
       await pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
       var res=await worker.recognize(cv);
-      paginas.push(res.data.text||'');
+      cv.width=cv.height=0;                            // libera la memoria del canvas
+      if(!vivo()){ try{ await worker.terminate(); }catch(e){} return; }
+      var texto=res.data.text||'';
+      paginas.push(texto);
+      // las líneas de esta página entran en el escenario apenas se leen
+      var parcial=_parsearOCTexto([texto]);
+      wzStageAdd(parcial.items.map(function(it){return {linea:it.linea,sku:it.sku,desc:it.desc,cant:it.cant,monto:it.monto};}),run);
+      if(parcial.oc){ var d=_wzEl('wz-doc-oc'); if(d) d.textContent=parcial.oc.replace(/(OC-\d+)-\d+$/,'$1'); }
+      wzStagePag(i,n);
     }
-    await worker.terminate(); worker=null;
+    await worker.terminate(); worker=null; _ocrWorkerAct=null;
+    if(!vivo()) return;
 
     var r=_parsearOCTexto(paginas);
     if(!r.items.length){
-      _archEstado('');
-      err.textContent='No se encontraron productos en el PDF. Si es otro formato, usa el Excel o la carga manual.';
+      wzLeerFallo(run,'No se encontraron productos en el PDF. Si es otro formato, usa el Excel o la carga manual.');
       return;
     }
     ARCH_ROWS=r.items.map(function(it,i){
@@ -1106,21 +1401,23 @@ async function leerPDFdeOC(file){
     _archEstado('Comprobando los SKU con tu Stock…');
     google.script.run
       .withSuccessHandler(function(s){
+        if(!vivo()) return;
         var mapa=(s&&s.ok&&s.data)||{};
         ARCH_ROWS.forEach(function(row){ _archAplicarStock(row,mapa); });
-        _archEstado('PDF leído'+(r.oc?' · '+r.oc:'')+' · revisa la vista previa antes de importar'+
-          (r.faltan.length?' · Atención: no se leyeron las líneas: '+r.faltan.join(', '):''));
         renderPreview();
+        wzFinLectura(run);
       })
       .withFailureHandler(function(){
-        _archEstado('PDF leído · no se pudo comprobar el Stock, revisa los SKU a mano');
+        if(!vivo()) return;
         renderPreview();
+        wzFinLectura(run);
       })
       .skusEnStock(S.token, ARCH_ROWS.map(function(x){return x.sku;}));
   }catch(ex){
     if(worker){ try{ await worker.terminate(); }catch(e){} }
-    _archEstado('');
-    err.textContent='No se pudo leer el PDF: '+(ex&&ex.message?ex.message:ex)+'. Usa el Excel o la carga manual.';
+    _ocrWorkerAct=null;
+    if(!vivo()) return;
+    wzLeerFallo(run,'No se pudo leer el PDF: '+(ex&&ex.message?ex.message:ex)+'. Usa el Excel o la carga manual.');
   }
 }
 
@@ -1132,31 +1429,32 @@ function _archAplicarStock(row,mapa){
     if(row.cant>0) row.incluir=true;
   } else {
     row.desc=row.descOCR||row.desc; row.noStock=true;
-    row.aviso='No está en el Stock de tu sede: busca el producto en el SKU, o marca el check si es un producto nuevo';
+    row.aviso=_PV_AVISO_STOCK;
     row.incluir=false;
   }
 }
 
-function editArch(idx,campo,valor,foco){
+function editArch(idx,campo,valor,foco,destello){
   var row=ARCH_ROWS.find(function(r){return r.idx===idx;}); if(!row) return;
   if(campo==='cant'){ pvCant(idx,valor); return; }
   var nuevo=String(valor||'').trim();
   if(nuevo===row.sku && !row.noStock) return;   // sin cambios y ya verificado
-  row.sku=nuevo;
+  row.sku=nuevo; row.nuevo=false; row.omit=false; row.sug=null; row.sugBusy=false;
   google.script.run
-    .withSuccessHandler(function(s){ _archAplicarStock(row,(s&&s.ok&&s.data)||{}); _pvRefrescar(idx,foco); })
+    .withSuccessHandler(function(s){ _archAplicarStock(row,(s&&s.ok&&s.data)||{}); _pvRefrescar(idx,foco,destello); })
     .withFailureHandler(function(){ _pvRefrescar(idx); })
     .skusEnStock(S.token,[row.sku]);
 }
 
 function clearFile(){
-  ARCH_ROWS=[]; ARCH_TOT=null;
-  _archEstado('');
+  ARCH_ROWS=[]; ARCH_TOT=null; _pvFocusSig='';
   document.getElementById('arch-file-inp').value='';
   document.getElementById('arch-preview').classList.add('hidden');
   document.getElementById('arch-err').textContent='';
+  var tt=document.getElementById('arch-total'); if(tt){ tt.innerHTML=''; tt.style.display='none'; }
+  var ff=document.getElementById('arch-focus'); if(ff) ff.innerHTML='';
   ARCH_FILE='';
-  if(typeof _wzFound==='function') _wzFound();
+  if(typeof wzDonePintar==='function') wzDonePintar();
   if(typeof entResumen==='function') entResumen();
 }
 
@@ -1213,10 +1511,9 @@ function guardarEntradaManual(){
     .withSuccessHandler(function(r){
       btn.disabled=false;btn.textContent=_wzTxtGuardar();
       if(!r.ok){err.textContent=r.error;return;}
-      showToast('Entrada registrada ('+filas.length+' SKU'+(filas.length>1?'s':'')+')','ok');
-      closeFS('fs-entrada');
       PAGE_LOADED['stock']=false;
       reloadPage('entradas');
+      wzExito(filas.length,filas.reduce(function(a,f){return a+f.unidades;},0),fac,0);
     })
     .withFailureHandler(function(e){btn.disabled=false;btn.textContent=_wzTxtGuardar();err.textContent=e.message;})
     .registrarEntradasMultiple(S.token, filas, comun);
@@ -1248,11 +1545,13 @@ function guardarEntradaArchivo(){
     .withSuccessHandler(function(r){
       btn.disabled=false;btn.textContent=_wzTxtGuardar();
       if(!r.ok){err.textContent=r.error;return;}
-      showToast('Importados '+filas.length+' SKU'+(filas.length>1?'s':'')+' correctamente','ok');
-      clearFile();
-      closeFS('fs-entrada');
+      var montoImp=0; seleccionados.forEach(function(x){ if(typeof x.monto==='number') montoImp+=x.monto; });
+      var unidImp=filas.reduce(function(a,f){return a+f.unidades;},0), nImp=filas.length;
       PAGE_LOADED['stock']=false;
       reloadPage('entradas');
+      WZ.fin=true;                                  // la pantalla de éxito ya no depende de las filas del archivo
+      clearFile();
+      wzExito(nImp,unidImp,fac,Math.round(montoImp*100)/100);
     })
     .withFailureHandler(function(e){btn.disabled=false;btn.textContent=_wzTxtGuardar();err.textContent=e.message;})
     .registrarEntradasMultiple(S.token, filas, comun);
