@@ -460,9 +460,6 @@ function switchEntradaTab(tab){
   ENTRADA_TAB=tab;
   document.getElementById('tab-content-manual').classList.toggle('hidden', tab!=='manual');
   document.getElementById('tab-content-archivo').classList.toggle('hidden', tab!=='archivo');
-  document.getElementById('ent-m-manual').classList.toggle('on', tab==='manual');
-  document.getElementById('ent-m-archivo').classList.toggle('on', tab==='archivo');
-  document.getElementById('btn-ent-save').textContent=tab==='manual'?'Guardar entrada':'Importar desde archivo';
   entResumen();
 }
 
@@ -471,33 +468,199 @@ function entDyn(b){
   document.querySelectorAll('#ent-dy button').forEach(function(x){x.classList.toggle('on',x===b);});
 }
 
-// Resumen del pie y estado del botón Guardar
-function entResumen(){
-  var fac=(document.getElementById('ent-factura').value||'').trim();
-  var n=0,u=0;
+// Productos válidos y unidades de la carga actual (manual o archivo)
+function _entCuenta(){
+  var n=0,u=0,incompletas=0;
   if(ENTRADA_TAB==='manual'){
     document.querySelectorAll('#ent-rows-wrap [id^="ent-row-"]').forEach(function(row){
       var id=row.id.replace('ent-row-','');
       var sku=((document.getElementById('er-sku-'+id)||{}).value||'').trim();
       var und=Number((document.getElementById('er-und-'+id)||{}).value||0);
       if(sku&&und>0){ n++; u+=und; }
+      else if(sku||und>0) incompletas++;   // fila a medias; la fila totalmente vacía se ignora
     });
   } else {
     ARCH_ROWS.forEach(function(r){ if(r.incluir){ n++; u+=Number(r.cant)||0; } });
   }
-  var ok=!!fac&&n>0;
-  var btn=document.getElementById('btn-ent-save');
-  if(btn&&btn.textContent.indexOf('...')<0) btn.disabled=!ok;
-  var msg=document.getElementById('ent-msg');
-  if(msg){
-    msg.innerHTML=ok?'<b>'+n+'</b> '+(n===1?'producto':'productos')+' · <b>'+fmt(u)+'</b> unidades':(!fac?'Escribe la factura para continuar':(ENTRADA_TAB==='manual'?'Agrega al menos un producto':'Carga un archivo y marca los productos'));
-    msg.style.color=ok?'':'var(--text3)';
-  }
-  var st=document.getElementById('ent-stat');
-  if(st){ st.className='en2-stat'+(ok?' ok':''); document.getElementById('ent-stat-t').textContent=ok?'Listo para guardar':'Faltan datos'; }
+  return {n:n,u:u,incompletas:incompletas};
 }
 
+// Se llama cada vez que cambia algo del formulario: refresca el aviso de estado y el asistente
+function entResumen(){
+  var fac=(document.getElementById('ent-factura').value||'').trim();
+  var c=_entCuenta();
+  var ok=!!fac&&c.n>0;
+  var st=document.getElementById('ent-stat');
+  if(st){ st.className='en2-stat'+(ok?' ok':''); document.getElementById('ent-stat-t').textContent=ok?'Listo para guardar':'Faltan datos'; }
+  wzActualizar();
+}
+
+/* ── ASISTENTE (4 pasos): 1 Origen · 2 Factura · 3 Productos · 4 Confirmar ── */
+var WZ={paso:1,origen:null};
+var WZ_NOM=['Origen','Datos de la factura','Productos','Confirmar'];
+
+function wzOrigen(o){
+  WZ.origen=o;
+  switchEntradaTab(o);
+  if(o==='manual') wzIr(2);   // escribir a mano no necesita archivo: se pasa directo a la factura
+}
+
+// ¿Se puede salir de este paso hacia adelante? → {ok, msg}
+function wzValido(p){
+  var c=_entCuenta();
+  if(p===1){
+    if(!WZ.origen) return {ok:false,msg:'Elige cómo cargar los productos'};
+    if(WZ.origen==='archivo'&&!ARCH_ROWS.length) return {ok:false,msg:'Sube la orden de compra o el Excel para continuar'};
+    return {ok:true,msg:''};
+  }
+  if(p===2){
+    return (document.getElementById('ent-factura').value||'').trim()?{ok:true,msg:''}:{ok:false,msg:'Escribe la factura para continuar'};
+  }
+  if(p===3){
+    if(c.incompletas) return {ok:false,msg:'Completa SKU y unidades de cada fila, o quita las incompletas'};
+    if(!c.n) return {ok:false,msg:WZ.origen==='archivo'?'Marca al menos un producto':'Agrega al menos un producto'};
+    return {ok:true,msg:''};
+  }
+  return {ok:true,msg:''};
+}
+function _wzPuedeIr(k){
+  if(k<=WZ.paso) return true;
+  for(var j=1;j<k;j++){ if(!wzValido(j).ok) return false; }
+  return true;
+}
+function wzIr(k){
+  if(k<1||k>4||!_wzPuedeIr(k)) return;
+  WZ.paso=k;
+  if(k===4) wzResumen();
+  wzActualizar();
+  var pb=document.querySelector('#fs-entrada .fs-body'); if(pb) pb.scrollTop=0;
+  if(k===2) setTimeout(function(){var e=document.getElementById('ent-factura'); if(e&&!e.value) e.focus();},80);
+}
+function wzSiguiente(){ if(wzValido(WZ.paso).ok) wzIr(WZ.paso+1); }
+function wzAtras(){ if(WZ.paso>1) wzIr(WZ.paso-1); else closeFS('fs-entrada'); }
+
+function _wzResumenPaso(k){
+  var c=_entCuenta();
+  if(k===1){
+    if(!WZ.origen) return 'Elige cómo cargar';
+    if(WZ.origen==='manual') return 'Escribir a mano';
+    if(!ARCH_ROWS.length) return 'Sube la OC o el Excel';
+    var oc=(document.getElementById('ent-oc').value||'').trim();
+    return (oc||'Archivo')+' · '+ARCH_ROWS.length+' productos';
+  }
+  if(k===2){ var f=(document.getElementById('ent-factura').value||'').trim(); return f?'Factura '+f:'Factura y datos del ingreso'; }
+  if(k===3){
+    if(WZ.origen==='archivo'){
+      var rev=ARCH_ROWS.filter(_pvRev).length;
+      return c.n?(c.n+' de '+ARCH_ROWS.length+' incluidos'+(rev?' · '+rev+' por revisar':'')):'Revisa los productos';
+    }
+    return c.n?(c.n+(c.n===1?' producto':' productos')+' · '+fmt(c.u)+' u.'):'Agrega los productos';
+  }
+  return 'Confirma y guarda';
+}
+
+// Texto del botón final según el origen
+function _wzTxtGuardar(){
+  var n=_entCuenta().n;
+  return WZ.origen==='archivo'?'Importar '+n+(n===1?' producto':' productos'):'Guardar entrada';
+}
+
+// Repinta el riel de pasos, el encabezado, los pasos visibles y la barra de botones
+function wzActualizar(){
+  // si se quitó el archivo estando más adelante, se vuelve al paso 1
+  if(WZ.origen==='archivo'&&!ARCH_ROWS.length&&WZ.paso>=3) WZ.paso=1;
+  var rail=document.getElementById('wz-rail'); if(!rail) return;
+  var chk='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  rail.innerHTML='<h4>Asistente · 4 pasos</h4>'+WZ_NOM.map(function(n,i){
+    var k=i+1, hecho=k<WZ.paso&&wzValido(k).ok, c=k===WZ.paso?' on':(hecho?' done':'');
+    return '<button type="button" class="wz-stp'+c+'" '+(_wzPuedeIr(k)?'':'disabled')+' onclick="wzIr('+k+')">'+
+      '<span class="wz-dot">'+(hecho?chk:k)+'</span><span class="wz-tx"><strong>'+n+'</strong><small>'+esc(_wzResumenPaso(k))+'</small></span></button>';
+  }).join('')+'<div class="wz-rf">Puedes volver a cualquier paso ya completado sin perder lo que escribiste.</div>';
+
+  var T=[
+    ['Origen de los productos','Sube la orden de compra y leemos todo por ti, o escríbelos a mano.'],
+    ['Datos de la factura',WZ.origen==='archivo'&&(document.getElementById('ent-oc').value||'').trim()?'La OC ya está completada con los datos del archivo. Falta la factura.':'Escribe la factura y completa lo que necesites.'],
+    ['Productos recibidos',WZ.origen==='archivo'?'Revisa lo leído: corrige SKU o cantidades y desmarca lo que no llegó.':'Busca cada producto por SKU o nombre y escribe las unidades.'],
+    ['Confirma y guarda','Revisa el resumen. Puedes editar cualquier sección antes de guardar.']
+  ][WZ.paso-1];
+  document.getElementById('wz-eb').textContent='Paso '+WZ.paso+' de 4';
+  document.getElementById('wz-t').textContent=T[0];
+  document.getElementById('wz-s').textContent=T[1];
+  for(var k=1;k<=4;k++) document.getElementById('wz-s'+k).classList.toggle('hidden',k!==WZ.paso);
+  // tarjetas de origen y zonas de paso 1
+  document.getElementById('ent-m-archivo').classList.toggle('sel',WZ.origen==='archivo');
+  document.getElementById('ent-m-manual').classList.toggle('sel',WZ.origen==='manual');
+  document.getElementById('wz-s1-arch').classList.toggle('hidden',WZ.origen!=='archivo');
+  document.getElementById('wz-s1-man').classList.toggle('hidden',WZ.origen!=='manual');
+
+  var v=wzValido(WZ.paso);
+  var back=document.getElementById('btn-ent-back'), nx=document.getElementById('btn-ent-next'), sv=document.getElementById('btn-ent-save');
+  back.innerHTML=WZ.paso>1?'← Atrás':'Cancelar <span class="en2-kb">Esc</span>';
+  nx.classList.toggle('hidden',WZ.paso===4);
+  sv.classList.toggle('hidden',WZ.paso!==4);
+  nx.disabled=!v.ok;
+  if(sv.textContent.indexOf('...')<0){
+    sv.textContent=_wzTxtGuardar();
+    var listo=!!(document.getElementById('ent-factura').value||'').trim()&&_entCuenta().n>0;
+    sv.disabled=!listo;
+  }
+  var msg=document.getElementById('ent-msg');
+  if(msg){
+    var c=_entCuenta();
+    if(WZ.paso===4) msg.innerHTML='<b>'+c.n+'</b> '+(c.n===1?'producto':'productos')+' · <b>'+fmt(c.u)+'</b> unidades';
+    else if(!v.ok) msg.textContent=v.msg;
+    else msg.innerHTML=c.n?'<b>'+c.n+'</b> '+(c.n===1?'producto':'productos')+' · <b>'+fmt(c.u)+'</b> unidades':'';
+    msg.style.color=(WZ.paso!==4&&!v.ok)?'var(--text3)':'';
+  }
+}
+
+// Paso 4: resumen con enlaces para editar cada sección
+function wzResumen(){
+  var el=document.getElementById('wz-resumen'); if(!el) return;
+  var g=function(id){return (document.getElementById(id)||{}).value||'';};
+  var c=_entCuenta();
+  function kv(k,v){ return '<div class="wz-kv"><span>'+k+'</span><b>'+(v?esc(v):'—')+'</b></div>'; }
+  var origen=WZ.origen==='archivo'
+    ? kv('Origen','Archivo ('+ARCH_ROWS.length+' líneas)')+kv('Orden de compra',g('ent-oc'))+kv('Proveedor',g('ent-proveedor'))
+    : kv('Origen','Escrito a mano')+kv('Orden de compra',g('ent-oc'))+kv('Proveedor',g('ent-proveedor'));
+  var h='<div class="wz-rv">'+
+    '<div class="wz-rc"><div class="wz-rt"><span>Origen</span><button type="button" onclick="wzIr(1)">Editar</button></div>'+origen+'</div>'+
+    '<div class="wz-rc"><div class="wz-rt"><span>Factura</span><button type="button" onclick="wzIr(2)">Editar</button></div>'+
+      kv('Referencia',g('ent-factura'))+kv('Fecha de ingreso',g('ent-fecha'))+kv('Dynamics',g('ent-dynamics'))+kv('Responsable',g('ent-responsable'))+'</div>';
+  var conMonto=WZ.origen==='archivo'&&ARCH_ROWS.some(function(r){return typeof r.monto==='number';});
+  if(conMonto){
+    var sel=0; ARCH_ROWS.forEach(function(r){ if(r.incluir&&typeof r.monto==='number') sel+=r.monto; });
+    sel=Math.round(sel*100)/100;
+    var t=ARCH_TOT||{}, cuadra=t.sub&&Math.abs(sel-t.sub)<0.05;
+    h+='<div class="wz-tot"><div><small>Total a importar (sin impuestos)</small><b>'+_soles(sel)+'</b></div>'+
+       '<div class="r"><small>'+c.n+' productos · '+fmt(c.u)+' u.</small><b>'+(t.sub?(cuadra?'Cuadra con la OC ✓':'Subtotal OC '+_soles(t.sub)):'')+'</b></div></div>';
+  } else {
+    h+='<div class="wz-tot"><div><small>Se sumará al stock de la sede</small><b>'+fmt(c.u)+' unidades</b></div><div class="r"><small>Productos</small><b>'+c.n+'</b></div></div>';
+  }
+  if(WZ.origen==='archivo'){
+    var om=ARCH_ROWS.filter(function(r){return !r.incluir;});
+    h+=om.length
+      ? '<div class="wz-nt w"><b>'+om.length+(om.length===1?' línea omitida':' líneas omitidas')+':</b> '+om.map(function(r){return esc(r.sku+' '+(r.desc||''));}).join(' · ')+' <a href="#" onclick="wzIr(3);return false">Revisar</a></div>'
+      : '<div class="wz-nt o"><b>Todo conforme.</b> Se importan todas las líneas del archivo.</div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+  document.getElementById('ent-err4').textContent='';
+}
+
+// Resalta de dónde vino lo leído del archivo (paso 1)
+function _wzFound(){
+  var el=document.getElementById('wz-found'); if(!el) return;
+  if(!ARCH_ROWS.length){ el.innerHTML=''; return; }
+  var oc=(document.getElementById('ent-oc').value||'').trim(), t=ARCH_TOT||{};
+  el.innerHTML=(ARCH_FILE?'<span class="wz-file">'+esc(ARCH_FILE)+'</span>':'')+
+    (oc?'<span>✓ '+esc(oc)+'</span>':'')+'<span>✓ '+ARCH_ROWS.length+' productos</span>'+
+    (t.sub?'<span>✓ Subtotal '+_soles(t.sub)+'</span>':'');
+}
+
+var ARCH_FILE='';   // nombre del archivo cargado
 function abrirEntrada(){
+  WZ.paso=1; WZ.origen=null;
   switchEntradaTab('manual');
   ['ent-factura','ent-proveedor','ent-oc','ent-fvenc'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.value='';
@@ -509,13 +672,14 @@ function abrirEntrada(){
   document.getElementById('ent-rows-wrap').innerHTML='';
   ENT_ROW_COUNT=0;
   document.getElementById('ent-err').textContent='';
+  document.getElementById('ent-err4').textContent='';
+  document.getElementById('ent-oc-tag').textContent='opcional';
   addEntradaRow();
   clearFile();
   document.getElementById('arch-err').textContent='';
   entCargarOCs();
   entResumen();
   openFS('fs-entrada');
-  setTimeout(function(){document.getElementById('ent-factura').focus();},120);
 }
 
 // OC pendientes de recibir de esta tienda: al elegir una se llenan OC y proveedor
@@ -576,7 +740,7 @@ function addEntradaRow(){
   div.querySelector('.en2-del').addEventListener('click',function(){ removeEntradaRow(id); });
   entNumerar();
   entResumen();
-  sku.focus();
+  if(WZ.paso===3&&ENTRADA_TAB==='manual') sku.focus();
 }
 
 function entNumerar(){
@@ -597,7 +761,7 @@ document.addEventListener('keydown',function(e){
   if(!fs||!fs.classList.contains('open')) return;
   if(e.key==='Escape'){ closeFS('fs-entrada'); return; }
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
-    var b=document.getElementById('btn-ent-save');
+    var b=document.getElementById(WZ.paso===4?'btn-ent-save':'btn-ent-next');
     if(b&&!b.disabled){ e.preventDefault(); b.click(); }
   }
 });
@@ -614,6 +778,7 @@ function handleFileSelect(file){
   if(!file)return;
   var err=document.getElementById('arch-err');
   err.textContent='';
+  ARCH_FILE=file.name||'';
   _archEstado('');
   if(/\.pdf$/i.test(file.name) || file.type==='application/pdf'){ leerPDFdeOC(file); return; }
   if(!file.name.match(/\.xlsx?$/i)){err.textContent='Solo se aceptan archivos .xlsx, .xls o .pdf';return;}
@@ -736,6 +901,7 @@ function renderPreview(){
   document.getElementById('arch-preview').classList.remove('hidden');
   _pvBarra();
   _archTotal();
+  _wzFound();
 }
 
 // Barra superior: "Incluir todos" y el botón que filtra las filas por revisar
@@ -934,7 +1100,7 @@ async function leerPDFdeOC(file){
     });
     ARCH_TOT=r.totales||{sub:null,imp:null,total:null};
     var ocEl=document.getElementById('ent-oc');
-    if(r.oc && ocEl && !ocEl.value.trim()){ ocEl.value=r.oc; entAplicarOC(r.oc); }
+    if(r.oc && ocEl && !ocEl.value.trim()){ ocEl.value=r.oc; entAplicarOC(r.oc); document.getElementById('ent-oc-tag').textContent='✓ del PDF'; }
 
     // Verificar cada SKU contra el Stock de la sede y usar su descripción oficial
     _archEstado('Comprobando los SKU con tu Stock…');
@@ -989,6 +1155,8 @@ function clearFile(){
   document.getElementById('arch-file-inp').value='';
   document.getElementById('arch-preview').classList.add('hidden');
   document.getElementById('arch-err').textContent='';
+  ARCH_FILE='';
+  if(typeof _wzFound==='function') _wzFound();
   if(typeof entResumen==='function') entResumen();
 }
 
@@ -1003,7 +1171,7 @@ function guardarEntrada(){
 
 function guardarEntradaManual(){
   var fac=document.getElementById('ent-factura').value.trim();
-  var err=document.getElementById('ent-err');
+  var err=document.getElementById('ent-err4');
   if(!fac){err.textContent='La factura/referencia es obligatoria';return;}
 
   // Recopilar todas las filas de producto
@@ -1015,6 +1183,7 @@ function guardarEntradaManual(){
     var sku=(document.getElementById('er-sku-'+id)||{}).value||'';
     var und=(document.getElementById('er-und-'+id)||{}).value||'';
     sku=sku.trim();
+    if(!sku&&!und) return;   // fila totalmente vacía: se ignora
     if(!sku||!und){valido=false;return;}
     filas.push({
       sku:sku,
@@ -1042,20 +1211,20 @@ function guardarEntradaManual(){
 
   google.script.run
     .withSuccessHandler(function(r){
-      btn.disabled=false;btn.textContent='Guardar entrada';
+      btn.disabled=false;btn.textContent=_wzTxtGuardar();
       if(!r.ok){err.textContent=r.error;return;}
       showToast('Entrada registrada ('+filas.length+' SKU'+(filas.length>1?'s':'')+')','ok');
       closeFS('fs-entrada');
       PAGE_LOADED['stock']=false;
       reloadPage('entradas');
     })
-    .withFailureHandler(function(e){btn.disabled=false;btn.textContent='Guardar entrada';err.textContent=e.message;})
+    .withFailureHandler(function(e){btn.disabled=false;btn.textContent=_wzTxtGuardar();err.textContent=e.message;})
     .registrarEntradasMultiple(S.token, filas, comun);
 }
 
 function guardarEntradaArchivo(){
   var fac=document.getElementById('ent-factura').value.trim();
-  var err=document.getElementById('arch-err');
+  var err=document.getElementById('ent-err4');
   if(!fac){err.textContent='La factura/referencia es obligatoria';return;}
   var seleccionados=ARCH_ROWS.filter(function(r){return r.incluir;});
   if(!seleccionados.length){err.textContent='Selecciona al menos un producto';return;}
@@ -1077,7 +1246,7 @@ function guardarEntradaArchivo(){
 
   google.script.run
     .withSuccessHandler(function(r){
-      btn.disabled=false;btn.textContent='Importar desde archivo';
+      btn.disabled=false;btn.textContent=_wzTxtGuardar();
       if(!r.ok){err.textContent=r.error;return;}
       showToast('Importados '+filas.length+' SKU'+(filas.length>1?'s':'')+' correctamente','ok');
       clearFile();
@@ -1085,6 +1254,6 @@ function guardarEntradaArchivo(){
       PAGE_LOADED['stock']=false;
       reloadPage('entradas');
     })
-    .withFailureHandler(function(e){btn.disabled=false;btn.textContent='Importar desde archivo';err.textContent=e.message;})
+    .withFailureHandler(function(e){btn.disabled=false;btn.textContent=_wzTxtGuardar();err.textContent=e.message;})
     .registrarEntradasMultiple(S.token, filas, comun);
 }

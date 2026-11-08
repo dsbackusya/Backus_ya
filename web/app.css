@@ -2472,6 +2472,75 @@ input.filter-inp:focus{
 #fs-entrada .fs-footer{align-items:center}
 #btn-ent-save:disabled{opacity:.45;cursor:not-allowed}
 
+/* ── Asistente de Registrar entrada (4 pasos) ── */
+.wz{display:grid;grid-template-columns:268px minmax(0,1fr);background:var(--surface);border:1px solid var(--border2);border-radius:24px;min-width:0}
+.wz-rail{background:var(--surface2);border-right:1px solid var(--border);border-radius:24px 0 0 24px;padding:26px 22px;display:flex;flex-direction:column}
+.wz-rail h4{margin:0 0 20px;font:500 10px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text3)}
+.wz-stp{display:flex;gap:14px;border:0;background:none;text-align:left;padding:0;position:relative;min-height:74px;width:100%;cursor:pointer}
+.wz-stp::before{content:"";position:absolute;left:14px;top:32px;bottom:2px;width:2px;background:var(--border2)}
+.wz-stp:last-of-type::before{display:none}
+.wz-stp.done::before{background:var(--ok)}
+.wz-dot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex:none;font:600 12.5px 'Inter',sans-serif;background:var(--surface3);color:var(--text3);border:2px solid var(--surface3);position:relative;z-index:1;transition:.2s}
+.wz-tx{text-align:left;min-width:0}
+.wz-tx strong{display:block;font-size:13.5px;color:var(--text3);margin-top:5px}
+.wz-tx small{display:block;font-size:11.5px;color:var(--text4);margin-top:2px;line-height:1.35;max-width:176px;overflow-wrap:anywhere}
+.wz-stp.on .wz-dot{background:var(--accent-ghost);border-color:var(--accent);color:var(--accent2);box-shadow:0 0 0 5px rgba(123,97,239,.12)}
+.wz-stp.on .wz-tx strong{color:var(--text)}.wz-stp.on .wz-tx small{color:var(--text3)}
+.wz-stp.done .wz-dot{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.wz-stp.done .wz-tx strong{color:var(--text2)}.wz-stp.done .wz-tx small{color:var(--text3)}
+.wz-stp:disabled{cursor:default}
+.wz-stp:not(:disabled):not(.on):hover .wz-tx strong{color:var(--text)}
+.wz-rf{margin-top:auto;font-size:11.5px;color:var(--text4);border-top:1px dashed var(--border2);padding-top:14px;line-height:1.5}
+.wz-pane{display:flex;flex-direction:column;min-width:0;min-height:560px}
+.wz-ph{padding:28px 34px 0}
+.wz-eb{font:500 10.5px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent2)}
+.wz-ph h2{margin:6px 0 4px;font-size:23px;letter-spacing:-.015em;color:var(--text)}
+.wz-ph p{margin:0;color:var(--text3);font-size:13.5px}
+.wz-pb{padding:24px 34px 30px;flex:1;min-width:0}
+.wz-ch{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.wz-cho{border:1px solid var(--border2);background:var(--surface2);border-radius:16px;padding:22px 20px;text-align:left;display:flex;flex-direction:column;gap:8px;transition:.15s;position:relative;color:var(--text);cursor:pointer;font-family:inherit}
+.wz-cho:hover{border-color:var(--accent);background:var(--accent-ghost)}
+.wz-cho.sel{border-color:var(--accent);background:var(--accent-ghost);box-shadow:0 0 0 3px rgba(123,97,239,.15)}
+.wz-ic{width:42px;height:42px;border-radius:12px;background:var(--accent-ghost);color:var(--accent2);display:grid;place-items:center}
+.wz-cho b{font-size:15px}.wz-cho p{margin:0;font-size:12.5px;color:var(--text3);line-height:1.45}
+.wz-tag{position:absolute;top:14px;right:14px;font:600 9.5px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ok);background:var(--ok-bg);border-radius:99px;padding:2px 9px}
+#wz-s1-arch{margin-top:16px}
+.wz-found{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.wz-found span{background:var(--ok-bg);color:var(--ok);border-radius:99px;padding:5px 12px;font-size:12px;font-weight:600}
+.wz-found .wz-file{background:var(--surface3);color:var(--text2)}
+.wz-note{margin-top:16px;background:var(--surface2);border:1px dashed var(--border2);border-radius:14px;padding:14px 16px;font-size:13px;color:var(--text2)}
+.wz-fg{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}
+.wz-fg .wz-full{grid-column:1/-1}
+.en2-f label em#ent-oc-tag{color:var(--ok)}
+.wz-rv{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.wz-rc{border:1px solid var(--border);background:var(--surface2);border-radius:16px;padding:16px 18px;min-width:0}
+.wz-rt{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.wz-rt span{font:500 10px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text3)}
+.wz-rt button{background:none;border:0;color:var(--accent2);font:600 12px 'Inter',sans-serif;cursor:pointer}
+.wz-kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:13px;color:var(--text2)}
+.wz-kv b{color:var(--text);text-align:right;font-weight:600;overflow-wrap:anywhere}
+.wz-tot{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;background:linear-gradient(135deg,rgba(123,97,239,.22),rgba(123,97,239,.06));border:1px solid var(--accent-line);border-radius:16px;padding:18px 22px}
+.wz-tot small{display:block;font:500 10px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--text2)}
+.wz-tot b{font-size:28px;letter-spacing:-.02em;color:var(--text)}
+.wz-tot .r{text-align:right}.wz-tot .r b{font-size:17px}
+.wz-nt{grid-column:1/-1;border-radius:14px;padding:12px 16px;font-size:12.5px;color:var(--text2)}
+.wz-nt.w{background:var(--warn-bg)}.wz-nt.w b{color:var(--warn)}
+.wz-nt.o{background:var(--ok-bg)}.wz-nt.o b{color:var(--ok)}
+.wz-nt a{color:var(--accent2);font-weight:600}
+@media (max-width:900px){
+  .wz{grid-template-columns:1fr;border-radius:18px}
+  .wz-rail{flex-direction:row;padding:12px;overflow-x:auto;gap:4px;border-right:0;border-bottom:1px solid var(--border);border-radius:18px 18px 0 0}
+  .wz-rail h4,.wz-rf{display:none}
+  .wz-stp{min-height:0;flex:1 0 auto;width:auto;align-items:center}
+  .wz-stp::before,.wz-tx small{display:none}
+  .wz-tx strong{margin-top:0;font-size:12.5px}
+  .wz-ph,.wz-pb{padding-left:16px;padding-right:16px}
+  .wz-ph{padding-top:20px}.wz-ph h2{font-size:20px}
+  .wz-pane{min-height:0}
+  .wz-ch,.wz-fg,.wz-rv{grid-template-columns:1fr}
+  .wz-tx{display:none}.wz-stp.on .wz-tx{display:block}
+}
+
 /* ── Vista previa de la importación (Excel / PDF) ── */
 .pv-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}
 .pv-all{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer}
