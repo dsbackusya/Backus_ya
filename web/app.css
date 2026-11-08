@@ -2073,10 +2073,15 @@ input.filter-inp:focus{
 #fs-conteo .cnt-cam-msg{position:absolute;left:12px;right:12px;bottom:9px;text-align:center;font-size:12px;color:rgba(255,255,255,.9);text-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none}
 #fs-conteo .cnt-flash{position:absolute;right:20px;top:10px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:rgba(255,255,255,.2);color:#fff;display:flex;align-items:center;justify-content:center}
 #fs-conteo .cnt-flash.on{background:#F5B94C;color:#1A1530}
-#fs-conteo .cnt-cam-off{position:absolute;inset:0;background:rgba(24,10,86,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:0 24px;cursor:pointer}
+#fs-conteo .cnt-cam-off{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:0 28px;cursor:pointer;
+  background:rgba(40,22,120,.55);-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2)}
 #fs-conteo.cnt-det .cnt-cam-off{cursor:default}
-#fs-conteo .cnt-off-code{font-family:var(--font-mono);font-size:14px;color:#fff}
-#fs-conteo .cnt-off-sub{font-size:12px;color:rgba(255,255,255,.7)}
+#fs-conteo .cnt-cam.off .cnt-aim{opacity:0}
+#fs-conteo .cnt-off-ic{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.2);color:#fff;margin-bottom:6px}
+#fs-conteo .cnt-off-code{font-family:var(--font-mono);font-size:12.5px;color:#fff;background:rgba(255,255,255,.16);padding:3px 10px;border-radius:10px;margin-bottom:2px}
+#fs-conteo .cnt-off-t{font-size:15px;font-weight:600;color:#fff}
+#fs-conteo .cnt-off-sub{font-size:12.5px;line-height:1.35;color:rgba(255,255,255,.78);max-width:280px}
+#fs-conteo .cnt-off-b{margin-top:10px;height:34px;padding:0 16px;border-radius:17px;background:#fff;color:#4a32c4;font-size:13px;font-weight:700;display:flex;align-items:center}
 @media(min-width:560px){#fs-conteo .cnt-cam{margin:14px 0 0;border-radius:20px}}
 
 #fs-conteo .cnt-foot{font-size:13px;color:rgba(255,255,255,.9);padding:12px 2px 0;line-height:1.35;text-align:center}

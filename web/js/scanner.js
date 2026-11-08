@@ -238,26 +238,40 @@ function _cntCamDetener(){
   var v = document.getElementById('cnt-cam-v'); if (v) { try { v.srcObject = null; } catch(e){} }
   var f = document.getElementById('cnt-flash'); if (f) { f.style.display = 'none'; f.classList.remove('on'); }
 }
-// html = contenido de la capa negra; null = ocultarla y mostrar el visor
+// html = contenido de la capa sobre el visor; null = ocultarla y mostrar el visor
 function _cntCamNegro(html){
   var off = document.getElementById('cnt-cam-off'); if (!off) return;
   var vivo = !html;
   off.style.display = vivo ? 'none' : 'flex';
   if (!vivo) off.innerHTML = html;
+  var cam = document.getElementById('cnt-cam'); if (cam) cam.classList.toggle('off', !vivo);
   var l = document.getElementById('cnt-cam-line'); if (l) l.style.display = vivo ? '' : 'none';
   var m = document.getElementById('cnt-cam-msg');  if (m) m.style.display = vivo ? '' : 'none';
 }
+// Contenido de la capa: icono, título, texto y (opcional) botón. Tocar la capa vuelve a escanear.
+var _CNT_ICO = {
+  ok:   '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  warn: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8.5" y1="8.5" x2="13.5" y2="13.5"/><line x1="13.5" y1="8.5" x2="8.5" y2="13.5"/></svg>',
+  cam:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M9.5 5h5l1.5 2H19a2 2 0 0 1 2 2v7.5M7 7H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12"/><path d="M10.2 10.2a3 3 0 0 0 3.6 3.6"/></svg>'
+};
+function _cntOff(ico, titulo, sub, boton, codigo){
+  return '<div class="cnt-off-ic">' + _CNT_ICO[ico] + '</div>' +
+    (codigo ? '<div class="cnt-off-code">' + esc(codigo) + '</div>' : '') +
+    '<div class="cnt-off-t">' + esc(titulo) + '</div>' +
+    (sub ? '<div class="cnt-off-sub">' + esc(sub) + '</div>' : '') +
+    (boton ? '<div class="cnt-off-b">' + esc(boton) + '</div>' : '');
+}
 function _cntCamPausar(codigo){
   _cntCamDetener();
-  _cntCamNegro((codigo ? '<div class="cnt-off-code">'+esc(codigo)+'</div>' : '') + '<div class="cnt-off-sub">Cámara en pausa</div>');
+  _cntCamNegro(_cntOff('ok', 'Código leído', 'Buscando el producto…', '', codigo));
 }
 function _cntCamNoEncontrado(){
   if (_cntCam.activo) return; // el código se escribió a mano con la cámara encendida: no se toca el visor
-  _cntCamNegro('<div style="font-size:15px;color:#FF8A8A">Código no encontrado</div><div class="cnt-off-sub">Toca para escanear otra vez</div>');
+  _cntCamNegro(_cntOff('warn', 'Código no encontrado', 'Revisa el código o búscalo por nombre', 'Escanear otro'));
 }
 function _cntCamSinCamara(texto){
   _cntCamDetener();
-  _cntCamNegro('<div style="font-size:13px;color:#E4DEFF">'+esc(texto)+'</div><div class="cnt-off-sub">Toca para reintentar</div>');
+  _cntCamNegro(_cntOff('cam', 'Cámara no disponible', texto, 'Reintentar'));
   var e = document.getElementById('cnt-ean'); if (e && _cntCamAbierta()) e.focus();
 }
 // Toque sobre el panel negro: si no hay producto detectado, vuelve a escanear
@@ -285,7 +299,7 @@ function _cntCamIniciar(){
   var video = document.getElementById('cnt-cam-v'), msg = document.getElementById('cnt-cam-msg');
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     _cntCam.error = true;
-    _cntCamSinCamara('La cámara solo funciona con la app abierta por https (o instalada). Escribe el código arriba.');
+    _cntCamSinCamara('Ábrela por https o instalada. Mientras, escribe el código.');
     return;
   }
   _cntCamNegro(null);
@@ -351,10 +365,10 @@ function _cntCamIniciar(){
       _cntCam.iniciando = false; _cntCam.error = true;
       var n = err && err.name;
       _cntCamSinCamara(
-        n === 'NotAllowedError'  ? 'Permiso de cámara denegado. Actívalo en los ajustes del navegador o de la app, o escribe el código arriba.'
-      : n === 'NotFoundError'    ? 'Este equipo no tiene cámara. Escribe el código arriba.'
-      : n === 'NotReadableError' ? 'La cámara está en uso por otra aplicación. Escribe el código arriba.'
-      :                            'No se pudo abrir la cámara. Escribe el código arriba.');
+        n === 'NotAllowedError'  ? 'Permiso denegado. Actívalo en los ajustes o escribe el código.'
+      : n === 'NotFoundError'    ? 'Este equipo no tiene cámara. Escribe el código.'
+      : n === 'NotReadableError' ? 'Está en uso por otra aplicación. Escribe el código.'
+      :                            'No se pudo abrir. Escribe el código.');
     });
 }
 
