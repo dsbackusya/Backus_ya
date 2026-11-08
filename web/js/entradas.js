@@ -644,6 +644,7 @@ function wzActualizar(){
     ['Confirma y guarda','Revisa el resumen. Puedes editar cualquier sección antes de guardar.']
   ][WZ.paso-1];
   document.querySelector('#fs-entrada .wz-ph').classList.toggle('hidden',fin);
+  document.querySelector('#fs-entrada .wz-pane').dataset.paso=WZ.paso;   // el paso 3 usa una columna más ancha
   _wzEl('wz-eb').textContent='Paso '+WZ.paso+' de 4';
   _wzEl('wz-t').textContent=T[0];
   _wzEl('wz-s').textContent=T[1];
