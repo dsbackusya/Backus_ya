@@ -232,7 +232,7 @@
       var o = {
         _row: row, sku: str(r.sku), desc: str(r.descripcion), marca: str(r.marca), categoria: str(r.categoria),
         entradas: num(r.entradas), salidas: num(r.salidas), mt: num(r.mt),
-        stock: num(r.stock_actual), stockPack: num(r.stock_pack), packs: num(r.packs), costo: num(r.costo),
+        stock: num(r.stock_actual), stockPack: num(r.stock_pack), packs: num(r.packs), costo: num(r.costo), precio: num(r.precio),
         fVenc: '', diasVenc: ''
       };
       o.sede = sedeNombre(r.sede_id);
@@ -273,31 +273,83 @@
     };
   });
 
+  // Valida los datos de presentación de un SKU: pack (unidades por pack, obligatorio) y, solo para administrador, SAP y precio del Maestro.
+  function datosSKU(p, fila) {
+    var pack = entero(fila.pack);
+    if (pack === null || pack < 1) return { error: 'Indica cómo viene el producto: unidades por pack (1 o más).' };
+    var o = { pack: pack, sap: null, precio: null };
+    if (p.rol === 'admin') {                       // el Maestro es global y solo lo escribe el administrador (lo exige también la base)
+      var sap = str(fila.sap), precio = str(fila.precio);
+      if (sap) {
+        if (!/^[0-9]{4,10}$/.test(sap)) return { error: 'El código SAP debe tener solo números (4 a 10 dígitos).' };
+        o.sap = sap;
+      }
+      if (precio) {
+        var n = Number(precio.replace(',', '.'));
+        if (!isFinite(n) || n < 0) return { error: 'El precio por unidad no es válido.' };
+        o.precio = Math.round(n * 100) / 100;
+      }
+    }
+    return o;
+  }
+  // Crea o completa la fila del Maestro: nunca pisa la descripción ni un dato que no se haya enviado.
+  async function escribirMaestro(sku, desc, d) {
+    if (d.sap === null && d.precio === null) return;
+    var ex = await sb.from('maestro_sku').select('sku').eq('sku', sku).maybeSingle();
+    if (ex.error) throw ex.error;
+    var cambios = {};
+    if (d.sap !== null) cambios.cod_sap = d.sap;
+    if (d.precio !== null) cambios.precio = d.precio;
+    var w = ex.data
+      ? await sb.from('maestro_sku').update(cambios).eq('sku', sku)
+      : await sb.from('maestro_sku').insert(Object.assign({ sku: sku, descripcion: desc }, cambios));
+    if (w.error) throw w.error;
+  }
+
   API.registrarSKU = guard(async function (p, fila) {
     var sku = str(fila.sku);
     if (!sku) return { ok: false, error: 'SKU obligatorio' };
+    var d = datosSKU(p, fila);
+    if (d.error) return { ok: false, error: d.error };
     var sede = exigirSede(p, fila);
     var r = await sb.from('sede_productos').insert({
-      sede_id: sede, sku: sku, descripcion: str(fila.desc), marca: nulo(fila.marca), categoria: nulo(fila.categoria)
+      sede_id: sede, sku: sku, descripcion: str(fila.desc), marca: nulo(fila.marca), categoria: nulo(fila.categoria), packs: d.pack
     });
     if (r.error) {
       if (r.error.code === '23505') return { ok: false, error: 'El SKU "' + sku + '" ya existe en STOCK.' };
       throw r.error;
     }
+    try { await escribirMaestro(sku, str(fila.desc), d); }
+    catch (e) { return { ok: true, aviso: 'El producto se creó, pero no se pudo guardar el SAP o el precio en el Maestro: ' + (e && e.message ? e.message : e) }; }
     return { ok: true };
   });
 
   API.editarSKU = guard(async function (p, rowNum, fila) {
     var ref = _stockRows[rowNum];
     if (!ref) return { ok: false, error: 'Recarga el stock e intenta de nuevo.' };
+    var d = datosSKU(p, fila);
+    if (d.error) return { ok: false, error: d.error };
     var r = await sb.from('sede_productos').update({
-      sku: str(fila.sku), descripcion: str(fila.desc), marca: nulo(fila.marca), categoria: nulo(fila.categoria)
+      sku: str(fila.sku), descripcion: str(fila.desc), marca: nulo(fila.marca), categoria: nulo(fila.categoria), packs: d.pack
     }).eq('sede_id', ref.sede_id).eq('sku', ref.sku);
     if (r.error) {
       if (r.error.code === '23505') return { ok: false, error: 'El SKU "' + str(fila.sku) + '" ya existe.' };
       throw r.error;
     }
+    try { await escribirMaestro(str(fila.sku), str(fila.desc), d); }
+    catch (e) { return { ok: true, aviso: 'Los cambios se guardaron, pero no se pudo actualizar el SAP o el precio en el Maestro: ' + (e && e.message ? e.message : e) }; }
     return { ok: true };
+  });
+
+  // Datos del Maestro de un código (SAP y precio por unidad): sirve para completar el formulario de SKU. Lo puede leer cualquier usuario.
+  API.getMaestroSKU = guard(async function (p, sku) {
+    var s0 = str(sku);
+    if (!s0) return { ok: true, existe: false };
+    var r = await sb.from('maestro_sku').select('sku,descripcion,cod_sap,precio').eq('sku', s0).maybeSingle();
+    if (r.error) throw r.error;
+    if (!r.data) return { ok: true, existe: false };
+    var sap = str(r.data.cod_sap);
+    return { ok: true, existe: true, desc: str(r.data.descripcion), sap: /^[0-9]+$/.test(sap) ? sap : '', precio: r.data.precio === null ? '' : String(r.data.precio) };
   });
 
   API.buscarSKU = guard(async function (p, query) {

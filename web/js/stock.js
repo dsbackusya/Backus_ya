@@ -569,219 +569,426 @@ function exportStock(){
   dashExportStock();
 }
 
-var SKU_EDIT_ROW=null;
-var SKU_SHEET_ID=null; // para admin: sheetId de la tienda del SKU
-var SKU_CACHE=[];      // productos conocidos al abrir el formulario: avisa códigos repetidos y sugiere marcas/categorías
-
-function _skuMostrar(modo){ // 'form' | 'ok'
-  var f=modo==='form';
-  document.getElementById('sku-form').style.display=f?'':'none';
-  document.getElementById('sku-prev').style.display=f?'':'none';
-  document.getElementById('sku-foot').style.display=f?'':'none';
-  document.getElementById('sku-ok').style.display=f?'none':'';
-}
-function _skuTextos(esEdicion){
-  document.getElementById('fs-sku-title').textContent=esEdicion?'Editar SKU':'Nuevo SKU';
-  document.getElementById('sku-h1').textContent=esEdicion?'Editar SKU':'Nuevo SKU';
-  document.getElementById('sku-nota-edit').style.display=esEdicion?'flex':'none';
-  document.getElementById('sku-pnote').textContent=esEdicion?'El stock y los movimientos de este producto no cambian.':'El producto se crea con stock en cero. Para ingresar unidades registra una Entrada o haz un Conteo.';
-  document.getElementById('btn-sku-save').textContent=esEdicion?'Guardar cambios':'Guardar SKU';
-  document.getElementById('btn-sku-otro').style.display=esEdicion?'none':'';
-}
+/* ══════════════════════════════════════
+   NUEVO / EDITAR SKU — asistente de 2 pasos
+   1 Datos del producto · 2 Revisar y guardar (así se verá en Stock)
+══════════════════════════════════════ */
+var SK={paso:1,dir:1,modo:'nuevo',row:null,sheetId:null,sede:'',sku:'',sap:'',desc:'',pack:0,packOtro:false,precio:'',marca:'',cat:'',
+        chk:'idle',dup:null,mHit:null,mBusy:false,fin:false,keep:true,orig:null,saving:false,run:0,chkRun:0,tm:null,bound:false};
+var SKU_CACHE=[];                 // productos conocidos al abrir el formulario: avisa códigos repetidos y sugiere marcas/categorías
+var SK_PACKS=[1,6,12,24];         // presentaciones habituales (unidades por pack); "Otro" permite cualquier número
+var SK_MX={m:false,c:false};      // chips de marca/categoría desplegados
+var SK_NOM=['Datos del producto','Revisar y guardar'];
+var _skEl=function(id){ return document.getElementById(id); };
+var _skEdit=function(){ return SK.modo==='editar'; };
+var _skAdmin=function(){ return !!S&&S.rol==='admin'; };   // el Maestro (SAP y precio) solo lo escribe el administrador
+function _skMoney(n){ return Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+var _SK_CHK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+var _SK_CHK16='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+var _SK_LOCK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
 function abrirSKUForm(rowNum){
-  SKU_EDIT_ROW=rowNum;
-  SKU_SHEET_ID=null;
-  var esEdicion=rowNum!==null;
+  var edit=rowNum!==null&&rowNum!==undefined;
   SKU_CACHE=(DATA.stock||[]).map(function(r){return {sku:String(r.sku||''),desc:r.desc||'',marca:r.marca||'',categoria:r.categoria||'',_row:r._row,sede:r.sede||''};});
-  document.getElementById('sku-err').textContent='';
-  _skuMostrar('form');
-  _skuTextos(esEdicion);
-
-  // Selector de sede para admin en modo nuevo
-  var sedeWrap=document.getElementById('sku-sede-wrap');
-  if(sedeWrap){
-    if(S.rol==='admin' && !esEdicion){
-      var tiendas=[...new Set((DATA.stock||[]).map(function(r){return r.sede;}).filter(Boolean))].sort();
-      var opts=tiendas.map(function(t){return '<option value="'+esc(t)+'">'+esc(t)+'</option>';}).join('');
-      document.getElementById('sku-sede').innerHTML='<option value="">Selecciona tienda...</option>'+opts;
-      sedeWrap.style.display='';
-    } else {
-      sedeWrap.style.display='none';
-    }
-  }
-
-  if(esEdicion){
+  SK.run++; SK.chkRun++; clearTimeout(SK.tm);
+  SK.paso=1; SK.dir=1; SK.fin=false; SK.saving=false; SK.modo=edit?'editar':'nuevo'; SK.row=edit?rowNum:null; SK.sheetId=null; SK.sede='';
+  SK.sku=''; SK.sap=''; SK.desc=''; SK.pack=0; SK.packOtro=false; SK.precio=''; SK.marca=''; SK.cat='';
+  SK.chk='idle'; SK.dup=null; SK.mHit=null; SK.mBusy=false; SK.orig=null; SK_MX={m:false,c:false};
+  _skErr('');
+  if(edit){
     var row=(DATA.stock||[]).find(function(r){return r._row===rowNum;});
-    if(!row)return;
-    SKU_SHEET_ID=row.sheetId||null;
-    document.getElementById('sku-lovis').value=row.sku;
-    document.getElementById('sku-desc').value=row.desc;
-    document.getElementById('sku-marca').value=row.marca;
-    document.getElementById('sku-categoria').value=row.categoria;
-  } else {
-    document.getElementById('sku-lovis').value='';
-    document.getElementById('sku-desc').value='';
-    document.getElementById('sku-marca').value='';
-    document.getElementById('sku-categoria').value='';
+    if(!row) return;
+    SK.sheetId=row.sheetId||null; SK.sede=row.sede||'';
+    SK.sku=row.sku; SK.desc=row.desc; SK.marca=row.marca; SK.cat=row.categoria;
+    SK.pack=row.packs>0?row.packs:0; SK.packOtro=SK.pack>0&&SK_PACKS.indexOf(SK.pack)<0;
+    SK.precio=row.precio>0?String(row.precio):'';
+    SK.chk='ok';
+    SK.orig={sku:row.sku,desc:row.desc,marca:row.marca,cat:row.categoria,pack:SK.pack,sap:'',precio:SK.precio};
+    // el SAP no viene en el Stock: se trae del Maestro mientras se muestra el formulario
+    var run=SK.run; SK.mBusy=true;
+    google.script.run
+      .withSuccessHandler(function(r){
+        if(run!==SK.run) return;
+        SK.mBusy=false;
+        if(r&&r.ok&&r.existe){ SK.sap=r.sap||''; if(!SK.precio&&r.precio) SK.precio=r.precio; }
+        SK.orig.sap=SK.sap; SK.orig.precio=SK.precio;
+        skCargarCampos(); skActualizar();
+      })
+      .withFailureHandler(function(){ if(run!==SK.run) return; SK.mBusy=false; skCargarCampos(); skActualizar(); })
+      .getMaestroSKU(S.token,row.sku);
   }
-  skuEv();
+  skBind();
+  skCargarCampos();
+  skRender(false);
   openFS('fs-sku');
-  setTimeout(function(){document.getElementById('sku-lovis').focus();},120);
+  setTimeout(function(){ var e=_skEl(edit?'sku-desc':'sku-lovis'); if(e) e.focus(); },160);
 }
 
-// Atajos en PC: Esc cierra y Ctrl+Enter guarda
-document.addEventListener('keydown',function(e){
-  var fs=document.getElementById('fs-sku');
-  if(!fs||!fs.classList.contains('open')) return;
-  if(e.key==='Escape'){ closeFS('fs-sku'); return; }
-  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
-    var b=document.getElementById('btn-sku-save');
-    if(b&&!b.disabled&&document.getElementById('sku-foot').style.display!=='none'){ e.preventDefault(); b.click(); }
-  }
-});
-
-// Sugerencias de marca/categoría a partir de lo ya cargado
-function _skuChips(elId,campo,inpId){
-  var v=(document.getElementById(inpId).value||'').trim().toLowerCase(), vistos={}, lista=[];
-  SKU_CACHE.forEach(function(r){ var x=r[campo]; if(x&&!vistos[x]){vistos[x]=true;lista.push(x);} });
-  lista.sort();
-  var sug=lista.filter(function(x){return !v||x.toLowerCase().indexOf(v)>-1;}).slice(0,6);
-  document.getElementById(elId).innerHTML=sug.map(function(x){
-    return '<button type="button" class="'+(x.toLowerCase()===v?'on':'')+'" data-i="'+inpId+'" data-v="'+esc(x)+'" onclick="skuElegir(this)">'+esc(x)+'</button>';
-  }).join('');
+/* ── escribe el estado en los campos (al abrir, al cargar el Maestro y al pasar a "agregar otro") ── */
+function skCargarCampos(){
+  var set=function(id,v){ var e=_skEl(id); if(e&&e.value!==v) e.value=v; };
+  set('sku-lovis',SK.sku); set('sku-sap',SK.sap); set('sku-desc',SK.desc); set('sku-precio',SK.precio);
+  set('sku-marca',SK.marca); set('sku-categoria',SK.cat); set('sku-pack',SK.packOtro&&SK.pack?String(SK.pack):'');
+  _skEl('sku-dcount').textContent=SK.desc.length+' / 120';
+  var maestro=_skAdmin();
+  var sap=_skEl('sku-sap'), pr=_skEl('sku-precio');
+  sap.disabled=!maestro||SK.mBusy; pr.disabled=!maestro||SK.mBusy;
+  sap.placeholder=SK.mBusy?'Cargando…':'Ej: 4000123';
+  // sede (solo administrador creando)
+  var sw=_skEl('sk-sede-wrap');
+  if(_skAdmin()&&!_skEdit()){
+    var tiendas=[...new Set((DATA.stock||[]).map(function(r){return r.sede;}).filter(Boolean))].sort();
+    _skEl('sk-sedes').innerHTML=tiendas.map(function(t){return '<button type="button" class="sk-pill'+(SK.sede===t?' on':'')+'" onclick="skPickSede(this.dataset.s)" data-s="'+esc(t)+'">'+esc(t)+'</button>';}).join('');
+    sw.style.display='';
+  } else sw.style.display='none';
+  _skEl('sk-packs').innerHTML=skPackPills();
+  _skEl('sk-pko').classList.toggle('hidden',!SK.packOtro);
+  skPackHelp(); skChips(); skSkuUI(); skMaestroHints();
 }
-function skuElegir(b){ document.getElementById(b.dataset.i).value=b.dataset.v; skuEv(); }
 
-// Valida en vivo: código repetido, formato, vista previa y estado de los botones
-function skuEv(){
-  var sku=(document.getElementById('sku-lovis').value||'').trim();
-  var d=(document.getElementById('sku-desc').value||'').trim();
-  var ma=(document.getElementById('sku-marca').value||'').trim();
-  var ca=(document.getElementById('sku-categoria').value||'').trim();
-  var esEd=SKU_EDIT_ROW!==null;
-  document.getElementById('sku-dcount').textContent=document.getElementById('sku-desc').value.length+' / 120';
+function skBind(){
+  if(SK.bound) return; SK.bound=true;
+  var si=_skEl('sku-lovis'), sa=_skEl('sku-sap'), di=_skEl('sku-desc'), pr=_skEl('sku-precio'), po=_skEl('sku-pack'), mi=_skEl('sku-marca'), ci=_skEl('sku-categoria');
+  si.addEventListener('input',function(){ SK.sku=si.value; skCheck(); });
+  sa.addEventListener('input',function(){ var v=sa.value.replace(/\D/g,''); if(v!==sa.value) sa.value=v; SK.sap=v; skMaestroHints(); skActualizar(); });
+  di.addEventListener('input',function(){ SK.desc=di.value; _skEl('sku-dcount').textContent=di.value.length+' / 120'; skMaestroHints(); skActualizar(); });
+  pr.addEventListener('input',function(){ var v=pr.value.replace(/[^0-9.]/g,''), i=v.indexOf('.'); if(i>-1) v=v.slice(0,i+1)+v.slice(i+1).replace(/\./g,''); if(v!==pr.value) pr.value=v; SK.precio=v; skMaestroHints(); skActualizar(); });
+  po.addEventListener('input',function(){ var n=parseInt(po.value,10); SK.pack=n>=1?n:0; skPackHelp(); skActualizar(); });
+  mi.addEventListener('input',function(){ SK.marca=mi.value; skChips(); skActualizar(); });
+  ci.addEventListener('input',function(){ SK.cat=ci.value; skChips(); skActualizar(); });
+  /* Enter recorre los campos; al terminar la categoría pasa a revisar */
+  var enter=function(el,fn){ el.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); fn(); } }); };
+  enter(si,function(){ (sa.disabled?di:sa).focus(); });
+  enter(sa,function(){ di.focus(); });
+  enter(di,function(){ skFocusPack(); });
+  enter(po,function(){ (pr.disabled?mi:pr).focus(); });
+  enter(pr,function(){ mi.focus(); });
+  enter(mi,function(){ ci.focus(); });
+  enter(ci,function(){ if(skDatosOk()) skRevisar(); });
+  _skEl('sk-packs').addEventListener('keydown',function(e){
+    var b=[].slice.call(this.querySelectorAll('.sk-pill')), i=b.indexOf(document.activeElement);
+    if(e.key==='ArrowRight'&&i<b.length-1){ e.preventDefault(); b[i+1].focus(); }
+    if(e.key==='ArrowLeft'&&i>0){ e.preventDefault(); b[i-1].focus(); }
+  });
+}
 
-  var sedeSel=(document.getElementById('sku-sede')||{}).value||'';
-  if(esEd){ var fe=(DATA.stock||[]).filter(function(r){return r._row===SKU_EDIT_ROW;})[0]; sedeSel=fe?fe.sede:''; }  // al editar, solo cuenta la sede del producto (el mismo código puede existir en otra sede)
-  var ex=null;
-  if(sku){
-    ex=SKU_CACHE.filter(function(r){
-      return r.sku.toLowerCase()===sku.toLowerCase() && r._row!==SKU_EDIT_ROW && (!sedeSel||!r.sede||r.sede===sedeSel);
-    })[0]||null;
-  }
-  var formatoMal=sku&&!/^[A-Za-z0-9\-_.]+$/.test(sku);
-  var inp=document.getElementById('sku-lovis');
-  inp.className='sku-in mono'+((ex||formatoMal)?' bad':(sku?' good':''));
-  var h=document.getElementById('sku-lovis-h');
-  if(ex){
-    h.innerHTML='<div class="sku-dup"><b>Este SKU ya existe en tu Stock</b><br>'+esc(ex.desc)+(ex.marca?' · '+esc(ex.marca):'')+
+/* ── validación del código: formato, repetido en el Stock y búsqueda en el Maestro ── */
+function skCheck(){
+  clearTimeout(SK.tm);
+  var n=++SK.chkRun, v=SK.sku.trim();
+  SK.dup=null; SK.mHit=null; SK.mBusy=false;
+  if(!v){ SK.chk='idle'; skSkuUI(); skMaestroHints(); skActualizar(); return; }
+  if(!/^[A-Za-z0-9\-_.]+$/.test(v)){ SK.chk='fmt'; skSkuUI(); skMaestroHints(); skActualizar(); return; }
+  var sedeSel=SK.sede;
+  if(_skEdit()) sedeSel=SK.sede;   // al editar solo cuenta la sede del producto (el mismo código puede existir en otra sede)
+  var ex=SKU_CACHE.filter(function(r){
+    return r.sku.toLowerCase()===v.toLowerCase() && r._row!==SK.row && (!sedeSel||!r.sede||r.sede===sedeSel);
+  })[0]||null;
+  if(ex){ SK.chk='dup'; SK.dup=ex; skSkuUI(); skMaestroHints(); skActualizar(); return; }
+  SK.chk='ok'; skSkuUI(); skActualizar();               // disponible: no se espera a la consulta del Maestro para poder seguir
+  if(_skEdit()&&SK.orig&&v===SK.orig.sku){ skMaestroHints(); return; }
+  SK.mBusy=true; skSkuUI();
+  SK.tm=setTimeout(function(){
+    google.script.run
+      .withSuccessHandler(function(r){
+        if(n!==SK.chkRun) return;
+        SK.mBusy=false;
+        if(r&&r.ok&&r.existe){
+          SK.mHit=r;
+          if(!SK.sap&&r.sap){ SK.sap=r.sap; skCargarCampos(); }
+          if(!SK.precio&&r.precio){ SK.precio=r.precio; skCargarCampos(); }
+        }
+        skSkuUI(); skMaestroHints(); skActualizar();
+      })
+      .withFailureHandler(function(){ if(n!==SK.chkRun) return; SK.mBusy=false; skSkuUI(); skMaestroHints(); })
+      .getMaestroSKU(S.token,v);
+  },300);
+}
+function skSkuUI(){
+  var inp=_skEl('sku-lovis'); if(!inp) return;
+  var mal=SK.chk==='dup'||SK.chk==='fmt';
+  inp.className='sk-in lg'+(mal?' bad':(SK.chk==='ok'&&SK.sku.trim()?' good':''));
+  _skEl('sk-stt').innerHTML=SK.mBusy?'<span class="sk-spin"></span>':(SK.chk==='ok'?'<span class="okc">'+_SK_CHK+'</span>':(mal?'<span class="bdc">!</span>':''));
+  var h=_skEl('sku-lovis-h'), ex=SK.dup;
+  if(SK.chk==='dup'&&ex){
+    h.innerHTML='<div class="sk-dup"><b>Este SKU ya existe en tu Stock</b>'+esc(ex.desc)+(ex.marca?' · '+esc(ex.marca):'')+
       (ex._row>0?'<br><button type="button" onclick="abrirSKUForm('+ex._row+')">Editar ese producto</button>':'')+'</div>';
-  } else if(formatoMal){
-    h.innerHTML='<div class="sku-hint err">Usa solo letras, números, guiones o puntos.</div>';
-  } else if(sku&&!esEd){
-    h.innerHTML='<div class="sku-hint ok">'+ICO('check',13)+'Código disponible</div>';
-  } else { h.innerHTML=''; }
-
-  _skuChips('sku-chips-m','marca','sku-marca');
-  _skuChips('sku-chips-c','categoria','sku-categoria');
-
-  // Vista previa: la fila tal como se verá en Stock (al editar, con los números reales del producto)
-  var pn=document.getElementById('sku-pvn'); pn.textContent=d||'Descripción del producto'; pn.className='sku-pn'+(d?'':' empty');
-  document.getElementById('sku-pvs').textContent=sku||'SKU';
-  document.getElementById('sku-pvm').textContent=ma||'Sin marca';
-  document.getElementById('sku-pvc').textContent=ca||'Sin categoría';
-  var fila=esEd?(DATA.stock||[]).filter(function(r){return r._row===SKU_EDIT_ROW;})[0]:null;
-  var st=fila?fila.stock:0, e=st>0?'ok':(st<0?'ng':'no');
-  document.getElementById('sku-pvmov').innerHTML=fila?('<span style="color:var(--ok)">+'+fmt(fila.entradas)+'</span> &nbsp;−'+fmt(fila.salidas)):'+0 &nbsp;−0';
-  var stk=document.getElementById('sku-pvstk'); stk.textContent=fmt(st); stk.style.color=e==='ng'?'var(--danger)':'';
-  document.getElementById('sku-pvpack').textContent=fila?Math.round(fila.stockPack):'0';
-  document.getElementById('sku-pvcost').textContent=(fila&&fila.costo)?'S/ '+fmt(fila.costo):'—';
-  var pe=document.getElementById('sku-pvest'); pe.textContent=e==='ok'?'Con stock':(e==='ng'?'Negativo':'Sin stock'); pe.className='sku-pill '+e;
-
-  var sinSede=S.rol==='admin'&&!esEd&&!sedeSel;
-  var malo=!sku||!d||!!ex||formatoMal||sinSede;
-  document.getElementById('btn-sku-save').disabled=malo;
-  document.getElementById('btn-sku-otro').disabled=malo;
-  var msg=document.getElementById('sku-msg');
-  msg.textContent=ex?'Ese código ya existe: edítalo en lugar de crearlo':(sinSede?'Selecciona la tienda destino':(malo?'Completa el código y la descripción para guardar':'Todo listo para guardar'));
-  msg.style.color=ex?'var(--warn)':(malo?'var(--text3)':'var(--ok)');
-  var stt=document.getElementById('sku-stat');
-  stt.className='sku-stat '+(ex?'no':(malo?'':'ok'));
-  document.getElementById('sku-stat-t').textContent=ex?'Código repetido':(malo?'Faltan datos':'Listo para guardar');
+  } else if(SK.chk==='fmt'){
+    h.innerHTML='<div class="sk-hint err">Usa solo letras, números, guiones o puntos.</div>';
+  } else if(SK.mBusy){
+    h.innerHTML='<div class="sk-hint mut">Buscando en el Maestro…</div>';
+  } else if(SK.chk==='ok'&&!_skEdit()){
+    h.innerHTML='<div class="sk-hint ok">'+_SK_CHK+' Código disponible'+(SK.mHit?' · ya está en el Maestro':'')+'</div>';
+  } else h.innerHTML='';
+}
+// Avisos de SAP y precio (bloqueados para tiendas; ayudas para el administrador) y atajo para usar la descripción del Maestro
+function skMaestroHints(){
+  var maestro=_skAdmin();
+  var sh=_skEl('sku-sap-h'), ph=_skEl('sku-precio-h'); if(!sh||!ph) return;
+  var lock='<div class="sk-lock">'+_SK_LOCK+'<span>Lo completa el administrador (Maestro).</span></div>';
+  if(!maestro){ sh.innerHTML=lock; ph.innerHTML=lock; }
+  else {
+    sh.innerHTML=(SK.sap&&!/^[0-9]{4,10}$/.test(SK.sap))?'<div class="sk-hint err">Solo números (de 4 a 10 dígitos).</div>':'';
+    ph.innerHTML='<div class="sk-hint mut">Se guarda en el Maestro y valoriza el Stock (costo = precio × unidades).</div>';
+  }
+  if(SK.mHit&&SK.mHit.desc&&!SK.desc.trim()){
+    var h=_skEl('sku-lovis-h');
+    if(h&&!h.querySelector('.sk-dup')&&!h.querySelector('.sk-usar'))
+      h.insertAdjacentHTML('beforeend','<div class="sk-hint mut sk-usar">En el Maestro: «'+esc(SK.mHit.desc)+'» <button type="button" onclick="skUsarDescMaestro()">Usar descripción</button></div>');
+  }
+}
+function skUsarDescMaestro(){
+  if(!SK.mHit||!SK.mHit.desc) return;
+  SK.desc=SK.mHit.desc.slice(0,120); skCargarCampos(); skActualizar();
+  var d=_skEl('sku-desc'); if(d) d.focus();
 }
 
-function skuOtro(){
-  SKU_EDIT_ROW=null; SKU_SHEET_ID=null;
-  _skuMostrar('form');
-  _skuTextos(false);
-  ['sku-lovis','sku-desc','sku-marca','sku-categoria'].forEach(function(id){document.getElementById(id).value='';});
-  document.getElementById('sku-err').textContent='';
-  skuEv();
-  setTimeout(function(){document.getElementById('sku-lovis').focus();},60);
+/* ── presentación (unidades por pack) ── */
+function skPackPills(){
+  return SK_PACKS.map(function(n){ return '<button type="button" class="sk-pill'+(!SK.packOtro&&SK.pack===n?' on':'')+'" onclick="skPickPack('+n+')">'+(n===1?'Unidad':'Pack x'+n)+'</button>'; }).join('')+
+         '<button type="button" class="sk-pill'+(SK.packOtro?' on':'')+'" onclick="skPickPack(0)">Otro</button>';
+}
+function skPackHelp(){
+  var h=_skEl('sk-pack-h'); if(!h) return;
+  var pk=SK.pack;
+  if(!pk){ h.className='sk-hint mut'; h.textContent='Elige cómo viene para poder calcular los packs.'; return; }
+  var ej=pk===1?24:pk*4;
+  h.className='sk-hint ok';
+  h.innerHTML=_SK_CHK+(pk===1?' Se cuenta por unidad: 1 pack = 1 unidad.':' Cada pack trae '+pk+' unidades · ej.: '+ej+' unidades = '+(ej/pk)+' packs');
+}
+function skFocusPack(){ var b=document.querySelector('#sk-packs .sk-pill.on')||document.querySelector('#sk-packs .sk-pill'); if(b) b.focus(); }
+function skPickPack(n){
+  if(n===0){ SK.packOtro=true; SK.pack=parseInt(_skEl('sku-pack').value,10)||0; }
+  else { SK.packOtro=false; SK.pack=n; }
+  _skEl('sk-packs').innerHTML=skPackPills();
+  _skEl('sk-pko').classList.toggle('hidden',!SK.packOtro);
+  skPackHelp(); skActualizar();
+  setTimeout(function(){
+    if(SK.paso!==1) return;
+    var next=SK.packOtro?_skEl('sku-pack'):(_skEl('sku-precio').disabled?_skEl('sku-marca'):_skEl('sku-precio'));
+    if(next) next.focus();
+  },60);
+}
+function skPickSede(nombre){
+  SK.sede=nombre;
+  document.querySelectorAll('#sk-sedes .sk-pill').forEach(function(b){ b.classList.toggle('on',b.dataset.s===nombre); });
+  if(SK.sku.trim()) skCheck(); else skActualizar();
+  setTimeout(function(){ var e=_skEl('sku-lovis'); if(e) e.focus(); },80);
+}
+
+/* ── sugerencias de marca/categoría a partir de lo ya cargado (3 visibles + "+N") ── */
+function _skLista(campo){
+  var vistos={}, lista=[];
+  SKU_CACHE.forEach(function(r){ var x=r[campo]; if(x&&!vistos[x]){ vistos[x]=true; lista.push(x); } });
+  return lista.sort();
+}
+function _skChipsHTML(lista,val,fn,key){
+  var v=val.trim().toLowerCase();
+  var items=lista.filter(function(x){ return !v||x.toLowerCase().indexOf(v)>-1; });
+  items.sort(function(a,b){ return (b.toLowerCase()===v)-(a.toLowerCase()===v); });      // el elegido va primero
+  var LIM=3, extra=items.length-LIM, ver=SK_MX[key]?items:items.slice(0,LIM);
+  var h=ver.map(function(x){ return '<button type="button" class="'+(x.toLowerCase()===v?'on':'')+'" data-v="'+esc(x)+'" onclick="'+fn+'(this.dataset.v)">'+esc(x)+'</button>'; }).join('');
+  if(extra>0) h+='<button type="button" class="more" onclick="skMas(\''+key+'\')">'+(SK_MX[key]?'Menos':'+'+extra)+'</button>';
+  return h;
+}
+function skChips(){
+  var m=_skEl('sku-chips-m'), c=_skEl('sku-chips-c');
+  if(m) m.innerHTML=_skChipsHTML(_skLista('marca'),SK.marca,'skPickM','m');
+  if(c) c.innerHTML=_skChipsHTML(_skLista('categoria'),SK.cat,'skPickC','c');
+}
+function skMas(k){ SK_MX[k]=!SK_MX[k]; skChips(); }
+function skPickM(x){ SK.marca=(SK.marca.toLowerCase()===x.toLowerCase())?'':x; _skEl('sku-marca').value=SK.marca; skChips(); skActualizar(); }
+function skPickC(x){ SK.cat=(SK.cat.toLowerCase()===x.toLowerCase())?'':x; _skEl('sku-categoria').value=SK.cat; skChips(); skActualizar(); }
+
+/* ── reglas de avance ── */
+function skCambios(){
+  var o=SK.orig; if(!o) return [];
+  var out=[];
+  [['Código',o.sku,SK.sku.trim()],['Descripción',o.desc,SK.desc.trim()],['Pack',o.pack?'de '+o.pack:'',SK.pack?'de '+SK.pack:''],
+   ['Marca',o.marca,SK.marca.trim()],['Categoría',o.cat,SK.cat.trim()],['Código SAP',o.sap,SK.sap],['Precio',o.precio?'S/ '+o.precio:'',SK.precio?'S/ '+SK.precio:'']].forEach(function(c){
+    if(String(c[1]||'')!==String(c[2]||'')) out.push({k:c[0],a:c[1]||'—',d:c[2]||'—'});
+  });
+  return out;
+}
+function skDatosOk(){
+  if(_skAdmin()&&!_skEdit()&&!SK.sede) return false;
+  if(!SK.sku.trim()||!SK.desc.trim()||SK.chk==='dup'||SK.chk==='fmt'||!(SK.pack>=1)) return false;
+  if(SK.sap&&!/^[0-9]{4,10}$/.test(SK.sap)) return false;
+  if(SK.precio&&!(parseFloat(SK.precio)>=0)) return false;
+  return true;
+}
+function skPuedeGuardar(){ return skDatosOk()&&(!_skEdit()||skCambios().length>0); }
+
+/* ── navegación ── */
+function skAnimar(){
+  var p=_skEl('sk-pane'); if(!p) return;
+  p.classList.remove('in-fwd','in-back'); void p.offsetWidth;
+  p.classList.add(SK.dir>0?'in-fwd':'in-back');
+}
+function skRevisar(){ if(!skDatosOk()||SK.fin) return; SK.dir=1; SK.paso=2; skPintarRevisar(); skRender(true); }
+function skIr(k){ if(SK.fin) return; if(k===1){ SK.dir=-1; SK.paso=1; skRender(true); } else skRevisar(); }
+function skAtras(){ if(SK.paso===2){ SK.dir=-1; SK.paso=1; skRender(true); } else closeFS('fs-sku'); }
+
+function skRender(anim){
+  var edit=_skEdit();
+  _skEl('fs-sku-title').textContent=edit?'Editar SKU':'Nuevo SKU';
+  var pane=_skEl('sk-pane'); pane.dataset.paso=SK.fin?3:SK.paso;
+  if(anim) skAnimar();
+  var T={1:['Paso 1 de 2','Datos del producto',edit?'Corrige lo que necesites. El stock no cambia.':'Completa todo en una sola pantalla. El código se comprueba mientras escribes.'],
+         2:['Paso 2 de 2',edit?'Revisa los cambios':'Así se verá en Stock','Si todo está bien, guárdalo. Puedes volver a editar sin perder nada.']}[SK.paso]||['','',''];
+  _skEl('sk-ph').classList.toggle('hidden',SK.fin);
+  _skEl('sk-eb').textContent=T[0]; _skEl('sk-t').textContent=T[1]; _skEl('sk-s').textContent=T[2];
+  for(var k=1;k<=3;k++) _skEl('sk-s'+k).classList.toggle('hidden',k!==(SK.fin?3:SK.paso));
+  _skEl('sku-nota-edit').style.display=edit&&SK.paso===1?'':'none';
+  var fb=document.querySelector('#fs-sku .fs-body'); if(fb) fb.scrollTop=0;
+  skActualizar();
+}
+
+// Se llama en cada cambio: refresca el riel y la barra de botones (barato)
+function skActualizar(){
+  _skRailUpd();
+  var fin=SK.fin, edit=_skEdit(), p=SK.paso;
+  _skEl('sk-footer').classList.toggle('hidden',fin);
+  var back=_skEl('sk-back'), next=_skEl('btn-sku-next'), save=_skEl('btn-sku-save'), otro=_skEl('btn-sku-otro'), hints=_skEl('sk-hints');
+  back.innerHTML=p>1?'← Editar datos':'Cancelar <span class="en2-kb">Esc</span>';
+  next.classList.toggle('hidden',p!==1);
+  save.classList.toggle('hidden',p!==2);
+  otro.classList.toggle('hidden',p!==2||edit);
+  next.disabled=!skDatosOk();
+  var puede=skPuedeGuardar();
+  save.disabled=!puede||SK.saving; otro.disabled=!puede||SK.saving;
+  if(!SK.saving) save.textContent=edit?'Guardar cambios':'Guardar SKU';
+  var hh=p===1
+    ? '<span class="kb"><span class="kbd">Enter</span> siguiente campo</span><span class="kb"><span class="kbd">Ctrl</span> + <span class="kbd">Enter</span> guardar directo</span>'
+    : (edit?'':'<label class="sk-keep"><input type="checkbox" id="sk-keep" '+(SK.keep?'checked':'')+' onchange="SK.keep=this.checked"> Mantener marca, categoría y pack al agregar otro</label>');
+  if(hints._h!==hh){ hints._h=hh; hints.innerHTML=hh; }
+}
+function _skRailUpd(){
+  var rail=_skEl('sk-rail'); if(!rail) return;
+  if(!rail.dataset.built){
+    rail.dataset.built='1';
+    rail.innerHTML='<h4>Asistente · 2 pasos</h4>'+SK_NOM.map(function(n,i){
+      var k=i+1;
+      return '<button type="button" class="wz-stp" id="sk-stp-'+k+'" onclick="skIr('+k+')"><span class="wz-dot" id="sk-dot-'+k+'">'+k+'</span><span class="wz-ln"><i></i></span><span class="wz-tx"><strong>'+n+'</strong><small id="sk-sm-'+k+'"></small></span></button>';
+    }).join('');
+  }
+  for(var k=1;k<=2;k++){
+    var b=_skEl('sk-stp-'+k), hecho=SK.fin||(k<SK.paso&&skDatosOk()), on=!SK.fin&&k===SK.paso;
+    b.classList.toggle('on',on); b.classList.toggle('done',hecho);
+    b.disabled=SK.fin||(k===2&&!skDatosOk());
+    var dot=_skEl('sk-dot-'+k);
+    if((dot.dataset.d==='1')!==hecho){ dot.dataset.d=hecho?'1':'0'; dot.innerHTML=hecho?_SK_CHK16:k; }
+    var sm=_skEl('sk-sm-'+k), tx=k===1?(SK.sku?SK.sku+(SK.desc?' · '+SK.desc.slice(0,20)+(SK.desc.length>20?'…':''):''):'Código, descripción y presentación'):(_skEdit()?'Revisa los cambios y guarda':'Mira cómo quedará y guarda');
+    if(sm.textContent!==tx) sm.textContent=tx;
+  }
+}
+
+/* ── paso 2: la fila tal como se verá en Stock + dónde se guarda cada dato ── */
+function skPintarRevisar(){
+  var edit=_skEdit(), admin=_skAdmin();
+  var fila=edit?(DATA.stock||[]).find(function(r){return r._row===SK.row;}):null;
+  var stock=fila?fila.stock:0, ent=fila?fila.entradas:0, sal=fila?fila.salidas:0, pk=SK.pack, pr=parseFloat(SK.precio)||0;
+  var est=stock>0?'ok':(stock<0?'ng':'no');
+  var c=skCambios();
+  var kv=function(k,v,mut){ return '<div class="sk-kv"><span>'+k+'</span><b'+(mut?' class="mut"':'')+'>'+(v?esc(v):'—')+'</b></div>'; };
+  var sedeTxt=admin&&!edit&&SK.sede?SK.sede:(edit&&SK.sede?SK.sede:'tu tienda');
+  var diff='';
+  if(edit) diff='<div class="sk-diff"><h4>Cambios</h4>'+(c.length?c.map(function(x){return '<div class="sk-dr"><span>'+x.k+'</span><span class="a">'+esc(x.a)+'</span><span class="ar">→</span><span class="d">'+esc(x.d)+'</span></div>';}).join(''):'<div class="sk-sinc">Todavía no cambiaste nada. Vuelve atrás para editar.</div>')+'</div>';
+  var donde='<div class="sk-where">'+
+    '<div class="sk-wh"><div class="t"><span>Stock de '+esc(sedeTxt)+'</span><i>Solo esta tienda</i></div>'+kv('Código',SK.sku)+kv('Descripción',SK.desc)+kv('Unidades por pack',pk?(pk===1?'1 (por unidad)':String(pk)):'')+kv('Marca',SK.marca)+kv('Categoría',SK.cat)+'</div>'+
+    '<div class="sk-wh"><div class="t"><span>Maestro</span><i class="g">Las 3 tiendas</i></div>'+
+      (admin?kv('Código SAP',SK.sap)+kv('Precio por unidad',SK.precio?'S/ '+SK.precio:''):kv('Código SAP',SK.sap||'lo completa el administrador',!SK.sap)+kv('Precio por unidad',SK.precio?'S/ '+SK.precio:'lo completa el administrador',!SK.precio))+'</div></div>';
+  var pend='';
+  if(admin){ var q=[]; if(!SK.sap) q.push('Sin código SAP: no saldrá con SAP en la descarga de packs del Dashboard'); if(!SK.precio) q.push('Sin precio: el costo del Stock quedará en S/ 0.00'); if(q.length) pend='<div class="sk-pend">'+q.map(function(x){return '<span>⚠ '+x+'</span>';}).join('')+'</div>'; }
+  else if(!SK.precio||!SK.sap) pend='<div class="sk-pend"><span>⚠ El código SAP y el precio los completa el administrador. Hasta entonces el costo quedará en S/ 0.00</span></div>';
+  _skEl('sk-s2').innerHTML=
+    (admin&&!edit&&SK.sede?'<div class="sk-dest">Se creará en <b>'+esc(SK.sede)+'</b></div>':'')+
+    '<div class="sk-pw"><div class="sk-pw-cap"><span>Así se verá en Stock</span><i>Vista previa</i></div>'+
+    '<div class="sk-pw-hd"><span>Producto</span><span>Movimientos</span><span>Stock</span><span>Packs</span><span>Costo</span><span>Estado</span></div>'+
+    '<div class="sk-pw-row"><div><div class="sk-pn">'+esc(SK.desc)+'</div><div class="sk-ps"><span class="sk-sku">'+esc(SK.sku)+'</span>'+(SK.sap?'<span class="sk-sku sap">SAP '+esc(SK.sap)+'</span>':'')+'<i class="sk-dotp"></i><span>'+esc(SK.marca||'Sin marca')+'</span><i class="sk-dotp"></i><span>'+esc(SK.cat||'Sin categoría')+'</span></div></div>'+
+    '<div class="sk-pw-c"><b class="mv num"><i>+'+fmt(ent)+'</i> −'+fmt(sal)+'</b></div>'+
+    '<div class="sk-pw-c"><b class="num">'+fmt(stock)+'</b><span class="sk-bar0"><i style="width:'+Math.max(0,Math.min(100,stock/4))+'%"></i></span></div>'+
+    '<div class="sk-pw-c"><b class="num">'+(pk?fmt(Math.round(stock/pk*100)/100):'—')+'</b><small>'+(pk?(pk===1?'por unidad':'pack de '+pk):'sin definir')+'</small></div>'+
+    '<div class="sk-pw-c"><b class="num">S/ '+_skMoney(stock*pr)+'</b><small>'+(pr?'S/ '+_skMoney(pr)+' c/u':'sin precio')+'</small></div>'+
+    '<div class="sk-pw-c"><span class="sk-est '+est+'">'+(est==='ok'?'Con stock':(est==='ng'?'Negativo':'Sin stock'))+'</span></div></div></div>'+
+    donde+pend+diff+
+    '<div class="sk-nota"><span>ⓘ</span><span>'+(edit?'El stock y los movimientos de este producto no cambian.':'El producto se crea con stock en cero. Para ingresar unidades registra una Entrada o haz un Conteo.')+'</span></div>'+
+    '<div id="sku-err2" class="err-msg" style="margin-top:12px"></div>';
+}
+
+/* ── guardar ── */
+function _skErr(msg){ ['sku-err','sku-err2'].forEach(function(id){ var e=_skEl(id); if(e) e.textContent=msg||''; }); }
+function skExito(){
+  var edit=_skEdit();
+  _skEl('sk-s3').innerHTML='<div class="sk-ok"><svg class="big" viewBox="0 0 100 100"><circle class="halo" cx="50" cy="50" r="46"/><circle class="c1" cx="50" cy="50" r="46"/><path class="c2" d="M30 52l14 14 27-30"/></svg>'+
+    '<h2>'+(edit?'Cambios guardados':'SKU creado')+'</h2><p>'+(edit?'El producto se actualizó en Stock.':'Ya aparece en Stock'+(_skAdmin()&&SK.sede?' de '+esc(SK.sede):'')+'.')+'</p>'+
+    '<div class="mini"><span class="sk-sku">'+esc(SK.sku)+'</span><span style="font-weight:600">'+esc(SK.desc)+'</span><span class="sk-sku sap">'+(SK.pack===1?'por unidad':'pack de '+SK.pack)+'</span></div>'+
+    '<div class="acts">'+(edit?'':'<button type="button" class="btn btn-primary" onclick="skOtro()">Agregar otro SKU</button>')+'<button type="button" class="btn" onclick="closeFS(\'fs-sku\')">Listo</button></div></div>';
+  SK.dir=1; skRender(true);
+}
+// Deja listo el siguiente SKU; la marca, categoría y pack se pueden conservar (casilla del paso 2)
+function skOtro(){
+  var m=SK.marca,c=SK.cat,pk=SK.pack,po=SK.packOtro,keep=SK.keep,sede=SK.sede;
+  SK.run++; SK.chkRun++; clearTimeout(SK.tm);
+  SK.modo='nuevo'; SK.row=null; SK.orig=null; SK.sheetId=null; SK.fin=false; SK.saving=false; SK.paso=1; SK.dir=-1;
+  SK.sku=''; SK.sap=''; SK.desc=''; SK.precio=''; SK.chk='idle'; SK.dup=null; SK.mHit=null; SK.mBusy=false;
+  SK.marca=keep?m:''; SK.cat=keep?c:''; SK.pack=keep?pk:0; SK.packOtro=keep?po:false; SK.sede=sede;
+  _skErr(''); skCargarCampos(); skRender(true);
+  setTimeout(function(){ var e=_skEl('sku-lovis'); if(e) e.focus(); },200);
 }
 
 // otro=true: guarda y deja el formulario vacío para cargar el siguiente
 function guardarSKU(otro){
-  var lovis=(document.getElementById('sku-lovis').value||'').trim();
-  var desc =(document.getElementById('sku-desc').value ||'').trim();
-  var err  = document.getElementById('sku-err');
-  if(!lovis){err.textContent='El código Lovis es obligatorio';return;}
-  if(!desc) {err.textContent='La descripción es obligatoria';return;}
-
-  // Admin creando nuevo: necesita seleccionar tienda
-  var sheetId=SKU_SHEET_ID;
-  if(S.rol==='admin' && SKU_EDIT_ROW===null){
-    var sedeEl=document.getElementById('sku-sede');
-    var sedeName=sedeEl?sedeEl.value:'';
-    if(!sedeName){err.textContent='Selecciona la tienda destino';return;}
-    var match=DATA.stock.find(function(r){return r.sede===sedeName;});
+  if(!skPuedeGuardar()||SK.saving) return;
+  var lovis=SK.sku.trim(), desc=SK.desc.trim(), esEd=_skEdit();
+  // Admin creando nuevo: necesita la tienda destino
+  var sheetId=SK.sheetId;
+  if(_skAdmin()&&!esEd){
+    var match=(DATA.stock||[]).find(function(r){return r.sede===SK.sede;});
     sheetId=match?match.sheetId:null;
-    if(!sheetId){err.textContent='No se encontró el ID de la tienda';return;}
+    if(!sheetId){ _skErr('No se encontró el ID de la tienda'); return; }
   }
-
   var fila={
-    sku:       lovis,
-    desc:      desc,
-    marca:     (document.getElementById('sku-marca').value||'').trim(),
-    categoria: (document.getElementById('sku-categoria').value||'').trim(),
-    sheetId:   sheetId
+    sku:lovis, desc:desc, marca:SK.marca.trim(), categoria:SK.cat.trim(), sheetId:sheetId,
+    pack:SK.pack, sap:SK.sap, precio:SK.precio
   };
-  err.textContent='';
-  var btn=document.getElementById('btn-sku-save'), btn2=document.getElementById('btn-sku-otro');
-  var esEd=SKU_EDIT_ROW!==null;
-  var etiqueta=esEd?'Guardar cambios':'Guardar SKU';
-  var libera=function(){ btn.textContent=etiqueta; btn.disabled=false; btn2.disabled=false; };
-  btn.disabled=true; btn2.disabled=true; btn.textContent='Guardando...';
+  _skErr('');
+  var btn=_skEl('btn-sku-save');
+  SK.saving=true; btn.textContent='Guardando...'; skActualizar();
+  var libera=function(){ SK.saving=false; skActualizar(); };
+  var aviso=function(r){ if(r&&r.aviso) showToast(r.aviso,'err'); };
   if(esEd){
     google.script.run
       .withSuccessHandler(function(r){
         libera();
-        if(!r.ok){err.textContent=r.error;return;}
-        showToast('SKU actualizado correctamente','ok');
-        closeFS('fs-sku');
+        if(!r.ok){ _skErr(r.error); return; }
+        aviso(r);
         reloadPage('stock');
+        SK.fin=true; skExito();
       })
-      .withFailureHandler(function(e){libera();err.textContent=e.message;})
-      .editarSKU(S.token,SKU_EDIT_ROW,fila);
+      .withFailureHandler(function(e){ libera(); _skErr(e.message); })
+      .editarSKU(S.token,SK.row,fila);
   } else {
     google.script.run
       .withSuccessHandler(function(r){
         libera();
-        if(!r.ok){err.textContent=r.error;return;}
+        if(!r.ok){ _skErr(r.error); return; }
+        aviso(r);
         // El código recién creado cuenta como repetido si se vuelve a escribir sin cerrar el formulario
-        SKU_CACHE.push({sku:lovis,desc:desc,marca:fila.marca,categoria:fila.categoria,_row:-1,sede:(document.getElementById('sku-sede')||{}).value||''});
+        SKU_CACHE.push({sku:lovis,desc:desc,marca:fila.marca,categoria:fila.categoria,_row:-1,sede:SK.sede||''});
         reloadPage('stock');
-        if(otro){
-          showToast('SKU '+lovis+' creado','ok');
-          ['sku-lovis','sku-desc','sku-marca','sku-categoria'].forEach(function(id){document.getElementById(id).value='';});
-          skuEv();
-          document.getElementById('sku-lovis').focus();
-        } else {
-          _skuMostrar('ok');
-        }
+        if(otro){ showToast('SKU '+lovis+' creado','ok'); skOtro(); }
+        else { SK.fin=true; skExito(); }
       })
-      .withFailureHandler(function(e){libera();err.textContent=e.message;})
+      .withFailureHandler(function(e){ libera(); _skErr(e.message); })
       .registrarSKU(S.token,fila);
   }
 }
+
+// Atajos en PC: Esc cierra y Ctrl+Enter guarda (también desde el paso 1, si lo obligatorio está completo)
+document.addEventListener('keydown',function(e){
+  var fs=document.getElementById('fs-sku');
+  if(!fs||!fs.classList.contains('open')) return;
+  if(e.key==='Escape'){ closeFS('fs-sku'); return; }
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&!SK.fin&&skPuedeGuardar()){ e.preventDefault(); guardarSKU(false); }
+});
