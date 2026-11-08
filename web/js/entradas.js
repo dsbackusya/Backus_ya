@@ -760,7 +760,7 @@ function _ocrCargarLibs(){
 function _parsearOCTexto(paginas){
   var oc='';
   var items=[], ultimaLinea=0;
-  var reItem=/^[\s|~_.\-]*(\d{1,3})\s+(\d{6,10})\s+(.*?)\s*(\d{2}\/\d{2}\/\d{4})\s+(\d[\d.]*,\d{2}|\d+)\s+[A-Za-z]{2,4}\b(.*)$/;
+  var reItem=/^[\s|~_.\-]*(\d{1,3})\s+(\d{6,10})\s+(.*?)\s*(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d[\d.]*,\d{2}|\d+)\s+[A-Za-z]{2,4}\b(.*)$/;
   // Los montos siempre llevan 2 decimales; el OCR a veces pierde la coma ("3.14815"), así que se toman los dígitos y se divide entre 100
   function monto(tok){ var d=String(tok||'').replace(/\D/g,''); return d? Number(d)/100 : null; }
   function ultimoNumero(txt){
