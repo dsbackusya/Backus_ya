@@ -238,40 +238,45 @@ function _cntCamDetener(){
   var v = document.getElementById('cnt-cam-v'); if (v) { try { v.srcObject = null; } catch(e){} }
   var f = document.getElementById('cnt-flash'); if (f) { f.style.display = 'none'; f.classList.remove('on'); }
 }
-// html = contenido de la capa sobre el visor; null = ocultarla y mostrar el visor
-function _cntCamNegro(html){
+// html = contenido de la capa sobre el visor; null = ocultarla y mostrar el visor.
+// tono ('ok' | 'bad' | 'warn') pinta el marco de lectura (verde / rojo / ámbar).
+function _cntCamNegro(html, tono){
   var off = document.getElementById('cnt-cam-off'); if (!off) return;
   var vivo = !html;
   off.style.display = vivo ? 'none' : 'flex';
   if (!vivo) off.innerHTML = html;
-  var cam = document.getElementById('cnt-cam'); if (cam) cam.classList.toggle('off', !vivo);
+  var cam = document.getElementById('cnt-cam');
+  if (cam) {
+    cam.classList.toggle('off', !vivo);
+    cam.classList.remove('st-ok', 'st-bad', 'st-warn');
+    if (!vivo && tono) cam.classList.add('st-' + tono);
+  }
   var l = document.getElementById('cnt-cam-line'); if (l) l.style.display = vivo ? '' : 'none';
   var m = document.getElementById('cnt-cam-msg');  if (m) m.style.display = vivo ? '' : 'none';
 }
-// Contenido de la capa: icono, título, texto y (opcional) botón. Tocar la capa vuelve a escanear.
+// El marco de lectura cambia de estado: icono dentro del marco y, debajo, título, texto y enlace. Tocar vuelve a escanear.
 var _CNT_ICO = {
-  ok:   '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-  warn: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8.5" y1="8.5" x2="13.5" y2="13.5"/><line x1="13.5" y1="8.5" x2="8.5" y2="13.5"/></svg>',
-  cam:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M9.5 5h5l1.5 2H19a2 2 0 0 1 2 2v7.5M7 7H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12"/><path d="M10.2 10.2a3 3 0 0 0 3.6 3.6"/></svg>'
+  ok:   '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  bad:  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>',
+  cam:  '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M9.5 5h5l1.5 2H19a2 2 0 0 1 2 2v7.5M7 7H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12"/><path d="M10.2 10.2a3 3 0 0 0 3.6 3.6"/></svg>'
 };
-function _cntOff(ico, titulo, sub, boton, codigo){
+function _cntOff(ico, titulo, sub, enlace){
   return '<div class="cnt-off-ic">' + _CNT_ICO[ico] + '</div>' +
-    (codigo ? '<div class="cnt-off-code">' + esc(codigo) + '</div>' : '') +
-    '<div class="cnt-off-t">' + esc(titulo) + '</div>' +
+    '<div class="cnt-off-cap"><div class="cnt-off-t">' + esc(titulo) + '</div>' +
     (sub ? '<div class="cnt-off-sub">' + esc(sub) + '</div>' : '') +
-    (boton ? '<div class="cnt-off-b">' + esc(boton) + '</div>' : '');
+    (enlace ? '<u class="cnt-off-b">' + esc(enlace) + '</u>' : '') + '</div>';
 }
 function _cntCamPausar(codigo){
   _cntCamDetener();
-  _cntCamNegro(_cntOff('ok', 'Código leído', 'Buscando el producto…', '', codigo));
+  _cntCamNegro(_cntOff('ok', 'Código leído', (codigo ? codigo + ' · ' : '') + 'Buscando el producto…'), 'ok');
 }
 function _cntCamNoEncontrado(){
   if (_cntCam.activo) return; // el código se escribió a mano con la cámara encendida: no se toca el visor
-  _cntCamNegro(_cntOff('warn', 'Código no encontrado', 'Revisa el código o búscalo por nombre', 'Escanear otro'));
+  _cntCamNegro(_cntOff('bad', 'Código no encontrado', 'Revisa el código o búscalo por nombre', 'Escanear otro'), 'bad');
 }
 function _cntCamSinCamara(texto){
   _cntCamDetener();
-  _cntCamNegro(_cntOff('cam', 'Cámara no disponible', texto, 'Reintentar'));
+  _cntCamNegro(_cntOff('cam', 'Cámara no disponible', texto, 'Reintentar'), 'warn');
   var e = document.getElementById('cnt-ean'); if (e && _cntCamAbierta()) e.focus();
 }
 // Toque sobre el panel negro: si no hay producto detectado, vuelve a escanear

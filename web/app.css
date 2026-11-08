@@ -2058,9 +2058,9 @@ input.filter-inp:focus{
 #fs-conteo.cnt-det .cnt-fold-p{grid-template-rows:1fr;opacity:1;pointer-events:auto}
 
 /* escáner: banda a todo el ancho + marco con forma de código de barras + láser */
-#fs-conteo .cnt-cam{position:relative;margin:14px -20px 0;height:clamp(168px,26vh,230px);overflow:hidden;background:rgba(18,6,66,.5)}
+#fs-conteo .cnt-cam{position:relative;margin:14px -20px 0;height:clamp(200px,29vh,262px);overflow:hidden;background:rgba(18,6,66,.5)}
 #fs-conteo .cnt-cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:transparent}
-#fs-conteo .cnt-aim{position:absolute;left:50%;top:44%;width:min(300px,78%);height:56%;transform:translate(-50%,-50%);border-radius:10px;
+#fs-conteo .cnt-aim{position:absolute;left:50%;top:40%;width:min(300px,78%);height:50%;transform:translate(-50%,-50%);border-radius:10px;
   box-shadow:0 0 0 1px rgba(255,255,255,.25),0 0 0 600px rgba(18,6,66,.42);pointer-events:none}
 #fs-conteo .cnt-cb{position:absolute;width:20px;height:20px;border:0 solid #fff;pointer-events:none}
 #fs-conteo .cnt-tl{left:-1px;top:-1px;border-width:2.5px 0 0 2.5px;border-top-left-radius:10px}
@@ -2073,15 +2073,19 @@ input.filter-inp:focus{
 #fs-conteo .cnt-cam-msg{position:absolute;left:12px;right:12px;bottom:9px;text-align:center;font-size:12px;color:rgba(255,255,255,.9);text-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none}
 #fs-conteo .cnt-flash{position:absolute;right:20px;top:10px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;background:rgba(255,255,255,.2);color:#fff;display:flex;align-items:center;justify-content:center}
 #fs-conteo .cnt-flash.on{background:#F5B94C;color:#1A1530}
-#fs-conteo .cnt-cam-off{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:0 28px;cursor:pointer;
-  background:rgba(40,22,120,.55);-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2)}
+#fs-conteo .cnt-cam-off{position:absolute;inset:0;z-index:3;cursor:pointer}
 #fs-conteo.cnt-det .cnt-cam-off{cursor:default}
-#fs-conteo .cnt-cam.off .cnt-aim{opacity:0}
-#fs-conteo .cnt-off-ic{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.2);color:#fff;margin-bottom:6px}
-#fs-conteo .cnt-off-code{font-family:var(--font-mono);font-size:12.5px;color:#fff;background:rgba(255,255,255,.16);padding:3px 10px;border-radius:10px;margin-bottom:2px}
-#fs-conteo .cnt-off-t{font-size:15px;font-weight:600;color:#fff}
-#fs-conteo .cnt-off-sub{font-size:12.5px;line-height:1.35;color:rgba(255,255,255,.78);max-width:280px}
-#fs-conteo .cnt-off-b{margin-top:10px;height:34px;padding:0 16px;border-radius:17px;background:#fff;color:#4a32c4;font-size:13px;font-weight:700;display:flex;align-items:center}
+#fs-conteo .cnt-off-ic{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--c);color:#0c0630;box-shadow:0 6px 18px rgba(0,0,0,.28)}
+#fs-conteo .cnt-off-cap{position:absolute;left:14px;right:14px;bottom:9px;text-align:center}
+#fs-conteo .cnt-off-t{font-size:14px;font-weight:600;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.45)}
+#fs-conteo .cnt-off-sub{font-size:12px;line-height:1.3;color:rgba(255,255,255,.82);margin-top:1px;text-shadow:0 1px 4px rgba(0,0,0,.45);overflow-wrap:anywhere}
+#fs-conteo .cnt-off-b{display:inline-block;margin-top:5px;font-size:12.5px;font-weight:700;color:#fff;text-decoration:underline;text-underline-offset:3px}
+/* el marco de lectura toma el color del estado */
+#fs-conteo .cnt-cam.st-ok{--c:#4ADE9F;--cr:74,222,159}
+#fs-conteo .cnt-cam.st-bad{--c:#FF8A9B;--cr:255,138,155}
+#fs-conteo .cnt-cam.st-warn{--c:#F2B04B;--cr:242,176,75}
+#fs-conteo .cnt-cam.off .cnt-aim{background:rgba(var(--cr),.14);box-shadow:0 0 0 1px rgba(var(--cr),.7),0 0 0 600px rgba(18,6,66,.5)}
+#fs-conteo .cnt-cam.off .cnt-cb{border-color:var(--c)}
 @media(min-width:560px){#fs-conteo .cnt-cam{margin:14px 0 0;border-radius:20px}}
 
 #fs-conteo .cnt-foot{font-size:13px;color:rgba(255,255,255,.9);padding:12px 2px 0;line-height:1.35;text-align:center}
