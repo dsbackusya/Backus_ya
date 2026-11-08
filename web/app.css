@@ -2037,6 +2037,10 @@ input.filter-inp:focus{
 #fs-conteo .cnt-wrap{max-width:440px;margin:0 auto}
 #fs-conteo .cnt-grp{background:var(--surface2);border:1px solid var(--border2);border-radius:14px;overflow:hidden}
 #fs-conteo .cnt-grp:focus-within{border-color:rgba(123,97,239,.45)}
+/* El buscador por nombre: la lista de resultados sale por debajo de la tarjeta, así que no se puede recortar ni quedar tapada */
+#fs-conteo .cnt-grp.cnt-grp-ac{overflow:visible;position:relative;z-index:40}
+#fs-conteo .cnt-grp-ac .cnt-rw{position:relative}
+#fs-conteo .cnt-grp-ac .ac-list{left:-17px;right:-17px;top:calc(100% + 14px);background:var(--surface3);border:1px solid var(--border2);border-radius:12px;box-shadow:var(--shadow-md);z-index:60;max-height:min(320px,46vh)}
 #fs-conteo .cnt-rw{display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px}
 #fs-conteo .cnt-rw + .cnt-rw,#fs-conteo .cnt-prod + .cnt-rw{border-top:.5px solid rgba(167,159,201,.16)}
 #fs-conteo .cnt-scan{min-height:54px;padding-right:12px}
