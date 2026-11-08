@@ -2,6 +2,8 @@
    Tabla con edición en la celda, panel de detalle con impacto en el valor del stock e importación desde Excel (asistente de 2 pasos). */
 var PR={data:[],nuevos:[],sedes:[],idx:{},filtro:'todos',q:'',pag:0,editando:null,undo:null,det:null,tq:null};
 var PR_PS=50;                       // filas por página
+var _prPuede=function(){ return !!S&&(S.rol==='admin'||S.rol==='store'); };   // administrador y tiendas editan; el invitado solo mira
+var _prAdmin=function(){ return !!S&&S.rol==='admin'; };                    // recalcular mermas de todas las sedes: solo administrador
 var _PR_CHK='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 var _prEl=function(id){ return document.getElementById(id); };
 var _prM2=function(n){ return Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); };
@@ -29,12 +31,12 @@ function renderPrecios(r){
   PR.data=r.data; PR.nuevos=r.sinMaestro; PR.sedes=r.sedes; PR.editando=null; PR.pag=0;
   _prIndexar();
   _prEl('precios-root').innerHTML=
-    '<div class="pr-intro">Catálogo global compartido por las tiendas. Los precios valorizan el Stock y las mermas.</div>'+
+    '<div class="pr-intro">Catálogo global compartido por todas las tiendas. Los precios valorizan el Stock y las mermas.'+(S.rol==='store'?' <b>Lo que cambies aquí cambia para todas las tiendas.</b>':'')+'</div>'+
     '<div class="pr-kp" id="pr-kp"></div><div id="pr-alerta"></div>'+
     '<div class="pr-tb"><div class="pr-sr"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
       '<input id="pr-q" placeholder="Buscar por SKU, descripción o SAP…" autocomplete="off" oninput="prBuscar(this.value)"></div>'+
       '<div class="pr-chips" id="pr-chips"></div>'+
-      '<div class="pr-hintk"><span class="kbd">Clic</span> en un precio o SAP para editarlo · <span class="kbd">Enter</span> guarda y baja</div></div>'+
+      (_prPuede()?'<div class="pr-hintk"><span class="kbd">Clic</span> en un precio o SAP para editarlo · <span class="kbd">Enter</span> guarda y baja</div>':'')+'</div>'+
     '<div class="pr-tw" id="pr-tw"></div>';
   prPintar();
 }
@@ -82,7 +84,7 @@ function _prKpis(){
     '<button type="button" class="pr-k w'+(PR.filtro==='sinprecio'?' on':'')+'" onclick="prFiltro(\'sinprecio\')"><small>Con precio</small><b class="num">'+pP+'%</b><div class="s">'+fmt(c.conP)+' de '+fmt(c.total)+' · faltan '+fmt(c.total-c.conP)+'</div><div class="bar"><i style="width:'+pP+'%"></i></div></button>'+
     '<button type="button" class="pr-k w'+(PR.filtro==='sinsap'?' on':'')+'" onclick="prFiltro(\'sinsap\')"><small>Con código SAP</small><b class="num">'+pS+'%</b><div class="s">'+fmt(c.conS)+' de '+fmt(c.total)+' · faltan '+fmt(c.total-c.conS)+(c.sapMal?' ('+c.sapMal+' inválidos)':'')+'</div><div class="bar"><i style="width:'+pS+'%"></i></div></button>'+
     '<button type="button" class="pr-k '+(nN?'e':'')+(PR.filtro==='nuevos'?' on':'')+'" onclick="prFiltro(\'nuevos\')"><small>En tiendas pero sin Maestro</small><b class="num">'+nN+'</b><div class="s">'+(nN?'no tienen precio ni SAP':'todo está en el Maestro')+'</div></button>';
-  _prEl('pr-alerta').innerHTML=(nN&&PR.filtro!=='nuevos')?'<div class="pr-alert"><span>⚠</span><div><b>'+nN+(nN===1?' producto de tus tiendas no está':' productos de tus tiendas no están')+' en el Maestro</b> y por eso su costo sale en S/ 0.00.</div><button type="button" onclick="prFiltro(\'nuevos\')">Completarlos</button></div>':'';
+  _prEl('pr-alerta').innerHTML=(nN&&PR.filtro!=='nuevos')?'<div class="pr-alert"><span>⚠</span><div><b>'+nN+(nN===1?' producto de '+(S.rol==='store'?'tu tienda no está':'tus tiendas no está'):' productos de '+(S.rol==='store'?'tu tienda no están':'tus tiendas no están'))+' en el Maestro</b> y por eso su costo sale en S/ 0.00.</div><button type="button" onclick="prFiltro(\'nuevos\')">Completarlos</button></div>':'';
   var chips=[['todos','Todos',c.total],['sinprecio','Sin precio',c.total-c.conP],['sinsap','Sin SAP',c.total-c.conS],['nuevos','Sin Maestro',nN]].map(function(x){
     return '<button type="button" class="pr-chip'+(PR.filtro===x[0]?' on':'')+'" onclick="prFiltro(\''+x[0]+'\')">'+x[1]+' <b>'+fmt(x[2])+'</b></button>'; }).join('');
   _prEl('pr-chips').innerHTML=chips;
@@ -96,6 +98,7 @@ function _prCelda(r,campo){
   if(campo==='precio') val=_prTieneP(r)?'S/ '+_prM2(r.precio):null;
   else val=r.sap||null;
   var mal=campo==='sap'&&r.sap&&!_prSapOk(r.sap);
+  if(!_prPuede()) return '<span class="pr-cell sol'+(mal?' mal':'')+'">'+(val===null?'—':esc(val))+'</span>';
   return '<span class="pr-cell'+(val===null?' vac':'')+(mal?' mal':'')+'" data-s="'+esc(r.sku)+'" data-c="'+campo+'" onclick="prEditar(this)"'+(mal?' title="Código SAP inválido: debe tener solo números"':'')+'>'+
     (val===null?'agregar '+(campo==='precio'?'precio':'SAP'):esc(val))+'<span class="pen">✎</span></span>';
 }
@@ -217,22 +220,24 @@ function prDetalle(sku){
   var tot=_prStk(r);
   _prEl('pr-layer').innerHTML='<div class="pr-scrim" onclick="prCerrarLayer()"></div><aside class="pr-drw" role="dialog" aria-label="Detalle del producto">'+
     '<div class="hd"><div class="eb">'+esc(r.sku)+(r.nuevo?' · falta en el Maestro':'')+'</div><h3>'+esc(r.desc)+'</h3></div><div class="bd" id="pr-dbd"></div>'+
-    '<div class="ft"><button type="button" class="btn btn-ghost" onclick="prCerrarLayer()">Cancelar</button><button type="button" class="btn btn-primary" id="pr-dsv" onclick="prGuardarDetalle()">Guardar</button></div></aside>';
+    '<div class="ft"><button type="button" class="btn btn-ghost" onclick="prCerrarLayer()">'+(_prPuede()?'Cancelar':'Cerrar')+'</button>'+(_prPuede()?'<button type="button" class="btn btn-primary" id="pr-dsv" onclick="prGuardarDetalle()">Guardar</button>':'')+'</div></aside>';
   _prDetalleHTML();
-  google.script.run.withSuccessHandler(function(res){ if(PR.det&&PR.det.r===r&&res&&res.ok){ PR.det.mermas=res.n; _prDetalleMermas(); } }).withFailureHandler(function(){}).contarMermasSKU(S.token,r.sku);
+  if(_prAdmin()) google.script.run.withSuccessHandler(function(res){ if(PR.det&&PR.det.r===r&&res&&res.ok){ PR.det.mermas=res.n; _prDetalleMermas(); } }).withFailureHandler(function(){}).contarMermasSKU(S.token,r.sku);
 }
 function prCerrarLayer(){ var l=_prEl('pr-layer'); if(l) l.innerHTML=''; PR.det=null; }
 function _prDetalleHTML(){
   var D=PR.det, r=D.r;
   _prEl('pr-dbd').innerHTML=
-    '<div class="pr-g2"><div class="sk-f"><label><span>Código SAP</span><em>4 a 10 dígitos</em></label><input class="sk-in" id="pd-sap" value="'+esc(D.sap)+'" inputmode="numeric" maxlength="10" autocomplete="off"></div>'+
-    '<div class="sk-f"><label><span>Precio por unidad</span><em>S/</em></label><div class="sk-pre"><span class="pfx">S/</span><input class="sk-in" id="pd-precio" value="'+esc(D.precio)+'" inputmode="decimal" placeholder="0.00" autocomplete="off"></div></div></div>'+
-    '<div class="sk-f"><label><span>Descripción</span></label><input class="sk-in" id="pd-desc" value="'+esc(D.desc)+'" maxlength="120" autocomplete="off"></div>'+
+    (_prPuede()&&S.rol==='store'?'<div class="sk-hint mut" style="margin:0 0 14px">Este cambio se aplica a todas las tiendas.</div>':'')+
+    '<div class="pr-g2"><div class="sk-f"><label><span>Código SAP</span><em>4 a 10 dígitos</em></label><input class="sk-in" id="pd-sap" value="'+esc(D.sap)+'" inputmode="numeric" maxlength="10" autocomplete="off"'+(_prPuede()?'':' disabled')+'></div>'+
+    '<div class="sk-f"><label><span>Precio por unidad</span><em>S/</em></label><div class="sk-pre"><span class="pfx">S/</span><input class="sk-in" id="pd-precio" value="'+esc(D.precio)+'" inputmode="decimal" placeholder="0.00" autocomplete="off"'+(_prPuede()?'':' disabled')+'></div></div></div>'+
+    '<div class="sk-f"><label><span>Descripción</span></label><input class="sk-in" id="pd-desc" value="'+esc(D.desc)+'" maxlength="120" autocomplete="off"'+(_prPuede()?'':' disabled')+'></div>'+
     '<div class="pr-imp" id="pd-imp"></div>'+
     '<div class="pr-usos"><div><span>Tienda</span><span>Stock</span><span>Valor</span></div>'+PR.sedes.map(function(s,k){
       var v=_prTieneP(r)?'S/ '+_prM2(r.stock[k]*r.precio):'—';
       return '<div><span>'+esc(s.nombre)+'</span><b class="num">'+fmt(r.stock[k])+' u.</b><b class="num">'+v+'</b></div>'; }).join('')+'</div>'+
-    '<label class="pr-keep"><input type="checkbox" id="pd-rc" onchange="PR.det.recalc=this.checked"><span>Recalcular el costo de las mermas ya registradas de este SKU<small id="pd-mn">Cada merma guardó el precio del día en que se registró. Déjalo desmarcado si es un cambio de precio real; márcalo solo si corriges un error.</small></span></label>';
+    (_prAdmin()?'<label class="pr-keep"><input type="checkbox" id="pd-rc" onchange="PR.det.recalc=this.checked"><span>Recalcular el costo de las mermas ya registradas de este SKU<small id="pd-mn">Cada merma guardó el precio del día en que se registró. Déjalo desmarcado si es un cambio de precio real; márcalo solo si corriges un error.</small></span></label>':'');
+  if(!_prPuede()){ _prImpacto(); return; }
   ['pd-sap','pd-precio','pd-desc'].forEach(function(id){
     _prEl(id).addEventListener('input',function(){
       var e=_prEl(id);
@@ -250,10 +255,10 @@ function _prDetalleMermas(){
 }
 function _prImpacto(){
   var D=PR.det, r=D.r, tot=_prStk(r), a=(_prTieneP(r)?r.precio:0)*tot, p=parseFloat(D.precio)||0, b=p*tot, d=Math.round((b-a)*100)/100;
-  _prEl('pd-imp').innerHTML='<small>Impacto en el valor del stock (todas las tiendas)</small><div class="row"><span class="num">S/ '+_prM2(a)+'</span><span>→</span><b class="num">S/ '+_prM2(b)+'</b>'+
+  _prEl('pd-imp').innerHTML='<small>Impacto en el valor del stock ('+(_prAdmin()?'todas las tiendas':(S.rol==='store'?'tu tienda':'las tiendas'))+')</small><div class="row"><span class="num">S/ '+_prM2(a)+'</span><span>→</span><b class="num">S/ '+_prM2(b)+'</b>'+
     (d!==0?'<span class="d '+(d>0?'up':'dn')+' num">'+(d>0?'+':'')+'S/ '+_prM2(d)+'</span>':'<span class="mut">sin cambio</span>')+'</div>';
   var mal=(D.sap&&!_prSapOk(D.sap))||(D.precio&&!(parseFloat(D.precio)>=0))||!D.desc.trim()||(D.nuevo&&!D.sku);
-  _prEl('pr-dsv').disabled=!!mal;
+  var sv=_prEl('pr-dsv'); if(sv) sv.disabled=!!mal;
 }
 function prGuardarDetalle(){
   var D=PR.det; if(!D) return; var r=D.r, btn=_prEl('pr-dsv');
@@ -273,6 +278,7 @@ function prGuardarDetalle(){
     .guardarMaestroPrecios(S.token,[fila],recalc);
 }
 function prNuevo(){
+  if(!_prPuede()) return;
   PR.det={r:{sku:'',desc:'',sap:'',precio:null,stock:PR.sedes.map(function(){return 0;}),nuevo:true},sap:'',precio:'',desc:'',recalc:false,mermas:null,nuevo:true};
   _prEl('pr-layer').innerHTML='<div class="pr-scrim" onclick="prCerrarLayer()"></div><aside class="pr-drw" role="dialog" aria-label="Agregar al Maestro"><div class="hd"><div class="eb">Nuevo producto</div><h3>Agregar al Maestro</h3></div>'+
     '<div class="bd"><div class="sk-f"><label><span>Código Lovis / SKU <b style="color:var(--danger)">*</b></span></label><input class="sk-in" id="pn-sku" placeholder="Ej: 10000250" autocomplete="off" spellcheck="false"><div id="pn-h"></div></div>'+
@@ -334,6 +340,7 @@ var PI={cols:{},paso:1,dir:1,leyendo:false,leido:false,fin:false,archivo:'',fila
 var PI_NOM=['Archivo','Revisar y aplicar'];
 var _piTM=null;
 function prAbrirImportar(){
+  if(!_prPuede()) return;
   if(!PR.data.length&&!PR.nuevos.length){ showToast('Espera a que cargue el Maestro','err'); return; }
   PI.run++; clearTimeout(_piTM);
   PI.paso=1; PI.dir=1; PI.leyendo=false; PI.leido=false; PI.fin=false; PI.archivo=''; PI.filas=[]; PI.items=[]; PI.rc=false; PI.backup=false; PI.aplicando=false; PI.tab='precio';
@@ -523,7 +530,7 @@ function piTab(t){ PI.tab=t; _piPaso2Cuerpo(); }
 function piMarcar(i,v){ PI.items[i].inc=v; _piPaso2Cuerpo(); }
 function _piPaso2(){
   _prEl('pi-eb').textContent='Paso 2 de 2'; _prEl('pi-t').textContent='Revisa los cambios';
-  _prEl('pi-s').textContent='Desmarca lo que no quieras aplicar. Los saltos de precio de 25% o más se marcan con ⚠.';
+  _prEl('pi-s').textContent='Desmarca lo que no quieras aplicar. Los saltos de precio de 25% o más se marcan con ⚠.'+(S.rol==='store'?' Los cambios se aplican a todas las tiendas.':'');
   _piPaso2Cuerpo();
 }
 function _piPaso2Cuerpo(){
@@ -532,12 +539,12 @@ function _piPaso2Cuerpo(){
     return '<button type="button" class="pr-chip'+(PI.tab===t[0]?' on':'')+'" onclick="piTab(\''+t[0]+'\')">'+t[1]+' <b>'+fmt(cnt[t[0]])+'</b></button>'; }).join('');
   var rows=PI.items.map(function(it,idx){ return it.tipo===PI.tab?_piFila(it,idx):''; }).join('')||'<div class="pr-vacio">No hay filas en esta categoría.</div>';
   _prEl('pi-pb').innerHTML='<div class="pi-strip"><div><small>Se actualizarán</small><div class="v num">'+fmt(T.n)+' <span class="u">productos</span></div></div>'+
-    '<div><small>Valor del stock (todas las tiendas)</small><div class="v2 num">S/ '+_prM2(T.a)+' → S/ '+_prM2(T.b)+' <span class="d '+(T.d>0?'up':'dn')+'">'+(T.d>0?'+':'')+'S/ '+_prM2(T.d)+'</span></div></div>'+
+    '<div><small>Valor del stock ('+(_prAdmin()?'todas las tiendas':(S.rol==='store'?'tu tienda':'las tiendas'))+')</small><div class="v2 num">S/ '+_prM2(T.a)+' → S/ '+_prM2(T.b)+' <span class="d '+(T.d>0?'up':'dn')+'">'+(T.d>0?'+':'')+'S/ '+_prM2(T.d)+'</span></div></div>'+
     '<div><small>No se aplicarán</small><div class="v2 num'+(cnt.error?' er':'')+'">'+fmt(cnt.error)+' con errores</div></div></div>'+
     '<div class="pr-tabs">'+tabs+'</div><div class="pi-ct"><div class="pi-ch"><span></span><span>SKU</span><span>Descripción</span><span>Código SAP</span><span>Precio / unidad</span><span class="r">Δ</span></div>'+rows+'</div>';
   _prEl('pi-footer').innerHTML='<button type="button" class="btn btn-ghost" onclick="piAtras()">← Cambiar archivo</button>'+
     '<button type="button" class="btn btn-ghost" onclick="prExportar(true);PI.backup=true;_piPaso2Cuerpo()">'+(PI.backup?'✓ Respaldo descargado':'Descargar respaldo del Maestro')+'</button><span class="sk-hints"></span>'+
-    '<label class="sk-keep"><input type="checkbox" '+(PI.rc?'checked':'')+' onchange="PI.rc=this.checked"> Recalcular costo de mermas ya registradas</label>'+
+    (_prAdmin()?'<label class="sk-keep"><input type="checkbox" '+(PI.rc?'checked':'')+' onchange="PI.rc=this.checked"> Recalcular costo de mermas ya registradas</label>':'')+
     '<button type="button" class="btn btn-primary" id="pi-ap" '+(T.n&&!PI.aplicando?'':'disabled')+' onclick="piAplicar()">'+(PI.aplicando?'Aplicando...':'Aplicar '+fmt(T.n)+' cambios')+'</button>';
 }
 function _piFila(it,idx){
@@ -572,7 +579,7 @@ function piAplicar(){
       reloadPage('precios');
     })
     .withFailureHandler(function(e){ PI.aplicando=false; _prEl('pi-err').textContent=e.message; _piPaso2Cuerpo(); })
-    .guardarMaestroPrecios(S.token,filas,PI.rc);
+    .guardarMaestroPrecios(S.token,filas,_prAdmin()&&PI.rc);
 }
 function _piExito(){
   var R=PI.resumen||{conteo:{precio:0,sap:0,nuevo:0},tot:{a:0,b:0},mermas:0};

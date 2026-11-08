@@ -581,7 +581,8 @@ var SK_MX={m:false,c:false};      // chips de marca/categoría desplegados
 var SK_NOM=['Datos del producto','Revisar y guardar'];
 var _skEl=function(id){ return document.getElementById(id); };
 var _skEdit=function(){ return SK.modo==='editar'; };
-var _skAdmin=function(){ return !!S&&S.rol==='admin'; };   // el Maestro (SAP y precio) solo lo escribe el administrador
+var _skAdmin=function(){ return !!S&&S.rol==='admin'; };   // elegir tienda destino al crear: solo administrador
+var _skMaestro=function(){ return !!S&&(S.rol==='admin'||S.rol==='store'); };   // SAP y precio (Maestro global): administrador y tiendas
 function _skMoney(n){ return Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 var _SK_CHK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 var _SK_CHK16='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
@@ -630,7 +631,7 @@ function skCargarCampos(){
   set('sku-lovis',SK.sku); set('sku-sap',SK.sap); set('sku-desc',SK.desc); set('sku-precio',SK.precio);
   set('sku-marca',SK.marca); set('sku-categoria',SK.cat); set('sku-pack',SK.packOtro&&SK.pack?String(SK.pack):'');
   _skEl('sku-dcount').textContent=SK.desc.length+' / 120';
-  var maestro=_skAdmin();
+  var maestro=_skMaestro();
   var sap=_skEl('sku-sap'), pr=_skEl('sku-precio');
   sap.disabled=!maestro||SK.mBusy; pr.disabled=!maestro||SK.mBusy;
   sap.placeholder=SK.mBusy?'Cargando…':'Ej: 4000123';
@@ -723,13 +724,13 @@ function skSkuUI(){
 }
 // Avisos de SAP y precio (bloqueados para tiendas; ayudas para el administrador) y atajo para usar la descripción del Maestro
 function skMaestroHints(){
-  var maestro=_skAdmin();
+  var maestro=_skMaestro();
   var sh=_skEl('sku-sap-h'), ph=_skEl('sku-precio-h'); if(!sh||!ph) return;
   var lock='<div class="sk-lock">'+_SK_LOCK+'<span>Lo completa el administrador (Maestro).</span></div>';
   if(!maestro){ sh.innerHTML=lock; ph.innerHTML=lock; }
   else {
     sh.innerHTML=(SK.sap&&!/^[0-9]{4,10}$/.test(SK.sap))?'<div class="sk-hint err">Solo números (de 4 a 10 dígitos).</div>':'';
-    ph.innerHTML='<div class="sk-hint mut">Se guarda en el Maestro y valoriza el Stock (costo = precio × unidades).</div>';
+    ph.innerHTML='<div class="sk-hint mut">Se guarda en el Maestro (lo ven todas las tiendas) y valoriza el Stock: costo = precio × unidades.</div>';
   }
   if(SK.mHit&&SK.mHit.desc&&!SK.desc.trim()){
     var h=_skEl('sku-lovis-h');
@@ -885,7 +886,7 @@ function _skRailUpd(){
 
 /* ── paso 2: la fila tal como se verá en Stock + dónde se guarda cada dato ── */
 function skPintarRevisar(){
-  var edit=_skEdit(), admin=_skAdmin();
+  var edit=_skEdit(), admin=_skAdmin(), pM=_skMaestro();
   var fila=edit?(DATA.stock||[]).find(function(r){return r._row===SK.row;}):null;
   var stock=fila?fila.stock:0, ent=fila?fila.entradas:0, sal=fila?fila.salidas:0, pk=SK.pack, pr=parseFloat(SK.precio)||0;
   var est=stock>0?'ok':(stock<0?'ng':'no');
@@ -897,10 +898,9 @@ function skPintarRevisar(){
   var donde='<div class="sk-where">'+
     '<div class="sk-wh"><div class="t"><span>Stock de '+esc(sedeTxt)+'</span><i>Solo esta tienda</i></div>'+kv('Código',SK.sku)+kv('Descripción',SK.desc)+kv('Unidades por pack',pk?(pk===1?'1 (por unidad)':String(pk)):'')+kv('Marca',SK.marca)+kv('Categoría',SK.cat)+'</div>'+
     '<div class="sk-wh"><div class="t"><span>Maestro</span><i class="g">Las 3 tiendas</i></div>'+
-      (admin?kv('Código SAP',SK.sap)+kv('Precio por unidad',SK.precio?'S/ '+SK.precio:''):kv('Código SAP',SK.sap||'lo completa el administrador',!SK.sap)+kv('Precio por unidad',SK.precio?'S/ '+SK.precio:'lo completa el administrador',!SK.precio))+'</div></div>';
+      (pM?kv('Código SAP',SK.sap)+kv('Precio por unidad',SK.precio?'S/ '+SK.precio:''):kv('Código SAP',SK.sap||'sin dato',!SK.sap)+kv('Precio por unidad',SK.precio?'S/ '+SK.precio:'sin dato',!SK.precio))+'</div></div>';
   var pend='';
-  if(admin){ var q=[]; if(!SK.sap) q.push('Sin código SAP: no saldrá con SAP en la descarga de packs del Dashboard'); if(!SK.precio) q.push('Sin precio: el costo del Stock quedará en S/ 0.00'); if(q.length) pend='<div class="sk-pend">'+q.map(function(x){return '<span>⚠ '+x+'</span>';}).join('')+'</div>'; }
-  else if(!SK.precio||!SK.sap) pend='<div class="sk-pend"><span>⚠ El código SAP y el precio los completa el administrador. Hasta entonces el costo quedará en S/ 0.00</span></div>';
+  if(pM){ var q=[]; if(!SK.sap) q.push('Sin código SAP: no saldrá con SAP en la descarga de packs del Dashboard'); if(!SK.precio) q.push('Sin precio: el costo del Stock quedará en S/ 0.00'); if(q.length) pend='<div class="sk-pend">'+q.map(function(x){return '<span>⚠ '+x+'</span>';}).join('')+'</div>'; }
   _skEl('sk-s2').innerHTML=
     (admin&&!edit&&SK.sede?'<div class="sk-dest">Se creará en <b>'+esc(SK.sede)+'</b></div>':'')+
     '<div class="sk-pw"><div class="sk-pw-cap"><span>Así se verá en Stock</span><i>Vista previa</i></div>'+

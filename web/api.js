@@ -278,7 +278,7 @@
     var pack = entero(fila.pack);
     if (pack === null || pack < 1) return { error: 'Indica cómo viene el producto: unidades por pack (1 o más).' };
     var o = { pack: pack, sap: null, precio: null };
-    if (p.rol === 'admin') {                       // el Maestro es global y solo lo escribe el administrador (lo exige también la base)
+    if (p.rol === 'admin' || p.rol === 'store') {  // el Maestro es global: lo escriben el administrador y las tiendas (lo exige también la base)
       var sap = str(fila.sap), precio = str(fila.precio);
       if (sap) {
         if (!/^[0-9]{4,10}$/.test(sap)) return { error: 'El código SAP debe tener solo números (4 a 10 dígitos).' };
@@ -355,8 +355,9 @@
   /* ── MAESTRO DE PRECIOS Y SAP (solo administrador): catálogo global maestro_sku ── */
   // Todo el Maestro + stock por tienda (para valorizar) + productos de las tiendas que aún no están en el Maestro.
   API.getMaestroPrecios = guard(async function (p) {
-    if (p.rol !== 'admin') return { ok: false, error: 'Solo el administrador puede ver el Maestro de precios.' };
+    // El Maestro se puede ver con cualquier usuario. Una tienda ve el stock (y por eso el valor) de su propia sede.
     var sedes = (await cargarSedes()).slice().sort(function (a, b) { return a.id - b.id; });
+    if (p.rol === 'store') sedes = sedes.filter(function (s) { return s.id === p.sede_id; });
     var res = await Promise.all([
       todas(function () { return sb.from('maestro_sku').select('sku,descripcion,cod_sap,precio').order('sku'); }),
       todas(function () { return sb.from('v_stock').select('sede_id,sku,descripcion,stock_actual').order('sku'); })
@@ -383,7 +384,8 @@
 
   // filas: [{ sku, desc?, sap?, precio? }]  (clave ausente = no se toca; null = se borra). recalcular = recalcular el costo de las mermas ya registradas.
   API.guardarMaestroPrecios = guard(async function (p, filas, recalcular) {
-    if (p.rol !== 'admin') return { ok: false, error: 'Solo el administrador puede actualizar el Maestro.' };
+    if (p.rol !== 'admin' && p.rol !== 'store') return { ok: false, error: 'Tu usuario es de solo lectura: no puede actualizar el Maestro.' };
+    if (p.rol !== 'admin') recalcular = false;      // recalcular el costo de las mermas de todas las sedes es solo del administrador
     var lista = (filas || []).map(function (f) {
       var o = { sku: str(f.sku) };
       if ('desc' in f) o.desc = str(f.desc);

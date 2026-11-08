@@ -328,7 +328,6 @@ function initApp(){
   var esAdmin=S.rol==='admin'||S.rol==='invitado';
   document.querySelectorAll('.sb-store-only').forEach(function(el){ el.style.display=esAdmin?'none':''; });
   document.querySelectorAll('.sb-admin-only').forEach(function(el){ el.style.display=esAdmin?'':'none'; });
-  var _np=document.getElementById('nav-precios'); if(_np) _np.style.display=(S.rol==='admin')?'':'none';
   if(esAdmin){ navTo('dashboard',document.getElementById('nav-dashboard')); }
   else { navTo('stock',document.getElementById('nav-stock')); }
 }
@@ -352,7 +351,8 @@ function navTo(name,btn){
   document.getElementById('p-'+name).classList.add('active');
   if(btn)btn.classList.add('active');
   // Maestro es un grupo: se abre y se resalta cuando se entra a Conteo o Bees
-  var enMaestro=(name==='maestro'||name==='mconteo');
+  var enMaestro=(name==='maestro'||name==='mconteo'||name==='precios');
+  var _ps=document.getElementById('nav-precios-s'); if(_ps) _ps.classList.toggle('active',name==='precios');
   var grp=document.getElementById('sb-grp-maestro');
   if(grp){
     grp.classList.toggle('has-active',enMaestro);
@@ -401,9 +401,10 @@ function renderTopbarActions(name){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMaestroForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar al maestro</span></button>'+btnRefresh;
   } else if(name==='precios'){
     var icoImp='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+    var puedeEd=S&&(S.rol==='admin'||S.rol==='store');   // el invitado solo mira y exporta
     el.innerHTML='<button class="btn btn-ghost btn-sm tb-btn-icon" title="Exportar" onclick="prExportar(false)">'+icoExport+'<span class="tb-btn-label"> Exportar</span></button>'+
-      '<button class="btn btn-ghost btn-sm tb-btn-icon" title="Importar Excel" onclick="prAbrirImportar()">'+icoImp+'<span class="tb-btn-label"> Importar Excel</span></button>'+
-      '<button class="btn btn-primary btn-sm" onclick="prNuevo()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar producto</span></button>'+btnRefresh;
+      (puedeEd?'<button class="btn btn-ghost btn-sm tb-btn-icon" title="Importar Excel" onclick="prAbrirImportar()">'+icoImp+'<span class="tb-btn-label"> Importar Excel</span></button>'+
+      '<button class="btn btn-primary btn-sm" onclick="prNuevo()"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar producto</span></button>':'')+btnRefresh;
   } else if(name==='mconteo'){
     el.innerHTML='<button class="btn btn-primary btn-sm" onclick="abrirMConteoForm(null)"><span class="tb-btn-plus">+</span><span class="tb-btn-label"> Agregar producto</span></button>'+btnRefresh;
   } else if(name==='conteo'){

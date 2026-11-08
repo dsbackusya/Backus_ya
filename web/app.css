@@ -2764,6 +2764,7 @@ input.filter-inp:focus{
 .pr-cell.vac{color:var(--warn);font-weight:600;font-size:12px}
 .pr-cell.vac::before{content:"+";margin-right:2px}
 .pr-cell.mal{color:var(--danger)}
+.pr-cell.sol{cursor:default}.pr-cell.sol:hover{border-color:transparent;background:none}
 .pr-ed{width:100%;max-width:118px;box-sizing:border-box;background:var(--surface3);border:1px solid var(--accent);border-radius:9px;padding:7px 10px;text-align:right;color:var(--text);font:500 13px 'Inter',sans-serif;font-variant-numeric:tabular-nums;box-shadow:0 0 0 3px var(--accent-ghost)}
 .pr-ed.bad{border-color:var(--danger);box-shadow:0 0 0 3px var(--danger-bg);animation:prSh .3s}
 @keyframes prSh{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
