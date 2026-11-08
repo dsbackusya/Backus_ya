@@ -575,7 +575,7 @@ function wzActualizar(){
     var k=i+1, hecho=k<WZ.paso&&wzValido(k).ok, c=k===WZ.paso?' on':(hecho?' done':'');
     return '<button type="button" class="wz-stp'+c+'" '+(_wzPuedeIr(k)?'':'disabled')+' onclick="wzIr('+k+')">'+
       '<span class="wz-dot">'+(hecho?chk:k)+'</span><span class="wz-tx"><strong>'+n+'</strong><small>'+esc(_wzResumenPaso(k))+'</small></span></button>';
-  }).join('')+'<div class="wz-rf">Puedes volver a cualquier paso ya completado sin perder lo que escribiste.</div>';
+  }).join('');
 
   var T=[
     ['Origen de los productos','Sube la orden de compra y leemos todo por ti, o escríbelos a mano.'],
@@ -608,7 +608,7 @@ function wzActualizar(){
   if(msg){
     var c=_entCuenta();
     if(WZ.paso===4) msg.innerHTML='<b>'+c.n+'</b> '+(c.n===1?'producto':'productos')+' · <b>'+fmt(c.u)+'</b> unidades';
-    else if(!v.ok) msg.textContent=v.msg;
+    else if(!v.ok) msg.textContent='';   // el botón Siguiente deshabilitado ya indica que falta algo
     else msg.innerHTML=c.n?'<b>'+c.n+'</b> '+(c.n===1?'producto':'productos')+' · <b>'+fmt(c.u)+'</b> unidades':'';
     msg.style.color=(WZ.paso!==4&&!v.ok)?'var(--text3)':'';
   }
