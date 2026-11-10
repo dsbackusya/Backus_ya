@@ -9,10 +9,8 @@
    al quitar el splash se libera el contexto de WebGL. Sin WebGL (o con error) se muestra el logo plano. */
 (function(){
   var sp=document.getElementById('tsplash'); if(!sp) return;
-  // La animación se ve en cada apertura; solo se salta si la app se abrió hace menos de 20 s (recargas seguidas).
-  // (No se usa "reducir movimiento": en Windows se activa solo al desactivar efectos y ocultaba la animación.)
-  var vista=false; try{ vista=(Date.now()-(+sessionStorage.getItem('ts_vista')||0))<20000; }catch(e){}
-  var rep=vista;
+  // La animación se ve en cada carga y recarga (no se salta ni por la sesión ni por "reducir movimiento").
+  var rep=false;
   var DUR=2.4, MIN=rep?1200:2800, MAX=9000;
   var t0=Date.now(), terminado=false, esperando=false, timer=null, animFin=false, gl=null, raf=0, parar=false;
   var sr=document.getElementById('ts-sr');
