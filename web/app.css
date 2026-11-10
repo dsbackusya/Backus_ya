@@ -2113,9 +2113,6 @@ input.filter-inp:focus{
 #fs-conteo .cnt-eb .mono{font-family:var(--font-mono)}
 #fs-conteo .cnt-x{background:transparent;border:0;color:var(--accent2);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;padding:4px 0 4px 12px}
 #fs-conteo .cnt-nombre{font-size:21px;line-height:1.17;font-weight:700;letter-spacing:-.4px;margin:4px 0 10px;color:var(--text);text-wrap:balance}
-#fs-conteo .cnt-prev{display:none;align-items:center;gap:8px;font-size:12px;color:var(--text2);background:var(--surface3);border-radius:11px;padding:7px 11px;margin:0 0 2px}
-#fs-conteo .cnt-prev.on{display:flex}
-#fs-conteo .cnt-prev i{width:6px;height:6px;border-radius:50%;background:var(--accent2);flex:none}
 #fs-conteo .cnt-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)}
 #fs-conteo .cnt-prod + .cnt-row{margin-top:4px;border-top:1px solid var(--border)}
 #fs-conteo .cnt-nm b{display:block;font-size:16px;font-weight:600}
