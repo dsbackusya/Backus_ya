@@ -73,14 +73,24 @@ function _scannerNativoCerrar(){
   var ov = document.getElementById('scan-nativo'); if (ov) ov.remove();
 }
 
+// Un solo contexto de audio para toda la sesión: crear uno por escaneo congela la pantalla un instante y se acumula
+var _beepCtx = null;
+function _scanBeepCtx(){
+  var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+  if (!_beepCtx || _beepCtx.state === 'closed') _beepCtx = new AC();
+  if (_beepCtx.state === 'suspended') { try { _beepCtx.resume(); } catch(e){} }
+  return _beepCtx;
+}
+function _scanBeepWarm(){ try { _scanBeepCtx(); } catch(e){} }
 function _scanBeep(){
   try { if (navigator.vibrate) navigator.vibrate(80); } catch(e){}
   try {
-    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-    var ac = new AC(), o = ac.createOscillator(), g = ac.createGain();
+    var ac = _scanBeepCtx(); if (!ac) return;
+    var o = ac.createOscillator(), g = ac.createGain();
     o.type = 'square'; o.frequency.value = 1500; g.gain.value = 0.08;
-    o.connect(g); g.connect(ac.destination); o.start();
-    setTimeout(function(){ o.stop(); ac.close(); }, 110);
+    o.connect(g); g.connect(ac.destination);
+    o.onended = function(){ try { o.disconnect(); g.disconnect(); } catch(e){} };
+    o.start(); o.stop(ac.currentTime + 0.11);
   } catch(e){}
 }
 
@@ -521,14 +531,13 @@ function _llenarCamposSKU(skuId, descId, marcaId, resolved){
 }
 function _updateConteoStats() {
   if (!DATA.conteo) return;
-  var totalUnd = DATA.conteo.reduce(function(a, x) { return a + x.total; }, 0);
-  var skusU = [];
-  DATA.conteo.forEach(function(x) { if (skusU.indexOf(x.sku) < 0) skusU.push(x.sku); });
+  var totalUnd = 0, skusU = new Set();
+  DATA.conteo.forEach(function(x) { totalUnd += x.total; skusU.add(x.sku); });
   // Actualizar stat cards si están visibles (la página de conteo está activa)
   var sReg = document.querySelector('#conteo-root .stat-val');
   if (!sReg) return; // página no está renderizada aún
   var cards = document.querySelectorAll('#conteo-root .stat-val');
   if (cards[0]) cards[0].textContent = DATA.conteo.length;
-  if (cards[1]) cards[1].textContent = skusU.length;
+  if (cards[1]) cards[1].textContent = skusU.size;
   if (cards[2]) cards[2].textContent = fmt(totalUnd);
 }

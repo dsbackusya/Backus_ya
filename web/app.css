@@ -2025,23 +2025,24 @@ input.filter-inp:focus{
 #fs-conteo .fs-body{padding:0;max-width:none;width:100%;margin:0}
 #fs-conteo .cnt-wrap{max-width:440px;margin:0 auto;padding-bottom:40px}
 #fs-conteo svg{display:block}
+#fs-conteo button,#fs-conteo input{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
 /* ── Cámara arriba ── */
-#fs-conteo .cnt-cam{position:relative;height:clamp(270px,42vh,390px);border-radius:0 0 34px 34px;overflow:hidden;
+#fs-conteo .cnt-cam{position:relative;height:clamp(270px,42vh,390px);border-radius:0 0 34px 34px;overflow:hidden;contain:layout paint;isolation:isolate;
   background:
     repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 3px,transparent 3px 11px),
     radial-gradient(90% 70% at 50% 45%,rgba(123,97,239,.35),transparent 70%),
     linear-gradient(180deg,#1a1038,#0d0824)}
 #fs-conteo .cnt-cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:transparent}
 #fs-conteo .cnt-aim{position:absolute;left:50%;top:50%;width:min(290px,76%);height:112px;transform:translate(-50%,-50%);border-radius:14px;
-  box-shadow:0 0 0 1px rgba(255,255,255,.22),0 0 0 700px rgba(8,4,28,.46);pointer-events:none;transition:box-shadow .3s,background .3s}
-#fs-conteo .cnt-cb{position:absolute;width:24px;height:24px;border:0 solid #fff;pointer-events:none;transition:border-color .3s}
+  box-shadow:0 0 0 1px rgba(255,255,255,.22),0 0 0 700px rgba(8,4,28,.46);pointer-events:none}
+#fs-conteo .cnt-cb{position:absolute;width:24px;height:24px;border:0 solid #fff;pointer-events:none}
 #fs-conteo .cnt-tl{left:-1px;top:-1px;border-width:3px 0 0 3px;border-top-left-radius:14px}
 #fs-conteo .cnt-tr{right:-1px;top:-1px;border-width:3px 3px 0 0;border-top-right-radius:14px}
 #fs-conteo .cnt-bl{left:-1px;bottom:-1px;border-width:0 0 3px 3px;border-bottom-left-radius:14px}
 #fs-conteo .cnt-br{right:-1px;bottom:-1px;border-width:0 3px 3px 0;border-bottom-right-radius:14px}
 #fs-conteo .cnt-line{position:absolute;left:12px;right:12px;top:50%;height:2px;margin-top:-1px;border-radius:2px;
-  background:linear-gradient(90deg,transparent,#B9AEFF 18%,#fff 50%,#B9AEFF 82%,transparent);box-shadow:0 0 16px 2px rgba(185,174,255,.7);animation:cntLz 1.6s ease-in-out infinite;pointer-events:none}
+  background:linear-gradient(90deg,transparent,#B9AEFF 18%,#fff 50%,#B9AEFF 82%,transparent);box-shadow:0 0 16px 2px rgba(185,174,255,.7);animation:cntLz 1.6s ease-in-out infinite;pointer-events:none;will-change:transform,opacity}
 @keyframes cntLz{0%,100%{opacity:.35;transform:scaleX(.8)}50%{opacity:1;transform:scaleX(1)}}
 #fs-conteo .cnt-cam-msg{position:absolute;left:12px;right:12px;top:calc(50% + 76px);text-align:center;font-size:12.5px;color:rgba(255,255,255,.78);text-shadow:0 1px 4px rgba(0,0,0,.5);pointer-events:none}
 
@@ -2049,7 +2050,7 @@ input.filter-inp:focus{
 #fs-conteo .cnt-top{position:absolute;left:0;right:0;top:0;z-index:6;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:calc(12px + env(safe-area-inset-top,0)) 16px 0}
 #fs-conteo .cnt-ttl{font-size:15px;font-weight:600;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.4)}
 #fs-conteo .cnt-top-r{justify-self:end}
-#fs-conteo .cnt-gl{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;cursor:pointer;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+#fs-conteo .cnt-gl{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;cursor:pointer;background:rgba(30,18,84,.55);border:1px solid rgba(255,255,255,.18)}
 #fs-conteo .cnt-gl:active{transform:scale(.92)}
 #fs-conteo .cnt-flash.on{background:#F5B94C;color:#1A1530;border-color:#F5B94C}
 
@@ -2091,7 +2092,7 @@ input.filter-inp:focus{
 #fs-conteo .cnt-hist{margin-top:22px}
 #fs-conteo .cnt-hist-h{display:flex;justify-content:space-between;align-items:baseline;padding:0 0 6px;font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px}
 #fs-conteo .cnt-hist-h span:last-child{text-transform:none;letter-spacing:0;font-weight:400}
-#fs-conteo .cnt-h{display:flex;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid var(--border)}
+#fs-conteo .cnt-h{display:flex;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid var(--border);content-visibility:auto;contain-intrinsic-size:auto 66px}
 #fs-conteo .cnt-h-main{flex:1;min-width:0}
 #fs-conteo .cnt-h-n{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
 #fs-conteo .cnt-h-s{font-size:12px;color:var(--text3);margin-top:2px}
@@ -2104,7 +2105,7 @@ input.filter-inp:focus{
 /* ── Hoja inferior ── */
 #fs-conteo .cnt-sheet{position:absolute;left:50%;bottom:0;z-index:20;width:min(100%,440px);max-height:92%;overflow-y:auto;background:var(--surface);border-radius:30px 30px 0 0;border-top:1px solid var(--border2);
   padding:10px 20px calc(18px + env(safe-area-inset-bottom,0));box-shadow:0 -24px 60px rgba(0,0,0,.55);
-  transform:translate(-50%,105%);visibility:hidden;transition:transform .5s cubic-bezier(.2,.9,.2,1),visibility 0s .5s}
+  transform:translate(-50%,105%);visibility:hidden;will-change:transform;transition:transform .5s cubic-bezier(.2,.9,.2,1),visibility 0s .5s}
 #fs-conteo.cnt-det .cnt-sheet{transform:translate(-50%,0);visibility:visible;transition:transform .5s cubic-bezier(.2,.9,.2,1),visibility 0s}
 #fs-conteo .cnt-grab{width:38px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 14px}
 #fs-conteo .cnt-eb{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--text3)}

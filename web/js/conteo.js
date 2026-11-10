@@ -13,19 +13,12 @@ function _cargarMConteo(cb, force) {
     if (cb) _MCONTEO_PENDING.push(cb);
     if (_MCONTEO_PENDING.length > 1) return; // ya hay una petición en vuelo
   }
-  // Limpiar localStorage para no servir datos viejos offline
-  if (force) try { localStorage.removeItem('ds_mconteo_cache_v1'); } catch(e) {}
+  // El caché local se conserva hasta que llegue el catálogo nuevo (sirve de respaldo sin red)
   // Iniciar carga (force=true invalida el caché del servidor también)
   google.script.run
     .withSuccessHandler(function(r) {
       if (r && r.ok) {
-        _MCONTEO_LOCAL = r.data;
-        _MCONTEO_EAN_IDX = {};
-        _MCONTEO_SKU_IDX = {};
-        r.data.forEach(function(item) {
-          _MCONTEO_EAN_IDX[item.ean] = item;
-          _MCONTEO_SKU_IDX[item.sku.toLowerCase()] = item;
-        });
+        _mconteoIndexar(r.data);
         // Persistir en localStorage para uso offline
         try { localStorage.setItem('ds_mconteo_cache_v1', JSON.stringify(r.data)); } catch(e) {}
       }
@@ -48,6 +41,26 @@ function _cargarMConteo(cb, force) {
 // Índices de búsqueda O(1) — populados junto con _MCONTEO_LOCAL
 var _MCONTEO_EAN_IDX = {};
 var _MCONTEO_SKU_IDX = {};
+function _mconteoIndexar(data) {
+  _MCONTEO_LOCAL = data;
+  _MCONTEO_EAN_IDX = {};
+  _MCONTEO_SKU_IDX = {};
+  data.forEach(function(item) {
+    _MCONTEO_EAN_IDX[item.ean] = item;
+    _MCONTEO_SKU_IDX[String(item.sku || '').toLowerCase()] = item;
+  });
+}
+// Al abrir Conteo el catálogo guardado en el equipo se usa de inmediato (escanear y buscar sin esperar a la red);
+// en segundo plano se descarga el actualizado y lo reemplaza.
+function _mconteoHidratar() {
+  try {
+    var raw = localStorage.getItem('ds_mconteo_cache_v1'); if (!raw) return false;
+    var d = JSON.parse(raw);
+    if (!Array.isArray(d) || !d.length) return false;
+    _mconteoIndexar(d);
+    return true;
+  } catch(e) { return false; }
+}
 
 function loadConteo(){
   if(!S||!S.token){errBox('conteo-root','Sin sesión activa. Recarga la página.','conteo');PAGE_LOADING['conteo']=false;return;}
@@ -551,10 +564,42 @@ function limpiarProductoConteo(){
 }
 
 // Wrapper delgado — delega en acSearch con handler de selección propio (acSelectConteo)
+var _CNT_Q=null, _CNT_QSRC=null;
+function _cntIndiceBusq(){
+  if(_CNT_QSRC!==_MCONTEO_LOCAL){
+    _CNT_QSRC=_MCONTEO_LOCAL; _CNT_Q=[];
+    var visto={};
+    (_MCONTEO_LOCAL||[]).forEach(function(it){
+      var k=String(it.sku||'').toLowerCase(); if(!k||visto[k]) return; visto[k]=1;
+      _CNT_Q.push({sku:it.sku, desc:it.producto||'', q:k+' '+String(it.producto||'').toLowerCase()});
+    });
+  }
+  return _CNT_Q;
+}
 function acSearchConteo(){
-  var inp=document.getElementById('cnt-ean');
-  if(!inp)return;
-  // Reutiliza acSearch: listId='ac-cnt', onSelectFn='acSelectConteo'
+  var inp=document.getElementById('cnt-ean'), ac=document.getElementById('ac-cnt');
+  if(!inp||!ac)return;
+  var q=(inp.value||'').trim().toLowerCase();
+  if(q.length<2){ ac.classList.remove('open'); clearTimeout(acTimers['ac-cnt']); acSeq['ac-cnt']=(acSeq['ac-cnt']||0)+1; return; }
+  if(_MCONTEO_LOCAL){
+    // Búsqueda local en memoria (todas las palabras deben aparecer): sin red, sin espera
+    var idx=_cntIndiceBusq(), pal=q.split(/\s+/), res=[], i, w, ok;
+    for(i=0;i<idx.length && res.length<30;i++){
+      ok=true;
+      for(w=0;w<pal.length;w++){ if(idx[i].q.indexOf(pal[w])<0){ ok=false; break; } }
+      if(ok) res.push({sku:idx[i].sku, desc:idx[i].desc});
+    }
+    if(res.length){
+      clearTimeout(acTimers['ac-cnt']); acSeq['ac-cnt']=(acSeq['ac-cnt']||0)+1; // descarta respuestas del servidor que aún viajen
+      _acCacheSet('ac-cnt', res);
+      ac.innerHTML=res.map(function(x,k){
+        return '<div class="ac-item" onclick="acSelectConteo('+k+')"><div class="ac-sku">'+esc(x.sku)+'</div><div class="ac-desc">'+esc(x.desc)+'</div></div>';
+      }).join('');
+      ac.classList.add('open');
+      return;
+    }
+  }
+  // Catálogo aún sin cargar o sin coincidencias: búsqueda en el servidor (acSearch, con espera de 300 ms)
   acSearch('cnt-ean', null, null, 'ac-cnt', 'acSelectConteo');
 }
 
@@ -660,6 +705,35 @@ function _cntListo(total){
   if(t) t.style.color=total>0?'#C9BEF7':'';
 }
 
+function _cntPrevHoy(){
+  var skuNorm=String(_cnt.sku||'').trim();
+  if(!skuNorm) return 0;
+  var nBuf=(_conteoBuffer&&_conteoBuffer.length)||0, nSrv=(DATA&&DATA.conteo&&DATA.conteo.length)||0;
+  var key=skuNorm+'|'+(_cnt._editRow||'')+'|'+(_cnt._editBufferRef?1:0)+'|'+nBuf+'|'+nSrv;
+  if(_cnt._prevKey===key) return _cnt._prevVal;
+  var prevUnd=0, filasBuf={};
+  if(nBuf){
+    _conteoBuffer.forEach(function(b){
+      if(b._row) filasBuf[b._row]=1;
+      if(b===_cnt._editBufferRef) return; // el que se está editando no cuenta como previo
+      if(String(b.sku||'').trim()===skuNorm) prevUnd+=Number(b.total||b.und||0);
+    });
+  }
+  if(nSrv){
+    var hoy=new Date();
+    var hoyStr=String(hoy.getDate()).padStart(2,'0')+'/'+String(hoy.getMonth()+1).padStart(2,'0')+'/'+hoy.getFullYear();
+    var editRowNum=_cnt._editRow||null;
+    DATA.conteo.forEach(function(c){
+      if(String(c.sku||'').trim()!==skuNorm || String(c.fecha||'').trim()!==hoyStr) return;
+      if(editRowNum && c._row===editRowNum) return;   // la fila que se edita no se duplica
+      if(c._row && filasBuf[c._row]) return;          // ya reflejada en el historial local
+      prevUnd+=Number(c.total||c.und||0);
+    });
+  }
+  _cnt._prevKey=key; _cnt._prevVal=prevUnd;
+  return prevUnd;
+}
+
 function calcTotalConteo(){
   var packs=Number(document.getElementById('cnt-packs').value||0);
   var sueltas=Number(document.getElementById('cnt-und-sueltas').value||0);
@@ -671,29 +745,8 @@ function calcTotalConteo(){
   if(calcEl) calcEl.textContent=total>0 ? (packs+' × '+mult+' + '+sueltas) : '';
   var btnG=document.getElementById('btn-guardar-siguiente');
   if(btnG && !btnG.disabled && !_cnt._editRow) btnG.textContent=(_cnt.sku && total>0) ? ('Guardar '+total+' u y seguir') : 'Guardar y escanear siguiente';
-  // Aviso: lo que ya se contó hoy de este mismo producto (buffer local + registros de hoy del servidor). No se muestra stock.
-  var prevUnd=0;
-  var skuNorm=String(_cnt.sku||'').trim();
-  if(skuNorm && _conteoBuffer && _conteoBuffer.length){
-    _conteoBuffer.forEach(function(b){
-      if(b===_cnt._editBufferRef) return; // el que se está editando no cuenta como previo
-      if(String(b.sku||'').trim()===skuNorm) prevUnd+=Number(b.total||b.und||0);
-    });
-  }
-  if(skuNorm && DATA && DATA.conteo && DATA.conteo.length){
-    var hoy=new Date();
-    var hoyStr=String(hoy.getDate()).padStart(2,'0')+'/'+String(hoy.getMonth()+1).padStart(2,'0')+'/'+hoy.getFullYear();
-    var editRowNum=_cnt._editRow||null;
-    DATA.conteo.forEach(function(c){
-      if(String(c.sku||'').trim()===skuNorm && String(c.fecha||'').trim()===hoyStr){
-        // Excluir la fila que se está editando para no duplicar su conteo
-        if(editRowNum && c._row===editRowNum) return;
-        // Evitar doble conteo si este registro ya está reflejado en el buffer local
-        var yaEnBuffer=_conteoBuffer.some(function(b){ return b._row && b._row===c._row; });
-        if(!yaEnBuffer) prevUnd+=Number(c.total||c.und||0);
-      }
-    });
-  }
+  // Aviso: lo que ya se contó hoy de este mismo producto (se calcula una vez y se reutiliza mientras no cambie nada). No se muestra stock.
+  var prevUnd=_cntPrevHoy();
   var prevBox=document.getElementById('cnt-prev'), prevTxt=document.getElementById('cnt-prev-t');
   if(prevBox&&prevTxt){
     prevBox.classList.toggle('on', prevUnd>0);
@@ -824,8 +877,10 @@ function abrirConteo(){
   openFS('fs-conteo');
   // Siempre recargar MCONTEO al abrir — garantiza códigos actualizados
   _MCONTEO_LOCAL=null; _MCONTEO_PENDING=[]; _MCONTEO_EAN_IDX={}; _MCONTEO_SKU_IDX={};
+  var hidratado = _mconteoHidratar();
   var st = document.getElementById('cnt-ean-status');
-  if (st) { st.style.color = 'var(--text3)'; st.textContent = 'Cargando catálogo de productos...'; }
+  if (st && !hidratado) { st.style.color = 'var(--text3)'; st.textContent = 'Cargando catálogo de productos...'; }
+  if (typeof _scanBeepWarm === 'function') _scanBeepWarm(); // el audio se prepara con el toque que abrió la pantalla: sin pausa en el primer escaneo
   _cntCam.error = false;
   _cntCamNegro(null);
   // La cámara arranca de inmediato (no espera al catálogo); el catálogo solo hace falta al detectar un código
@@ -850,6 +905,12 @@ function _actualizarContadorBuffer(){
 
 
 // Agrega o reemplaza (por _row) una fila de conteo en la tabla local: editar no debe duplicar el registro
+var _cntSucio=false;
+function _cntFlush(){
+  if(!_cntSucio) return;
+  _cntSucio=false;
+  setTimeout(function(){ if(typeof filterConteo==='function') filterConteo(); _updateConteoStats(); }, 250);
+}
 function _conteoUpsertLocal(row){
   if(!DATA.conteo) DATA.conteo=[];
   var i=-1;
@@ -933,8 +994,7 @@ function guardarYContinuar(){
 
       // Agregar a tabla principal local — sin deduplicar
       _conteoUpsertLocal(r.inserted[0]);
-      if(typeof filterConteo==='function') filterConteo();
-      _updateConteoStats();
+      _cntSucio = true; // la tabla y los totales de la pantalla de atrás se actualizan al cerrar el formulario
 
       // Preparar para el siguiente
       limpiarFormConteo();

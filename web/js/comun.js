@@ -2,6 +2,7 @@
 /* ══════════════════════════════════════
    AUTOCOMPLETE + EAN
 ══════════════════════════════════════ */
+var acSeq={}; // número de búsqueda por lista: una respuesta tardía no pisa a una más nueva
 var acTimers={}; // mapa por listId — evita que filas distintas cancelen sus timers entre sí
 // Cache de resultados por listId — evita pasar JSON por onclick
 // Máx 20 entradas para evitar crecimiento ilimitado en sesiones largas
@@ -24,9 +25,11 @@ function acSearch(skuId,descId,marcaId,listId,onSelectFn){
   clearTimeout(acTimers[listId]);
   var q=document.getElementById(skuId).value.trim();
   if(q.length<2){document.getElementById(listId).classList.remove('open');return;}
+  var seq=(acSeq[listId]=(acSeq[listId]||0)+1);
   acTimers[listId]=setTimeout(function(){
     google.script.run
       .withSuccessHandler(function(r){
+        if(seq!==acSeq[listId])return;
         if(!r.ok)return;
         var list=document.getElementById(listId);
         if(!r.results.length){list.classList.remove('open');return;}
@@ -100,7 +103,7 @@ function openFS(id){
   setTimeout(function(){el.classList.add('open');},10);
 }
 function closeFS(id){
-  if(id==='fs-conteo') _cntCamDetener();
+  if(id==='fs-conteo'){ _cntCamDetener(); if(typeof _cntFlush==='function') _cntFlush(); }
   var el=document.getElementById(id);
   el.classList.remove('open');
   setTimeout(function(){el.style.display='none';},200);
