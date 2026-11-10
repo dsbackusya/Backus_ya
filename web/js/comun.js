@@ -98,12 +98,13 @@ function eanFill(eanId,skuId,descId,marcaId){
 
 /* ── FULL-SCREEN FORM HELPERS ── */
 function openFS(id){
+  if(id==='fs-conteo') document.body.classList.add('cnt-open');
   var el=document.getElementById(id);
   el.style.display='flex';
   setTimeout(function(){el.classList.add('open');},10);
 }
 function closeFS(id){
-  if(id==='fs-conteo'){ _cntCamDetener(); if(typeof _cntFlush==='function') _cntFlush(); }
+  if(id==='fs-conteo'){ document.body.classList.remove('cnt-open'); _cntCamDetener(); if(typeof _cntFlush==='function') _cntFlush(); }
   var el=document.getElementById(id);
   el.classList.remove('open');
   setTimeout(function(){el.style.display='none';},200);

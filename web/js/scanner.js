@@ -191,42 +191,76 @@ function _scannerNativo(targetId, title){
     });
 }
 
-// Respaldo para navegadores sin BarcodeDetector (iPhone/Safari, Firefox): librería ZXing
+// Respaldo para navegadores sin BarcodeDetector (iPhone/Safari, Firefox): librería ZXing.
+// Rendimiento: antes se decodificaba el fotograma COMPLETO (hasta 1280×720) cada 120 ms en el hilo principal, lo que
+// congelaba la pantalla. Ahora solo se lee la zona del marco, reducida a ≤640 px, con un canvas reutilizado y un ritmo
+// que se adapta (nunca ocupa más de ~1/3 del tiempo). El modo "TRY_HARDER" se usa solo 1 de cada 4 intentos.
+var _ZX_PRECARGA = null;
+function _scanPrecargarZXing(){
+  if ('BarcodeDetector' in window || window.ZXing || _ZX_PRECARGA) return;
+  _ZX_PRECARGA = document.createElement('script');
+  _ZX_PRECARGA.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+  _ZX_PRECARGA.async = true;
+  document.head.appendChild(_ZX_PRECARGA);
+}
+// Zona del video que está dentro del marco (video con object-fit: cover), un poco ampliada; null = fotograma completo
+function _cntRegionMarco(video){
+  try {
+    var aim = document.querySelector('#fs-conteo .cnt-aim');
+    var vw = video.videoWidth, vh = video.videoHeight;
+    if (!aim || !vw || !vh) return null;
+    var vr = video.getBoundingClientRect(), ar = aim.getBoundingClientRect();
+    if (!vr.width || !vr.height || !ar.width) return null;
+    var sc = Math.max(vr.width / vw, vr.height / vh);
+    var ox = (vw * sc - vr.width) / 2, oy = (vh * sc - vr.height) / 2;
+    var cx = (ar.left + ar.width / 2 - vr.left + ox) / sc, cy = (ar.top + ar.height / 2 - vr.top + oy) / sc;
+    var w = Math.min(vw, ar.width * 1.25 / sc), h = Math.min(vh, ar.height * 1.7 / sc);
+    var x = Math.max(0, Math.min(vw - w, cx - w / 2)), y = Math.max(0, Math.min(vh - h, cy - h / 2));
+    return { x: x, y: y, w: w, h: h };
+  } catch(e) { return null; }
+}
 function _scannerZXing(video, entregar, msg, est){
   est = est || _scanNat;
   function lanzar(){
     if (!est.activo) return;
-    var hints = new Map();
-    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-      ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
-      ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.QR_CODE ]);
-    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-    // Bucle propio: se toma un fotograma del video, se pasa a canvas y se decodifica con ZXing
-    var reader = new ZXing.MultiFormatReader();
-    reader.setHints(hints);
-    var cv = document.createElement('canvas'), cx = cv.getContext('2d');
+    function hints(duro){
+      var h = new Map();
+      h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+        ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
+        ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39, ZXing.BarcodeFormat.QR_CODE ]);
+      if (duro) h.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      return h;
+    }
+    var rapido = new ZXing.MultiFormatReader(); rapido.setHints(hints(false));
+    var duro = new ZXing.MultiFormatReader();   duro.setHints(hints(true));
+    var cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+    var n = 0, espera = 110;
     est.zx = { reset: function(){ clearTimeout(this.t); this.parar = true; } };
     (function paso(){
       var z = est.zx;
       if (!est.activo || !z || z.parar) return;
+      var t0 = performance.now();
       if (video.readyState >= 2 && video.videoWidth) {
-        cv.width = video.videoWidth; cv.height = video.videoHeight;
-        cx.drawImage(video, 0, 0);
+        var rg = (est === _cntCam ? _cntRegionMarco(video) : null) || { x: 0, y: 0, w: video.videoWidth, h: video.videoHeight };
+        var esc = Math.min(1, 640 / rg.w), cw = Math.max(16, Math.round(rg.w * esc)), ch = Math.max(16, Math.round(rg.h * esc));
+        if (cv.width !== cw) cv.width = cw;      // solo se cambia el tamaño si hace falta (cambiarlo vacía el canvas)
+        if (cv.height !== ch) cv.height = ch;
+        cx.drawImage(video, rg.x, rg.y, rg.w, rg.h, 0, 0, cw, ch);
         try {
           var bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(cv)));
-          var res = reader.decode(bmp);
+          var res = ((++n % 4) === 0 ? duro : rapido).decode(bmp);
           if (res) { entregar(res.getText()); return; }
         } catch(e) { /* no se encontró código en este fotograma */ }
       }
-      z.t = setTimeout(paso, 120);
+      espera = Math.max(110, (performance.now() - t0) * 3);
+      z.t = setTimeout(paso, espera);
     })();
   }
   if (window.ZXing) { lanzar(); return; }
-  var s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
-  s.onload = lanzar;
-  s.onerror = function(){ msg.textContent = 'No se pudo cargar el lector. Escribe el código abajo.'; };
-  document.head.appendChild(s);
+  var s = _ZX_PRECARGA || document.createElement('script');
+  if (!_ZX_PRECARGA) { s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js'; document.head.appendChild(s); }
+  s.addEventListener('load', lanzar);
+  s.addEventListener('error', function(){ msg.textContent = 'No se pudo cargar el lector. Escribe el código abajo.'; });
 }
 
 /* ── CÁMARA INTEGRADA EN LA PANTALLA DE CONTEO ──
@@ -332,7 +366,7 @@ function _cntCamIniciar(){
   }
 
   navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24, max: 30 } },
     audio: false
   })
     .then(function(stream){
@@ -361,12 +395,14 @@ function _cntCamIniciar(){
           if (!_cntCam.activo) return;
           if (conBD && formatos.length) {
             var detector = new BarcodeDetector({ formats: formatos });
-            var ultimo = 0;
+            var ultimo = 0, espera = 90;
             (function tick(t){
               if (!_cntCam.activo) return;
-              if (t - ultimo < 90 || video.readyState < 2) { _cntCam.raf = requestAnimationFrame(tick); return; }
+              if (t - ultimo < espera || video.readyState < 2) { _cntCam.raf = requestAnimationFrame(tick); return; }
               ultimo = t;
+              var t0 = performance.now();
               detector.detect(video).then(function(r){
+                espera = Math.max(90, (performance.now() - t0) * 2.5); // si la lectura tarda, se espacia (no satura el celular)
                 if (r && r.length) entregar(r[0].rawValue); else _cntCam.raf = requestAnimationFrame(tick);
               }).catch(function(){ _cntCam.raf = requestAnimationFrame(tick); });
             })(0);

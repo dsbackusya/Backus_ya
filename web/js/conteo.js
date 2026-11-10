@@ -879,15 +879,20 @@ function abrirConteo(){
   var hidratado = _mconteoHidratar();
   var st = document.getElementById('cnt-ean-status');
   if (st && !hidratado) { st.style.color = 'var(--text3)'; st.textContent = 'Cargando catálogo de productos...'; }
+  if (typeof _scanPrecargarZXing === 'function') _scanPrecargarZXing(); // iPhone/Firefox: el lector se descarga mientras arranca la cámara
   if (typeof _scanBeepWarm === 'function') _scanBeepWarm(); // el audio se prepara con el toque que abrió la pantalla: sin pausa en el primer escaneo
   _cntCam.error = false;
   _cntCamNegro(null);
   // La cámara arranca de inmediato (no espera al catálogo); el catálogo solo hace falta al detectar un código
   setTimeout(_cntVista, 60);
-  _cargarMConteo(function() {
-    var st2 = document.getElementById('cnt-ean-status');
-    if (st2 && st2.textContent === 'Cargando catálogo de productos...') st2.textContent = '';
-  }, true);
+  var _refrescarCat = function() {
+    _cargarMConteo(function() {
+      var st2 = document.getElementById('cnt-ean-status');
+      if (st2 && st2.textContent === 'Cargando catálogo de productos...') st2.textContent = '';
+    }, true);
+  };
+  // Con el catálogo guardado ya en uso, la descarga del actualizado espera a que la cámara arranque (así no compiten)
+  if (hidratado) setTimeout(function() { if (_cntCamAbierta()) _refrescarCat(); }, 2000); else _refrescarCat();
 }
 
 function _actualizarContadorBuffer(){
