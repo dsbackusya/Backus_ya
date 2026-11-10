@@ -820,101 +820,87 @@ window.addEventListener('load', function(){
   <div class="fs-body">
     <div class="cnt-wrap">
 
-      <!-- Arriba: escáner sobre degradado violeta -->
-      <header class="cnt-hero">
+      <!-- Cámara arriba -->
+      <div class="cnt-cam" id="cnt-cam">
+        <video id="cnt-cam-v" playsinline muted autoplay></video>
+        <div class="cnt-aim">
+          <span class="cnt-cb cnt-tl"></span><span class="cnt-cb cnt-tr"></span><span class="cnt-cb cnt-bl"></span><span class="cnt-cb cnt-br"></span>
+          <div class="cnt-line" id="cnt-cam-line"></div>
+        </div>
+        <div class="cnt-cam-msg" id="cnt-cam-msg">Centra el código de barras en el marco</div>
+        <div class="cnt-cam-off" id="cnt-cam-off" style="display:none" onclick="cntCamToque()"></div>
         <div class="cnt-top">
-          <button class="cnt-ib" onclick="_cerrarFormConteo()" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <button class="cnt-gl" onclick="_cerrarFormConteo()" aria-label="Volver"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
           <div class="cnt-ttl">Conteo</div>
-          <button class="cnt-ib" onclick="cntIrHistorial()" aria-label="Historial"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="14" y2="17"/></svg><span class="cnt-hdot" id="cnt-hdot"></span></button>
+          <span class="cnt-top-r"><button class="cnt-gl cnt-flash" id="cnt-flash" style="display:none" onclick="cntFlash()" aria-label="Linterna"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></button></span>
         </div>
+      </div>
 
-        <!-- Un solo campo: SKU, nombre o código de barras -->
-        <div class="cnt-search" id="cnt-search">
-          <div class="cnt-field">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input id="cnt-ean" placeholder="SKU, nombre o código de barras" autocomplete="off" autocapitalize="off" spellcheck="false"
-              onkeydown="if(event.key==='Enter'){event.preventDefault();cntEnter();}"
-              oninput="cntEntrada()"/>
-            <button class="cnt-clr" id="cnt-clr" onclick="cntLimpiarBusqueda()" aria-label="Borrar">×</button>
-          </div>
-          <div class="ac-list" id="ac-cnt"></div>
+      <!-- Buscador flotante: SKU, nombre o código de barras -->
+      <div class="cnt-search" id="cnt-search">
+        <div class="cnt-field">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="cnt-ean" placeholder="SKU, nombre o código de barras" autocomplete="off" autocapitalize="off" spellcheck="false"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();cntEnter();}"
+            oninput="cntEntrada()"/>
+          <button class="cnt-clr" id="cnt-clr" onclick="cntLimpiarBusqueda()" aria-label="Borrar">×</button>
         </div>
+        <div class="ac-list" id="ac-cnt"></div>
+      </div>
 
-        <!-- Estado: escaneando -->
-        <div class="cnt-fold" id="cnt-scanwrap"><div>
-          <div class="cnt-cam" id="cnt-cam">
-            <video id="cnt-cam-v" playsinline muted autoplay></video>
-            <div class="cnt-aim">
-              <span class="cnt-cb cnt-tl"></span><span class="cnt-cb cnt-tr"></span><span class="cnt-cb cnt-bl"></span><span class="cnt-cb cnt-br"></span>
-              <div class="cnt-line" id="cnt-cam-line"></div>
-            </div>
-            <div class="cnt-cam-msg" id="cnt-cam-msg">Centra el código de barras en el marco</div>
-            <button class="cnt-flash" id="cnt-flash" style="display:none" onclick="cntFlash()" aria-label="Linterna"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></button>
-            <div class="cnt-cam-off" id="cnt-cam-off" style="display:none" onclick="cntCamToque()"></div>
-          </div>
-          <div id="cnt-ean-status" class="cnt-foot"></div>
-          <div id="cnt-manual-wrap" style="display:none">
-            <button type="button" class="cnt-asoc" onclick="cntAsociarEAN()">Asociar este código a un producto</button>
-          </div>
-        </div></div>
+      <input type="hidden" id="cnt-sku"/>
+      <input type="hidden" id="cnt-sap"/>
+      <input type="hidden" id="cnt-mult"/>
+      <input type="hidden" id="cnt-producto-h"/>
 
-        <input type="hidden" id="cnt-sku"/>
-        <input type="hidden" id="cnt-sap"/>
-        <input type="hidden" id="cnt-mult"/>
-        <input type="hidden" id="cnt-producto-h"/>
-
-        <!-- Estado: producto encontrado -->
-        <div class="cnt-fold cnt-fold-p" id="cnt-prodwrap"><div>
-          <div id="cnt-producto-card" class="cnt-prod" style="display:none">
-            <div class="cnt-eb"><span class="mono" id="cnt-sku-display">-</span><button class="cnt-x" onclick="limpiarProductoConteo()" aria-label="Cambiar producto">Cambiar</button></div>
-            <div class="cnt-nombre" id="cnt-producto-nombre">-</div>
-            <div class="cnt-meta">1 pack = <b id="cnt-mult-und">?</b> unidades<span id="cnt-stock-wrap" style="display:none"> · Stock <b id="cnt-stock-display"></b></span></div>
-            <div id="cnt-progress-wrap">
-              <div class="cnt-bar"><i id="cnt-progress-bar"></i></div>
-              <div class="cnt-mr"><span id="cnt-progress-hint"></span><span id="cnt-progress-label"></span></div>
-            </div>
-          </div>
-        </div></div>
-      </header>
-
-      <!-- Abajo: cantidades sobre fondo oscuro -->
-      <main class="cnt-dark">
-        <div id="cnt-entry">
-          <div class="cnt-row">
-            <div class="cnt-nm"><b>Packs</b><small id="cnt-pack-sub">&nbsp;</small></div>
-            <div class="cnt-step">
-              <button type="button" onclick="cntMover('cnt-packs',-1)" aria-label="Un pack menos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-              <input class="cnt-val" id="cnt-packs" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()" onfocus="this.select()"/>
-              <button type="button" class="pl" onclick="cntMover('cnt-packs',1)" aria-label="Un pack más"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-            </div>
-          </div>
-          <div class="cnt-row">
-            <div class="cnt-nm"><b>Sueltas</b><small>Unidades sin pack</small></div>
-            <div class="cnt-step">
-              <button type="button" onclick="cntMover('cnt-und-sueltas',-1)" aria-label="Una unidad menos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-              <input class="cnt-val" id="cnt-und-sueltas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()" onfocus="this.select()"/>
-              <button type="button" class="pl" onclick="cntMover('cnt-und-sueltas',1)" aria-label="Una unidad más"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-            </div>
-          </div>
-          <div class="cnt-tot">
-            <span class="cnt-lab">Total</span>
-            <span class="cnt-totv"><b id="cnt-total-display">0</b><span>unidades</span></span>
-          </div>
-          <div class="cnt-calc" id="cnt-calc"></div>
-          <div id="cnt-err" class="cnt-foot cnt-err"></div>
+      <!-- Historial de hoy -->
+      <div class="cnt-list">
+        <div id="cnt-ean-status" class="cnt-foot"></div>
+        <div id="cnt-manual-wrap" style="display:none">
+          <button type="button" class="cnt-asoc" onclick="cntAsociarEAN()">Asociar este código a un producto</button>
         </div>
-
         <div id="cnt-history-container" class="cnt-hist" style="display:none">
-          <div class="cnt-hist-h"><span>Historial</span><span id="cnt-history-badge">0</span></div>
+          <div class="cnt-hist-h"><span>Hoy</span><span><span id="cnt-history-badge">0</span> conteos</span></div>
           <div id="cnt-history-list"></div>
         </div>
-      </main>
+      </div>
 
     </div>
   </div>
-  <div class="fs-footer">
+
+  <!-- Hoja inferior: producto y cantidades (sin stock) -->
+  <section class="cnt-sheet" id="cnt-entry">
+    <div class="cnt-grab"></div>
+    <div id="cnt-producto-card" class="cnt-prod" style="display:none">
+      <div class="cnt-eb"><span class="mono" id="cnt-sku-display">-</span><button class="cnt-x" onclick="limpiarProductoConteo()" aria-label="Cambiar producto">Cambiar</button></div>
+      <div class="cnt-nombre" id="cnt-producto-nombre">-</div>
+      <div class="cnt-prev" id="cnt-prev"><i></i><span id="cnt-prev-t"></span></div>
+    </div>
+    <div class="cnt-tiles">
+      <div class="cnt-tile">
+        <div class="cnt-lb">Packs</div><div class="cnt-sb" id="cnt-pack-sub">&nbsp;</div>
+        <input class="cnt-val" id="cnt-packs" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()" onfocus="this.select()"/>
+        <div class="cnt-ctl">
+          <button type="button" onclick="cntMover('cnt-packs',-1)" aria-label="Un pack menos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <button type="button" class="pl" onclick="cntMover('cnt-packs',1)" aria-label="Un pack más"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        </div>
+      </div>
+      <div class="cnt-tile">
+        <div class="cnt-lb">Sueltas</div><div class="cnt-sb">unidades sin pack</div>
+        <input class="cnt-val" id="cnt-und-sueltas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()" onfocus="this.select()"/>
+        <div class="cnt-ctl">
+          <button type="button" onclick="cntMover('cnt-und-sueltas',-1)" aria-label="Una unidad menos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          <button type="button" class="pl" onclick="cntMover('cnt-und-sueltas',1)" aria-label="Una unidad más"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="cnt-tot">
+      <span class="cnt-lab">Total</span>
+      <div><span class="cnt-totv"><b id="cnt-total-display">0</b><span>unidades</span></span><div class="cnt-calc" id="cnt-calc"></div></div>
+    </div>
+    <div id="cnt-err" class="cnt-err"></div>
     <button class="cnt-save" id="btn-guardar-siguiente" onclick="guardarYContinuar()">Guardar y escanear siguiente</button>
-  </div>
+  </section>
 </div>
 
 <!-- FORM: NUEVO / EDITAR SKU (asistente de 2 pasos) -->

@@ -522,7 +522,7 @@ function setProductoConteo(ean,sku,sap,producto,multiplicador,stock){
   document.getElementById('cnt-producto-nombre').textContent=producto;
   document.getElementById('cnt-sku-display').textContent=sku;
   var multUnd=document.getElementById('cnt-mult-und');if(multUnd)multUnd.textContent=mult;
-  var packSub=document.getElementById('cnt-pack-sub');if(packSub)packSub.textContent=mult+' unidades por pack';
+  var packSub=document.getElementById('cnt-pack-sub');if(packSub)packSub.textContent='× '+mult+' unidades';
   var eanIn=document.getElementById('cnt-ean');if(eanIn)eanIn.value='';
   var acL=document.getElementById('ac-cnt');if(acL)acL.classList.remove('open');
   _cntBuscaUI();
@@ -545,12 +545,8 @@ function limpiarProductoConteo(){
   document.getElementById('cnt-und-sueltas').value='';
   document.getElementById('cnt-total-display').textContent='0';
   _cntListo(0);
-  var bar=document.getElementById('cnt-progress-bar');
-  if(bar){bar.style.width='0%';}
-  var label=document.getElementById('cnt-progress-label');
-  if(label){label.textContent='— / — und.';}
-  var hint=document.getElementById('cnt-progress-hint');
-  if(hint){hint.textContent='';}
+  var pv=document.getElementById('cnt-prev'); if(pv) pv.classList.remove('on');
+  var cs=document.getElementById('cnt-calc'); if(cs) cs.textContent='';
   _cntVista();
 }
 
@@ -675,55 +671,33 @@ function calcTotalConteo(){
   if(calcEl) calcEl.textContent=total>0 ? (packs+' × '+mult+' + '+sueltas) : '';
   var btnG=document.getElementById('btn-guardar-siguiente');
   if(btnG && !btnG.disabled && !_cnt._editRow) btnG.textContent=(_cnt.sku && total>0) ? ('Guardar '+total+' u y seguir') : 'Guardar y escanear siguiente';
-  var stW=document.getElementById('cnt-stock-wrap'), stD=document.getElementById('cnt-stock-display');
-  if(stW&&stD){ var hayStock=!(_cnt._stock==null||_cnt._stock===''); stW.style.display=hayStock?'':'none'; if(hayStock) stD.textContent=Number(_cnt._stock).toLocaleString('es-PE')+' u'; }
-
-  // Progress bar vs stock — sumar conteos previos del mismo SKU en el buffer
-  var stock=_cnt._stock;
-  var bar=document.getElementById('cnt-progress-bar');
-  var label=document.getElementById('cnt-progress-label');
-  var hint=document.getElementById('cnt-progress-hint');
-  if(bar&&label&&hint){
-    if(stock==null||stock===undefined||stock===''){
-      label.textContent='';
-      bar.style.width='0%';
-      hint.textContent='';
-    } else {
-      var stockNum=Number(stock)||0;
-      // Sumar conteos previos del mismo SKU: buffer local + registros del servidor de hoy
-      var prevUnd=0;
-      var skuNorm=String(_cnt.sku||'').trim();
-      // 1. Buffer local (mismo dispositivo, aún no guardados)
-      if(skuNorm && _conteoBuffer && _conteoBuffer.length){
-        _conteoBuffer.forEach(function(b){
-          if(String(b.sku||'').trim()===skuNorm) prevUnd+=Number(b.total||b.und||0);
-        });
+  // Aviso: lo que ya se contó hoy de este mismo producto (buffer local + registros de hoy del servidor). No se muestra stock.
+  var prevUnd=0;
+  var skuNorm=String(_cnt.sku||'').trim();
+  if(skuNorm && _conteoBuffer && _conteoBuffer.length){
+    _conteoBuffer.forEach(function(b){
+      if(b===_cnt._editBufferRef) return; // el que se está editando no cuenta como previo
+      if(String(b.sku||'').trim()===skuNorm) prevUnd+=Number(b.total||b.und||0);
+    });
+  }
+  if(skuNorm && DATA && DATA.conteo && DATA.conteo.length){
+    var hoy=new Date();
+    var hoyStr=String(hoy.getDate()).padStart(2,'0')+'/'+String(hoy.getMonth()+1).padStart(2,'0')+'/'+hoy.getFullYear();
+    var editRowNum=_cnt._editRow||null;
+    DATA.conteo.forEach(function(c){
+      if(String(c.sku||'').trim()===skuNorm && String(c.fecha||'').trim()===hoyStr){
+        // Excluir la fila que se está editando para no duplicar su conteo
+        if(editRowNum && c._row===editRowNum) return;
+        // Evitar doble conteo si este registro ya está reflejado en el buffer local
+        var yaEnBuffer=_conteoBuffer.some(function(b){ return b._row && b._row===c._row; });
+        if(!yaEnBuffer) prevUnd+=Number(c.total||c.und||0);
       }
-      // 2. DATA.conteo del servidor — registros ya guardados hoy (cualquier dispositivo)
-      if(skuNorm && DATA && DATA.conteo && DATA.conteo.length){
-        var hoy=new Date();
-        var hoyStr=String(hoy.getDate()).padStart(2,'0')+'/'+String(hoy.getMonth()+1).padStart(2,'0')+'/'+hoy.getFullYear();
-        var editRowNum=_cnt._editRow||null;
-        DATA.conteo.forEach(function(c){
-          if(String(c.sku||'').trim()===skuNorm && String(c.fecha||'').trim()===hoyStr){
-            // Excluir la fila que se está editando para no duplicar su conteo
-            if(editRowNum && c._row===editRowNum) return;
-            // Evitar doble conteo si este registro ya está reflejado en el buffer local
-            var yaEnBuffer=_conteoBuffer.some(function(b){ return b._row && b._row===c._row; });
-            if(!yaEnBuffer) prevUnd+=Number(c.total||c.und||0);
-          }
-        });
-      }
-      var totalAcum=prevUnd+total;
-      var labelPrev=prevUnd>0?' (+'+prevUnd+' prev)':'';
-      label.textContent=totalAcum.toLocaleString('es-PE')+' / '+stockNum.toLocaleString('es-PE')+' u'+labelPrev;
-      var pct=stockNum>0?Math.min(Math.round(totalAcum/stockNum*100),100):100;
-      bar.style.width=pct+'%';
-      if(totalAcum===0) hint.textContent='Aún no has contado este producto';
-      else if(totalAcum===stockNum) hint.textContent='Coincide con el sistema';
-      else if(totalAcum<stockNum) hint.textContent='Faltan '+(stockNum-totalAcum).toLocaleString('es-PE')+' u';
-      else hint.textContent='Sobran '+(totalAcum-stockNum).toLocaleString('es-PE')+' u · revisa el conteo';
-    }
+    });
+  }
+  var prevBox=document.getElementById('cnt-prev'), prevTxt=document.getElementById('cnt-prev-t');
+  if(prevBox&&prevTxt){
+    prevBox.classList.toggle('on', prevUnd>0);
+    if(prevUnd>0) prevTxt.textContent='Ya contaste hoy '+prevUnd.toLocaleString('es-PE')+' u de este producto';
   }
 }
 // Buffer local de conteo y persistencia
