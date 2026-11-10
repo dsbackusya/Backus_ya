@@ -1,37 +1,166 @@
-/* Splash de arranque (DINET / TADA): la reja de la tienda sube, se ve la bodega y aparecen las letras y la mascota.
+/* Splash de arranque (Dinet): una lente de vidrio nace como círculo, se vuelve baldosa, refracta el logo con dispersión
+   cromática sobre el violeta de la app y se disuelve dejando el logo con un relieve suave (2.4 s). Va en WebGL puro.
    Se queda hasta que la app esté lista:
    - sin sesión: cuando aparece el login
    - con sesión: cuando la primera pantalla terminó de cargar sus datos
-   La primera vez de cada sesión dura al menos MIN ms (para que se vea la animación completa); las siguientes entran directo.
-   Si pasan MAX ms sin estar lista, ofrece Reintentar / Seguir esperando. */
+   La primera vez de cada sesión se ve la animación completa; las siguientes entran directo con el logo ya formado.
+   Si pasan MAX ms sin estar lista, ofrece Reintentar / Seguir esperando.
+   Rendimiento: al terminar la animación se dibuja el último cuadro y se deja de dibujar (la barra de carga es CSS);
+   al quitar el splash se libera el contexto de WebGL. Sin WebGL (o con error) se muestra el logo plano. */
 (function(){
   var sp=document.getElementById('tsplash'); if(!sp) return;
   var vista=false; try{ vista=sessionStorage.getItem('ts_vista')==='1'; }catch(e){}
   var reducido=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
   var rep=vista||reducido;
-  var MIN=rep?1300:4800, MAX=9000;
-  var t0=Date.now(), terminado=false, esperando=false, timer=null;
+  var DUR=2.4, MIN=rep?1200:2800, MAX=9000;
+  var t0=Date.now(), terminado=false, esperando=false, timer=null, animFin=false, gl=null, raf=0, parar=false;
   var sr=document.getElementById('ts-sr');
+  var canvas=document.getElementById('ts-gl');
   if(rep) sp.classList.add('rep');
 
-  // mascota (dibujo en SVG); el pelaje se arma con círculos alrededor del contorno
-  var mc=document.getElementById('ts-mascot');
-  if(mc){
-    mc.innerHTML='<svg viewBox="0 0 220 280" aria-hidden="true"> <defs> <linearGradient id="tsmf" gradientUnits="userSpaceOnUse" x1="60" y1="30" x2="150" y2="230"><stop offset="0" stop-color="#3FD9EC"/><stop offset=".55" stop-color="#22D3C0"/><stop offset="1" stop-color="#14C99A"/></linearGradient> <linearGradient id="tsmh" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#27D4B8"/><stop offset="1" stop-color="#E3F27C"/></linearGradient> <linearGradient id="tsml" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#18C99C"/><stop offset="1" stop-color="#0FB88E"/></linearGradient> </defs> <ellipse class="tsm-sh" cx="110" cy="264" rx="62" ry="9" fill="rgba(10,6,28,.55)"/> <g class="tsm-all"> <g fill="url(#tsml)"><rect x="68" y="196" width="40" height="58" rx="16"/><rect x="116" y="196" width="40" height="58" rx="16"/> <ellipse cx="80" cy="254" rx="27" ry="11"/><ellipse cx="146" cy="254" rx="29" ry="11"/></g> <g fill="#26385E"><rect x="68" y="206" width="40" height="34" rx="12"/><rect x="116" y="206" width="40" height="34" rx="12"/></g> <g id="tsfur" fill="url(#tsmf)"><ellipse cx="110" cy="122" rx="80" ry="88"/></g> <g id="tsuni"> <path d="M56 142 Q110 128 164 142 L170 206 Q110 222 50 206 Z" fill="#1F2F55"/> <path d="M56 142 Q110 128 164 142 L166 170 Q110 160 54 170 Z" fill="#E4ECF8"/> <path d="M54 170 Q110 160 166 170 L167 181 Q110 171 53 181 Z" fill="#F28C28"/> <path d="M110 134 L110 214" stroke="#E4ECF8" stroke-width="2" opacity=".7"/> <path d="M92 134 Q110 148 128 134" fill="#1F2F55" stroke="#1F2F55" stroke-width="6" stroke-linejoin="round"/> <circle cx="132" cy="154" r="5" fill="#fff" opacity=".9"/><circle cx="132" cy="154" r="2.4" fill="#F28C28"/> </g> <g class="tsm-head"> <path d="M50 52 Q36 14 68 6 Q72 30 82 46 Z" fill="url(#tsmh)"/><path d="M170 52 Q184 14 152 6 Q148 30 138 46 Z" fill="url(#tsmh)"/> <path d="M44 66 L18 80 L46 90 Z" fill="#0E9AA0"/><path d="M176 66 L202 80 L174 90 Z" fill="#0E9AA0"/> <g id="tsfur2" fill="url(#tsmf)"></g> <ellipse cx="110" cy="96" rx="58" ry="46" fill="#fff"/> <g fill="#fff" id="tsbangs"></g> <g class="tsm-eye"><ellipse cx="86" cy="94" rx="7.5" ry="9.5" fill="#15101f"/><circle cx="88.5" cy="90.5" r="2.4" fill="#fff"/></g> <g class="tsm-eye"><ellipse cx="134" cy="94" rx="7.5" ry="9.5" fill="#15101f"/><circle cx="136.5" cy="90.5" r="2.4" fill="#fff"/></g> <path d="M92 112 Q110 142 128 112 Z" fill="#3a0f2e"/><path d="M99 123 Q110 134 121 123 Q110 118 99 123 Z" fill="#FF8DB3"/><rect x="100" y="112" width="20" height="5" rx="2" fill="#fff"/> <path d="M62 68 Q110 8 158 68 Q110 58 62 68 Z" fill="#1F2F55"/> <path d="M118 64 Q158 56 174 70 Q148 76 116 70 Z" fill="#162240"/> <path d="M86 52 Q110 38 134 52" fill="none" stroke="#F28C28" stroke-width="3" stroke-linecap="round" opacity=".95"/> <circle cx="110" cy="44" r="8" fill="#fff"/><circle cx="110" cy="44" r="3.4" fill="#F28C28"/> </g> <path d="M62 134 Q70 152 88 162" stroke="#1F2F55" stroke-width="22" stroke-linecap="round" fill="none"/><path d="M56 128 L68 139" stroke="#E4ECF8" stroke-width="10" stroke-linecap="round"/><circle cx="90" cy="163" r="8.5" fill="url(#tsml)"/> <g transform="rotate(-18 92 160)"><rect x="84" y="150" width="14" height="20" rx="4" fill="#12202a"/><rect x="87" y="154" width="8" height="10" rx="2.5" fill="#B8F26B"/></g> <g class="tsm-tab"> <path d="M154 134 Q162 148 158 162" stroke="#1F2F55" stroke-width="22" stroke-linecap="round" fill="none"/><path d="M160 130 L152 138" stroke="#E4ECF8" stroke-width="10" stroke-linecap="round"/> <rect x="146" y="124" width="48" height="68" rx="9" fill="#1E6B3B" transform="rotate(8 170 158)"/> <rect x="152" y="132" width="36" height="52" rx="6" fill="#134D2A" transform="rotate(8 170 158)"/> <g fill="#B8F26B" transform="rotate(8 170 158)"><circle cx="190" cy="146" r="3.5"/><circle cx="190" cy="158" r="3.5"/><circle cx="190" cy="170" r="3.5"/></g> </g> </g></svg>';
-    var f=document.getElementById('tsfur'), h='', a, r, x, q='';
-    for(a=0;a<360;a+=11){ r=a*Math.PI/180; h+='<circle cx="'+(110+Math.cos(r)*79).toFixed(1)+'" cy="'+(122+Math.sin(r)*87).toFixed(1)+'" r="11"/>'; }
-    f.insertAdjacentHTML('beforeend',h);
-    for(x=62;x<=158;x+=12) q+='<circle cx="'+x+'" cy="'+(56+Math.abs(x-110)*.12).toFixed(1)+'" r="9.5"/>';
-    document.getElementById('tsbangs').innerHTML=q;
-  }
+  function marcarListo(){ animFin=true; sp.classList.add('listo'); }
+  function sinGL(){ parar=true; sp.classList.add('nogl'); marcarListo(); }
 
-  // la animación arranca cuando la fuente está lista (o a los 900 ms, para no esperar de más)
-  function entrar(){ sp.classList.add('go'); }
-  if(document.fonts&&document.fonts.load){
-    var yaEntro=false, ir=function(){ if(!yaEntro){ yaEntro=true; entrar(); } };
-    document.fonts.load('1em Anton').then(ir,ir);
-    setTimeout(ir,900);
-  } else entrar();
+  /* ───────── WebGL ───────── */
+  function iniciarGL(){
+    if(!canvas) return sinGL();
+    try{ gl=canvas.getContext('webgl',{alpha:false,antialias:false,powerPreference:'high-performance'})||canvas.getContext('experimental-webgl'); }catch(e){ gl=null; }
+    if(!gl) return sinGL();
+
+    var VS='attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
+    var FS=[
+    'precision highp float;',
+    'uniform vec2 uRes;uniform float uT;uniform float uAsp;',
+    'uniform sampler2D uLogo;uniform sampler2D uSuave;',
+    'float ease(float x){x=clamp(x,0.,1.);return x*x*(3.-2.*x);}',
+    'vec2 luv(vec2 lp){return vec2(lp.x/uAsp+.5,.5-lp.y);}',
+    'float inLogo(vec2 uv){return step(0.,uv.x)*step(uv.x,1.)*step(0.,uv.y)*step(uv.y,1.);}',
+    'float A(vec2 lp){vec2 u=luv(lp);return texture2D(uLogo,u).a*inLogo(u);}',
+    'float H(vec2 lp){vec2 u=luv(lp);return texture2D(uSuave,u).a*inLogo(u);}',
+    'float blob(vec2 p,vec2 c,float k){vec2 d=p-c;return exp(-k*dot(d,d));}',
+    // fondo: violeta de la app
+    'vec3 fondo(vec2 p){',
+    '  float sa=uRes.x/uRes.y;',
+    '  float d=length(p-vec2(0.,.06));',
+    '  vec3 c=mix(vec3(.50,.40,.96),vec3(.09,.05,.22),smoothstep(.0,.95,d));',
+    '  c+=vec3(.55,.45,1.)*blob(p,vec2(-.35*sa,.38),2.2)*.18;',
+    '  c*=1.-.35*smoothstep(.55,1.2,d);',
+    '  return c;}',
+    'void main(){',
+    '  vec2 p=(gl_FragCoord.xy-.5*uRes)/uRes.y;',
+    '  vec2 uLuz=vec2(-.55,.7);',
+    '  float LS=min(.27,.82*uRes.x/uRes.y/uAsp);',
+    '  vec2 lp0=p/LS;',
+    '  float t=uT;',
+    '  float pop=ease((t-.07)/.10);',
+    '  float morph=ease((t-.16)/.55);',
+    '  float grow=ease((t-.18)/.62);',
+    '  float dis=ease((t-.92)/.40);',
+    '  float Rr=mix(.19,.285,grow)*pop*mix(1.,.8,dis);',
+    '  float Rmax=min(Rr,.46*uRes.x/uRes.y);',
+    '  float M=mix(2.25,1.45,grow);M=mix(M,1.,dis);',
+    '  float K=mix(1.,.55,morph)*(1.-dis);',
+    '  float nn=mix(2.,4.6,morph);',
+    '  vec2 c=vec2(-.03,.026)*dis;',
+    '  vec2 q=(p-c)/max(Rmax,1e-4);',
+    '  float r=pow(pow(abs(q.x),nn)+pow(abs(q.y),nn),1./nn);',
+    '  float aa=1.5/(uRes.y*max(Rmax,1e-3));',
+    '  float inside=(1.-smoothstep(1.-aa,1.+aa,r))*step(.001,Rmax);',
+    '  float rr=min(r,.999);',
+    '  vec2 dir=q/max(length(q),1e-4);',
+    '  float mag=pow(rr,3.4)*1.25+smoothstep(.82,1.,rr)*1.0;',
+    '  vec2 fc=mix(vec2(-.02,.21),vec2(0.),ease((t-.25)/.75));',
+    '  vec2 base=fc+lp0/M;',
+    '  vec2 off=-dir*mag*K*.5;',
+    '  vec2 so=-dir*mag*K*.028;',
+    '  vec3 bgR=vec3(fondo(p+so*1.00).r,fondo(p+so*1.07).g,fondo(p+so*1.17).b);',
+    '  vec3 g=vec3(A(base+off*1.00),A(base+off*1.07),A(base+off*1.17));',
+    '  vec3 glass=mix(bgR,vec3(1.),g);',
+    '  float lt=clamp(dot(dir,normalize(uLuz))*.5+.5,0.,1.);',
+    '  float bevel=smoothstep(.80,1.,rr)*inside;',
+    '  vec3 bcol=mix(vec3(.30,.46,.70),vec3(.86,.94,1.),lt)*bevel*.55*(1.-dis);',
+    '  float lin=(1.-smoothstep(0.,.018,abs(r-.975)))*inside*.85*(1.-dis);',
+    '  glass=glass*(1.-.45*smoothstep(.72,1.,rr)*(1.-dis))+bcol+vec3(.8,.9,1.)*lin*(.35+.65*lt);',
+    '  float gloss=smoothstep(.55,1.,dot(normalize(q+vec2(.0001)),-normalize(uLuz)))*smoothstep(.55,.95,rr)*(1.-smoothstep(.95,1.,rr))*.5*(1.-dis);',
+    '  glass+=vec3(1.)*gloss;',
+    // logo plano con relieve (aparece cuando el vidrio se disuelve)
+    '  float a0=A(lp0);',
+    '  float e=.012;',
+    '  float gx=H(lp0+vec2(e*uAsp,0.))-H(lp0-vec2(e*uAsp,0.));',
+    '  float gy=H(lp0+vec2(0.,e))-H(lp0-vec2(0.,e));',
+    '  vec2 L=normalize(uLuz);',
+    '  float sh=(-gx*L.x+gy*L.y);',
+    '  float relief=clamp(sh*.86*1.9,-.5,.5);',
+    '  float edge=clamp(length(vec2(gx,gy))*.86*2.6,0.,1.);',
+    '  vec3 inkc=clamp(vec3(1.)+vec3(relief*.5+edge*.10-.07),0.,1.);',
+    '  float reveal=ease((t-.88)/.42);',
+    '  vec3 F=mix(fondo(p),inkc,a0*reveal);',
+    '  gl_FragColor=vec4(mix(F,glass,inside),1.);',
+    '}'].join('\n');
+
+    function sh(t,s){ var o=gl.createShader(t); gl.shaderSource(o,s); gl.compileShader(o); return gl.getShaderParameter(o,gl.COMPILE_STATUS)?o:null; }
+    var vs=sh(gl.VERTEX_SHADER,VS), fs=sh(gl.FRAGMENT_SHADER,FS); if(!vs||!fs) return sinGL();
+    var pr=gl.createProgram(); gl.attachShader(pr,vs); gl.attachShader(pr,fs); gl.linkProgram(pr);
+    if(!gl.getProgramParameter(pr,gl.LINK_STATUS)) return sinGL();
+    gl.useProgram(pr);
+    var buf=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,buf); gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    var loc=gl.getAttribLocation(pr,'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+    var U={}; ['uRes','uT','uAsp','uLogo','uSuave'].forEach(function(n){ U[n]=gl.getUniformLocation(pr,n); });
+
+    function textura(unidad,fuente){
+      var tx=gl.createTexture(); gl.activeTexture(gl.TEXTURE0+unidad); gl.bindTexture(gl.TEXTURE_2D,tx);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,fuente);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    }
+    // versión suavizada del logo (altura del relieve): se reduce y se vuelve a ampliar
+    function suave(img){
+      var w=img.naturalWidth,h=img.naturalHeight, a=document.createElement('canvas'); a.width=Math.round(w/5); a.height=Math.round(h/5);
+      var ax=a.getContext('2d'); ax.imageSmoothingQuality='high'; ax.drawImage(img,0,0,a.width,a.height);
+      var b=document.createElement('canvas'); b.width=w; b.height=h; var bx=b.getContext('2d'); bx.imageSmoothingQuality='high'; bx.drawImage(a,0,0,w,h);
+      return b;
+    }
+
+    var asp=1.174;
+    function ajustar(){
+      var dpr=Math.min(window.devicePixelRatio||1,1.5), movil=Math.min(innerWidth,innerHeight)<700;
+      var esc=dpr*(movil?.8:1);
+      canvas.width=Math.max(2,Math.round(innerWidth*esc)); canvas.height=Math.max(2,Math.round(innerHeight*esc));
+      gl.viewport(0,0,canvas.width,canvas.height);
+    }
+    function dibujar(t){
+      if(!gl||gl.isContextLost()) return;
+      gl.uniform2f(U.uRes,canvas.width,canvas.height); gl.uniform1f(U.uT,t); gl.uniform1f(U.uAsp,asp);
+      gl.uniform1i(U.uLogo,0); gl.uniform1i(U.uSuave,1);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+    }
+    var tAct=0, ini=0;
+    function cuadro(now){
+      raf=0; if(parar||terminado||document.hidden) return;
+      tAct=Math.min(DUR,(now-ini)/1000);
+      dibujar(tAct);
+      if(tAct<DUR){ raf=requestAnimationFrame(cuadro); }
+      else marcarListo();                              // último cuadro dibujado: ya no se vuelve a dibujar
+    }
+    function arrancar(){
+      ajustar();
+      if(rep){ dibujar(DUR); marcarListo(); return; }  // otras veces en la sesión: el logo ya formado
+      ini=performance.now(); raf=requestAnimationFrame(cuadro);
+    }
+    addEventListener('resize',function(){ if(!gl||terminado) return; ajustar(); dibujar(rep?DUR:tAct); });
+    document.addEventListener('visibilitychange',function(){ if(!document.hidden&&!rep&&tAct<DUR&&!raf&&!terminado&&!parar){ ini=performance.now()-tAct*1000; raf=requestAnimationFrame(cuadro); } });
+    canvas.addEventListener('webglcontextlost',function(e){ e.preventDefault(); sinGL(); });
+
+    var img=new Image();
+    img.onload=function(){
+      try{ asp=img.naturalWidth/img.naturalHeight; textura(0,img); textura(1,suave(img)); arrancar(); }
+      catch(e){ sinGL(); }
+    };
+    img.onerror=sinGL;
+    img.src='img/logo-dinet.png';
+  }
+  iniciarGL();
 
   // ¿la app ya puede mostrarse?
   function lista(){
@@ -44,13 +173,18 @@
     return false;
   }
 
+  function liberar(){
+    parar=true; if(raf) cancelAnimationFrame(raf);
+    try{ var x=gl&&gl.getExtension('WEBGL_lose_context'); if(x) x.loseContext(); }catch(e){}
+    gl=null;
+  }
   function terminar(){
     if(terminado) return; terminado=true; clearInterval(timer);
     try{ sessionStorage.setItem('ts_vista','1'); }catch(e){}
     if(sr) sr.textContent='Aplicación lista.';
     sp.classList.remove('failed'); sp.classList.add('ready');
-    setTimeout(function(){ sp.classList.add('out'); },300);
-    setTimeout(function(){ if(sp.parentNode) sp.parentNode.removeChild(sp); },1300);
+    setTimeout(function(){ sp.classList.add('out'); },200);
+    setTimeout(function(){ liberar(); if(sp.parentNode) sp.parentNode.removeChild(sp); },1000);
   }
   function fallar(){
     sp.classList.add('failed');
@@ -59,11 +193,11 @@
 
   timer=setInterval(function(){
     var el=Date.now()-t0, ok=lista();
-    if(ok&&el>=MIN){ terminar(); return; }
+    if(ok&&animFin&&el>=MIN){ terminar(); return; }
     if(el>=MAX&&!ok&&!esperando&&!sp.classList.contains('failed')) fallar();
   },120);
 
   var rb=document.getElementById('ts-retry'), wb=document.getElementById('ts-wait');
   if(rb) rb.onclick=function(){ location.reload(); };
-  if(wb) wb.onclick=function(){ esperando=true; sp.classList.remove('failed'); if(sr) sr.textContent='Dinet TaDa. Cargando la aplicación.'; };
+  if(wb) wb.onclick=function(){ esperando=true; sp.classList.remove('failed'); if(sr) sr.textContent='Dinet. Cargando la aplicación.'; };
 })();

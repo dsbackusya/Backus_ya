@@ -16,8 +16,7 @@
 <!-- Abre la conexión con Supabase mientras se descargan los scripts: el primer pedido (sesión) sale sin esperar el saludo TLS -->
 <link rel="preconnect" href="https://gqnhxityftpjnhkkajxx.supabase.co" crossorigin/>
 <link rel="preload" href="vendor/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin/>
-<link rel="preload" href="vendor/fonts/anton-latin.woff2" as="font" type="font/woff2" crossorigin/>
-<link rel="preload" href="img/splash-bodega.webp" as="image" type="image/webp"/>
+<link rel="preload" href="img/logo-dinet.png" as="image" type="image/png"/>
 <script src="vendor/supabase.js"></script>
 <script src="config.js"></script>
 <script src="api.js"></script>
@@ -46,20 +45,19 @@ window.addEventListener('load', function(){
 </head>
 <body>
 
-<!-- ══ SPLASH de arranque (se quita solo cuando la app está lista; ver js/splash.js) ══ -->
+<!-- ══ SPLASH de arranque: lente de vidrio sobre violeta que revela el logo (se quita solo cuando la app está lista; ver js/splash.js) ══ -->
 <div id="tsplash" role="status" aria-live="polite">
-  <div class="ts-bg" aria-hidden="true"></div>
-  <h1 class="ts-sr" id="ts-sr">Dinet TaDa. Cargando la aplicación.</h1>
-  <div class="ts-mascot" id="ts-mascot" aria-hidden="true"></div>
+  <canvas id="ts-gl" aria-hidden="true"></canvas>
+  <img class="ts-logo" src="img/logo-dinet.png" alt="" aria-hidden="true" decoding="async"/>
+  <h1 class="ts-sr" id="ts-sr">Dinet e-Commerce. Cargando la aplicación.</h1>
+  <div class="ts-bar" aria-hidden="true"><i></i></div>
   <div class="ts-stage">
-    <div class="ts-ttl" id="ts-ttl" aria-hidden="true"><span>Dinet</span><span>TaDa</span></div>
     <div class="ts-err">
       <h3>No pudimos cargar la app</h3>
       <p>Revisa tu conexión a internet e inténtalo otra vez.</p>
       <div class="ts-bt"><button class="ts-b1" id="ts-retry" type="button">Reintentar</button><button class="ts-b2" id="ts-wait" type="button">Seguir esperando</button></div>
     </div>
   </div>
-  <div class="ts-door" aria-hidden="true"></div>
 </div>
 <script src="js/splash.js"></script>
 
