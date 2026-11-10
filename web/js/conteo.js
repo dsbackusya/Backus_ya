@@ -667,7 +667,7 @@ document.addEventListener('pointerdown', function(e){
   var b=e.target.closest ? e.target.closest('#cnt-kp .cnt-k') : null;
   if(!b) return;
   e.preventDefault();
-  b.classList.add('p'); setTimeout(function(){ b.classList.remove('p'); }, 90);
+  b.classList.add('p'); setTimeout(function(){ b.classList.remove('p'); }, 120);
   cntTecla(b.getAttribute('data-k'));
 });
 document.addEventListener('keydown', function(e){   // en una computadora también sirve el teclado físico
