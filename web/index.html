@@ -826,6 +826,13 @@ window.addEventListener('load', function(){
         <div class="cnt-aim">
           <span class="cnt-cb cnt-tl"></span><span class="cnt-cb cnt-tr"></span><span class="cnt-cb cnt-bl"></span><span class="cnt-cb cnt-br"></span>
           <div class="cnt-line" id="cnt-cam-line"></div>
+          <!-- producto leído: aparece dentro del marco -->
+          <div id="cnt-producto-card" class="cnt-found" style="display:none">
+            <div class="cnt-fin">
+              <div class="cnt-ftop"><span class="cnt-fok"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="cnt-fsku" id="cnt-sku-display">-</span><button class="cnt-x" onclick="limpiarProductoConteo()" aria-label="Cambiar producto">Cambiar</button></div>
+              <div class="cnt-nombre" id="cnt-producto-nombre">-</div>
+            </div>
+          </div>
         </div>
         <div class="cnt-cam-msg" id="cnt-cam-msg">Centra el código de barras en el marco</div>
         <div class="cnt-cam-off" id="cnt-cam-off" style="display:none" onclick="cntCamToque()"></div>
@@ -853,31 +860,26 @@ window.addEventListener('load', function(){
       <input type="hidden" id="cnt-mult"/>
       <input type="hidden" id="cnt-producto-h"/>
 
-      <!-- Producto leído: el panel va dentro de la página, debajo de la cámara (sin modal ni stock) -->
+      <!-- Producto leído: campos y teclado propio (no se abre el teclado del celular) -->
       <section class="cnt-panel" id="cnt-entry">
-        <div id="cnt-producto-card" class="cnt-prod" style="display:none">
-          <div class="cnt-eb"><span class="mono" id="cnt-sku-display">-</span><button class="cnt-x" onclick="limpiarProductoConteo()" aria-label="Cambiar producto">Cambiar</button></div>
-          <div class="cnt-nombre" id="cnt-producto-nombre">-</div>
-        </div>
-        <div class="cnt-row">
-          <div class="cnt-nm"><b>Packs</b><small id="cnt-pack-sub">&nbsp;</small></div>
-          <div class="cnt-step">
-            <button type="button" onclick="cntMover('cnt-packs',-1)" aria-label="Un pack menos"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-            <input class="cnt-val" id="cnt-packs" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()" onfocus="this.select()"/>
-            <button type="button" class="pl" onclick="cntMover('cnt-packs',1)" aria-label="Un pack más"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+        <div class="cnt-fields">
+          <div class="cnt-row on" id="cnt-row-p" onpointerdown="cntSelCampo('p')">
+            <div class="cnt-nm"><b>Packs</b><small id="cnt-pack-sub">&nbsp;</small></div>
+            <div class="cnt-vw"><input class="cnt-val" id="cnt-packs" type="text" readonly inputmode="none" placeholder="0" tabindex="-1" autocomplete="off"/><i class="cnt-caret"></i></div>
+          </div>
+          <div class="cnt-row" id="cnt-row-s" onpointerdown="cntSelCampo('s')">
+            <div class="cnt-nm"><b>Sueltas</b><small>unidades sin pack</small></div>
+            <div class="cnt-vw"><input class="cnt-val" id="cnt-und-sueltas" type="text" readonly inputmode="none" placeholder="0" tabindex="-1" autocomplete="off"/><i class="cnt-caret"></i></div>
           </div>
         </div>
-        <div class="cnt-row">
-          <div class="cnt-nm"><b>Sueltas</b><small>unidades sin pack</small></div>
-          <div class="cnt-step">
-            <button type="button" onclick="cntMover('cnt-und-sueltas',-1)" aria-label="Una unidad menos"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-            <input class="cnt-val" id="cnt-und-sueltas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()" onfocus="this.select()"/>
-            <button type="button" class="pl" onclick="cntMover('cnt-und-sueltas',1)" aria-label="Una unidad más"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-          </div>
-        </div>
-        <div class="cnt-tot">
-          <span class="cnt-lab">Total</span>
-          <div><span class="cnt-totv"><b id="cnt-total-display">0</b><span>unidades</span></span><div class="cnt-calc" id="cnt-calc"></div></div>
+        <div class="cnt-tline"><span class="cnt-lab">Total</span><span class="cnt-tr2"><span class="cnt-calc" id="cnt-calc"></span><span class="cnt-totv"><b id="cnt-total-display">0</b><span>unidades</span></span></span></div>
+        <div class="cnt-kp" id="cnt-kp">
+          <button type="button" class="cnt-k" data-k="1">1</button><button type="button" class="cnt-k" data-k="2">2</button><button type="button" class="cnt-k" data-k="3">3</button>
+          <button type="button" class="cnt-k" data-k="4">4</button><button type="button" class="cnt-k" data-k="5">5</button><button type="button" class="cnt-k" data-k="6">6</button>
+          <button type="button" class="cnt-k" data-k="7">7</button><button type="button" class="cnt-k" data-k="8">8</button><button type="button" class="cnt-k" data-k="9">9</button>
+          <button type="button" class="cnt-k fn" data-k="n"><span id="cnt-kp-nt">Sueltas</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+          <button type="button" class="cnt-k" data-k="0">0</button>
+          <button type="button" class="cnt-k" data-k="b" aria-label="Borrar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><line x1="12" y1="9" x2="18" y2="15"/><line x1="18" y1="9" x2="12" y2="15"/></svg></button>
         </div>
         <div id="cnt-err" class="cnt-err"></div>
         <button class="cnt-save" id="btn-guardar-siguiente" onclick="guardarYContinuar()">Guardar y escanear siguiente</button>

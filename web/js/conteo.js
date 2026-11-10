@@ -314,7 +314,6 @@ function editarConteoRow(rowNum, packs, unds, sku, ean, producto, mult){
     if(sueltasEl){ sueltasEl.value=Number(unds)||0; }
     calcTotalConteo();
     _cntVista();
-    if(packsEl){ packsEl.focus(); packsEl.select(); }
   }, 150);
 }
 
@@ -486,7 +485,6 @@ function resolverEAN(){
     }
     st.textContent = '';
     setProductoConteo(found.ean, found.sku, found.sap || '', found.producto, found.multiplicador, found.stock);
-    document.getElementById('cnt-packs').focus();
   }
 
   if (_MCONTEO_LOCAL) {
@@ -504,8 +502,7 @@ function resolverEAN(){
             if (!r.ok) { st.textContent = 'No encontrado: ' + r.error; st.style.color = 'var(--danger)'; document.getElementById('cnt-manual-wrap').style.display = 'block'; _cntCamNoEncontrado(); return; }
             st.textContent = '';
             setProductoConteo(r.ean, r.sku, r.sap || '', r.producto, r.multiplicador, r.stock);
-            document.getElementById('cnt-packs').focus();
-          })
+                  })
           .withFailureHandler(function(e) { st.textContent = 'Error: ' + e.message; st.style.color = 'var(--danger)'; })
           .buscarEAN(S.token, ean);
       }
@@ -645,6 +642,45 @@ function cntLimpiarBusqueda(){
   document.getElementById('cnt-manual-wrap').style.display='none';
   _cntBuscaUI(); inp.focus();
 }
+// ── Teclado propio: el sistema no abre el teclado del celular ──
+var _cntF='p', _cntFresh=true;
+function cntSelCampo(k){
+  _cntF=k; _cntFresh=true;
+  var rp=document.getElementById('cnt-row-p'), rs=document.getElementById('cnt-row-s'), nt=document.getElementById('cnt-kp-nt');
+  if(rp) rp.classList.toggle('on', k==='p');
+  if(rs) rs.classList.toggle('on', k==='s');
+  if(nt) nt.textContent = k==='p' ? 'Sueltas' : 'Packs';
+}
+function _cntKpReset(){ cntSelCampo('p'); }
+function cntTecla(k){
+  if(!_cnt||!_cnt.sku) return;
+  if(k==='n'){ cntSelCampo(_cntF==='p'?'s':'p'); return; }
+  var el=document.getElementById(_cntF==='p'?'cnt-packs':'cnt-und-sueltas'); if(!el) return;
+  var v=String(el.value||'');
+  if(k==='b'){ v=v.slice(0,-1); _cntFresh=false; }
+  else {
+    if(_cntFresh){ v=''; _cntFresh=false; }   // el primer número reemplaza lo que había
+    v=(v+k).replace(/^0+(?=\d)/,'');
+    if(v.length>5) return;
+  }
+  el.value=v;
+  calcTotalConteo();
+}
+document.addEventListener('pointerdown', function(e){
+  var b=e.target.closest ? e.target.closest('#cnt-kp .cnt-k') : null;
+  if(!b) return;
+  e.preventDefault();
+  b.classList.add('p'); setTimeout(function(){ b.classList.remove('p'); }, 90);
+  cntTecla(b.getAttribute('data-k'));
+});
+document.addEventListener('keydown', function(e){   // en una computadora también sirve el teclado físico
+  var fs=document.getElementById('fs-conteo');
+  if(!fs || !fs.classList.contains('cnt-det') || (e.target && e.target.id==='cnt-ean') || e.ctrlKey || e.metaKey || e.altKey) return;
+  if(/^[0-9]$/.test(e.key)) { e.preventDefault(); cntTecla(e.key); }
+  else if(e.key==='Backspace') { e.preventDefault(); cntTecla('b'); }
+  else if(e.key==='Tab') { e.preventDefault(); cntTecla('n'); }
+  else if(e.key==='Enter') { var b=document.getElementById('btn-guardar-siguiente'); if(b && !b.disabled && b.classList.contains('listo')) { e.preventDefault(); guardarYContinuar(); } }
+});
 function cntMover(id,d){
   var el=document.getElementById(id); if(!el) return;
   var v=Math.max(0,Math.min(99999,(Number(el.value)||0)+d));
@@ -892,8 +928,8 @@ function guardarYContinuar(){
   var err=document.getElementById('cnt-err');
 
   if(!sku){err.textContent='Escanea un EAN o busca el SKU';document.getElementById('cnt-ean').focus();return;}
-  if(packs<0||sueltas<0){err.textContent='Packs y unidades no pueden ser negativos';document.getElementById('cnt-packs').focus();return;}
-  if(packs<=0&&sueltas<=0){err.textContent='Ingresa packs o unidades sueltas';document.getElementById('cnt-packs').focus();return;}
+  if(packs<0||sueltas<0){err.textContent='Packs y unidades no pueden ser negativos';cntSelCampo('p');return;}
+  if(packs<=0&&sueltas<=0){err.textContent='Ingresa packs o unidades sueltas';cntSelCampo('p');return;}
 
   err.textContent='';
 

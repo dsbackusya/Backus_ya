@@ -393,7 +393,9 @@ function _cntVista(){
   var fs = document.getElementById('fs-conteo'); if (!fs) return;
   var card = document.getElementById('cnt-producto-card');
   var det = !!(card && card.style.display === 'block');
+  var yaDet = fs.classList.contains('cnt-det');
   fs.classList.toggle('cnt-det', det);
+  if (det && !yaDet && typeof _cntKpReset === 'function') _cntKpReset(); // el teclado propio empieza en Packs
   if (det) {
     _cntCamPausar((typeof _cnt !== 'undefined' && _cnt && (_cnt.ean || _cnt.sku)) || '');
   } else if (_cntCamAbierta() && !_cntCam.activo && !_cntCam.iniciando && !_cntCam.error) {
