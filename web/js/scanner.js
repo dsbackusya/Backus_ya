@@ -4,7 +4,7 @@ function esc(v){
   if(v===null||v===undefined)return '';
   return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function fmt(v){return(v===null||v===undefined)?'—':Number(v).toLocaleString('es-PE');}
+function fmt(v){return(v===null||v===undefined)?'-':Number(v).toLocaleString('es-PE');}
 
 // errBox: muestra error en el contenedor de una página.
 // Si se pasa 'pageName', agrega botón "Reintentar" que llama a reloadPage(pageName).
@@ -195,13 +195,25 @@ function _scannerNativo(targetId, title){
 // Rendimiento: antes se decodificaba el fotograma COMPLETO (hasta 1280×720) cada 120 ms en el hilo principal, lo que
 // congelaba la pantalla. Ahora solo se lee la zona del marco, reducida a ≤640 px, con un canvas reutilizado y un ritmo
 // que se adapta (nunca ocupa más de ~1/3 del tiempo). El modo "TRY_HARDER" se usa solo 1 de cada 4 intentos.
-var _ZX_PRECARGA = null;
+var _ZX_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+var _ZX_PRECARGA = null, _ZX_FALLO = false;
+// Descarga el lector una sola vez; si falla, el siguiente intento vuelve a pedirlo (antes quedaba un <script> muerto para siempre)
+function _scanCargarZXing(alCargar, alFallar){
+  if (window.ZXing) { alCargar(); return; }
+  if (!_ZX_PRECARGA || _ZX_FALLO) {
+    _ZX_FALLO = false;
+    if (_ZX_PRECARGA) _ZX_PRECARGA.remove();
+    _ZX_PRECARGA = document.createElement('script');
+    _ZX_PRECARGA.src = _ZX_URL; _ZX_PRECARGA.async = true;
+    _ZX_PRECARGA.addEventListener('error', function(){ _ZX_FALLO = true; });
+    document.head.appendChild(_ZX_PRECARGA);
+  }
+  if (alCargar) _ZX_PRECARGA.addEventListener('load', alCargar);
+  if (alFallar) _ZX_PRECARGA.addEventListener('error', alFallar);
+}
 function _scanPrecargarZXing(){
-  if ('BarcodeDetector' in window || window.ZXing || _ZX_PRECARGA) return;
-  _ZX_PRECARGA = document.createElement('script');
-  _ZX_PRECARGA.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
-  _ZX_PRECARGA.async = true;
-  document.head.appendChild(_ZX_PRECARGA);
+  if ('BarcodeDetector' in window || window.ZXing || (_ZX_PRECARGA && !_ZX_FALLO)) return;
+  _scanCargarZXing(null, null);
 }
 // Zona del video que está dentro del marco (video con object-fit: cover), un poco ampliada; null = fotograma completo
 function _cntRegionMarco(video){
@@ -256,11 +268,7 @@ function _scannerZXing(video, entregar, msg, est){
       z.t = setTimeout(paso, espera);
     })();
   }
-  if (window.ZXing) { lanzar(); return; }
-  var s = _ZX_PRECARGA || document.createElement('script');
-  if (!_ZX_PRECARGA) { s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js'; document.head.appendChild(s); }
-  s.addEventListener('load', lanzar);
-  s.addEventListener('error', function(){ msg.textContent = 'No se pudo cargar el lector. Escribe el código abajo.'; });
+  _scanCargarZXing(lanzar, function(){ msg.textContent = 'No se pudo cargar el lector. Escribe el código abajo.'; });
 }
 
 /* ── CÁMARA INTEGRADA EN LA PANTALLA DE CONTEO ──
@@ -295,6 +303,7 @@ function _cntCamNegro(html, tono){
     cam.classList.remove('st-ok', 'st-bad', 'st-warn');
     if (!vivo && tono) cam.classList.add('st-' + tono);
   }
+  var live = document.getElementById('cnt-live'); if (live) live.textContent = vivo ? '' : off.textContent;   // lector de pantalla: anuncia el estado de la cámara
   var l = document.getElementById('cnt-cam-line'); if (l) l.style.display = vivo ? '' : 'none';
   var m = document.getElementById('cnt-cam-msg');  if (m) m.style.display = vivo ? '' : 'none';
 }
@@ -308,7 +317,7 @@ function _cntOff(ico, titulo, sub, enlace){
   return '<div class="cnt-off-ic">' + _CNT_ICO[ico] + '</div>' +
     '<div class="cnt-off-cap"><div class="cnt-off-t">' + esc(titulo) + '</div>' +
     (sub ? '<div class="cnt-off-sub">' + esc(sub) + '</div>' : '') +
-    (enlace ? '<u class="cnt-off-b">' + esc(enlace) + '</u>' : '') + '</div>';
+    (enlace ? '<span class="cnt-off-b">' + esc(enlace) + '</span>' : '') + '</div>';
 }
 function _cntCamPausar(codigo){
   _cntCamDetener();

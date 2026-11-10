@@ -233,15 +233,15 @@ function _evTabla(){
     };
     h+='<div class="ev-r" data-j="'+j+'">'+
       '<div class="ev-n1"><b>'+r.t+' '+tipo+'</b><small>'+r.sku+' · '+r.n+'</small></div>'+
-      '<div class="ev-c mut q" data-l="Inicial">'+(ini==null?'—':ini)+'</div>'+
+      '<div class="ev-c mut q" data-l="Inicial">'+(ini==null?'-':ini)+'</div>'+
       '<div class="q'+(r.k==='vac'?' na':(mm.ent+mm.entD?'':' na'))+'" data-l="ENT">'+(r.k!=='vac'&&mm.ent+mm.entD?'<div class="ev-c">+'+(mm.ent+mm.entD)+'</div>':'<div class="ev-na"></div>')+'</div>'+
       '<div class="q'+(r.k==='lle'?' na':(mm.dev+mm.devD?'':' na'))+'" data-l="DEV">'+(r.k!=='lle'&&mm.dev+mm.devD?'<div class="ev-c">+'+(mm.dev+mm.devD)+'</div>':'<div class="ev-na"></div>')+'</div>'+
       '<div class="q'+(r.k==='vac'?' na':'')+'" data-l="Venta">'+inp('ven',r.k!=='vac',mm.venD)+'</div>'+
-      '<div class="ev-c q'+(r.k==='lle'?' na':'')+'" data-l="Moto" title="Botellas y cajas que los motorizados deben: ya están sumadas al conteo">'+(r.k!=='lle'?(mr?mr:'—'):'')+'</div>'+
-      '<div class="ev-c mut q" data-l="PFN" title="PFN del último conteo (se mantiene hasta que se edite)">'+(pf?pf:'—')+'</div>'+
-      '<div class="ev-c q" data-l="Esperado">'+(esp==null?'—':esp)+'</div>'+
-      '<div class="ev-c q" data-l="Conteo"><b>'+(c==null?'—':c)+'</b></div>'+
-      '<div class="q" data-l="Dif."><div class="ev-s '+(d==null?'':_evCls(d))+'">'+(d==null?'—':_evSg(d))+'</div></div>'+
+      '<div class="ev-c q'+(r.k==='lle'?' na':'')+'" data-l="Moto" title="Botellas y cajas que los motorizados deben: ya están sumadas al conteo">'+(r.k!=='lle'?(mr?mr:'-'):'')+'</div>'+
+      '<div class="ev-c mut q" data-l="PFN" title="PFN del último conteo (se mantiene hasta que se edite)">'+(pf?pf:'-')+'</div>'+
+      '<div class="ev-c q" data-l="Esperado">'+(esp==null?'-':esp)+'</div>'+
+      '<div class="ev-c q" data-l="Conteo"><b>'+(c==null?'-':c)+'</b></div>'+
+      '<div class="q" data-l="Dif."><div class="ev-s '+(d==null?'':_evCls(d))+'">'+(d==null?'-':_evSg(d))+'</div></div>'+
     '</div>';
   });
   document.getElementById('ev-t').innerHTML=h;
@@ -265,7 +265,7 @@ function _evRefrescar(){
   var s=ENV.sel;
   document.querySelectorAll('.ev-r').forEach(function(row){
     var j=+row.dataset.j, esp=_evEsp(s,j), d=_evDif(s,j), e=row.querySelector('[data-l="Esperado"]'), x=row.querySelector('.ev-s');
-    e.textContent=esp==null?'—':esp; x.textContent=d==null?'—':_evSg(d); x.className='ev-s '+(d==null?'':_evCls(d));
+    e.textContent=esp==null?'-':esp; x.textContent=d==null?'-':_evSg(d); x.className='ev-s '+(d==null?'':_evCls(d));
   });
   _evDias(); _evResumen();
 }
@@ -282,7 +282,7 @@ function gxTip(col,i){
   var dia=ENV.m.days[i], tot=0, h='<h4>'+ENV_DL[i].charAt(0).toUpperCase()+ENV_DL[i].slice(1)+' '+parseInt(dia.slice(8),10)+(x.ci?' · cierre de la semana anterior':'')+'</h4>';
   Object.keys(ENV_FAM).forEach(function(k){
     var u=x.o[k], v=u*_evPrecio(ENV_FAM[k].g); tot+=v;
-    h+='<div class="t"><i style="background:'+ENV_FCOL[k]+'"></i><span>'+ENV_FAM[k].n+'</span><b class="'+_evCls(u)+'">'+(u===0?'—':(u>0?'+':'−')+Math.abs(u))+'</b><b class="m">'+(u===0?'':_evMoney(v))+'</b></div>';
+    h+='<div class="t"><i style="background:'+ENV_FCOL[k]+'"></i><span>'+ENV_FAM[k].n+'</span><b class="'+_evCls(u)+'">'+(u===0?'-':(u>0?'+':'−')+Math.abs(u))+'</b><b class="m">'+(u===0?'':_evMoney(v))+'</b></div>';
   });
   t.innerHTML=h+'<div class="tot"><span>Total</span><span class="'+_evCls(tot)+'">'+_evMoney(tot)+'</span></div>'; t.classList.add('on');
 }
@@ -376,7 +376,7 @@ function _evMerge(){
   var ht='<div></div>'+m.days.map(function(dia,i){ return '<div class="gx-hd">'+ENV_DN[i]+' '+parseInt(dia.slice(8),10)+'</div>'; }).join('');
   fams.forEach(function(k){
     ht+='<div class="gx-nm"><i style="background:'+ENV_FCOL[k]+'"></i>'+ENV_FAM[k].n+'</div>'+dias.map(function(x,i){
-      if(!x) return '<div class="gx-cell dim">'+(i===m.b?'·':'—')+'</div>';
+      if(!x) return '<div class="gx-cell dim">'+(i===m.b?'·':'-')+'</div>';
       var u=x.o[k];
       return '<div class="gx-cell '+(u<0?'f':u>0?'s':'ok')+'" title="'+_evMoney(u*_evPrecio(ENV_FAM[k].g))+'">'+(u===0?'0':(u>0?'+':'−')+Math.abs(u))+'</div>'; }).join('');
   });
@@ -430,7 +430,7 @@ function _evcForm(){
   var f=ENV.ses.f, n=ENV_MULT[f.tam]||0, packs=_evNum(f.packs)||0, solas=_evNum(f.solas)||0, und=_evNum(f.und)||0;
   var c=document.getElementById('evcf-c'), b=document.getElementById('evcf-b'); if(!c||!b) return;
   c.innerHTML=packs+' + '+solas+' = <b>'+(packs+solas)+'</b> cajas';
-  b.innerHTML=packs+' × '+(n||'—')+' = '+(packs*n)+' + '+und+' = <b>'+(packs*n+und)+'</b> botellas';
+  b.innerHTML=packs+' × '+(n||'-')+' = '+(packs*n)+' + '+und+' = <b>'+(packs*n+und)+'</b> botellas';
   var a=document.getElementById('evcf-auto'); if(a) a.textContent=packs;
 }
 function envAgregar(){
@@ -447,7 +447,7 @@ function envAgregar(){
       s.guardando=false;
       if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo guardar la línea','err'); _evcPinta(); return; }
       ENV.d.conteo.push(r.fila); if(r.moto&&r.moto.length) ENV.d.conteo=ENV.d.conteo.concat(r.moto); _evCalc();
-      s.f.tam=null; s.f.packs=''; s.f.solas=''; s.f.und=''; s.ult=etq+' — '+_evNLin(r.fila).bot+' botellas, '+_evNLin(r.fila).cajas+' cajas';
+      s.f.tam=null; s.f.packs=''; s.f.solas=''; s.f.und=''; s.ult=etq+': '+_evNLin(r.fila).bot+' botellas, '+_evNLin(r.fila).cajas+' cajas';
       showToast('Guardado: '+etq,'ok'); _evcPinta();
     }).withFailureHandler(function(e){ s.guardando=false; showToast(e.message,'err'); _evcPinta(); }).agregarEnvConteoLinea(S.token,dato);
   };
@@ -474,7 +474,7 @@ function _evcGuardarEdicion(){
     if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo guardar el cambio','err'); _evcPinta(); return; }
     ENV.d.conteo=ENV.d.conteo.map(function(x){ return x.id===id?r.fila:x; }); _evCalc();
     var etq=_evcEtq(f); s.edit=null; s.f={ estado:'llena', tam:null, ubi:'Palet', solas:'', packs:'', und:'' };
-    s.ult='Editaste: '+etq+' — '+_evNLin(r.fila).bot+' botellas, '+_evNLin(r.fila).cajas+' cajas';
+    s.ult='Editaste: '+etq+': '+_evNLin(r.fila).bot+' botellas, '+_evNLin(r.fila).cajas+' cajas';
     showToast('Línea actualizada: '+etq,'ok'); _evcPinta();
   }).withFailureHandler(function(e){ s.guardando=false; showToast(e.message,'err'); _evcPinta(); })
     .editarEnvConteoLinea(S.token,id,{ estado:f.estado, tamano:f.tam, ubicacion:f.ubi, packs:_evNum(f.packs)||0, solas:_evNum(f.solas)||0, unidades:_evNum(f.und)||0 });
@@ -524,11 +524,11 @@ function _evcPinta(){
     '<label class="evcf-l">Estado</label>'+_evcSeg([['llena','Llenas'],['vacia','Vacías']],f.estado,'envFE')+
     '<label class="evcf-l">Envase</label>'+_evcSeg([[630,'Botella 630'],[310,'Botella 305'],[1000,'Botella 1000']],f.tam,'envFT')+
     ''+
-    '<div class="evcf-box"><div class="evcf-bt"><b>1 · Botellas</b><span>× '+(n||'—')+' automático</span></div><div class="evcf-g">'+
+    '<div class="evcf-box"><div class="evcf-bt"><b>1 · Botellas</b><span>× '+(n||'-')+' automático</span></div><div class="evcf-g">'+
       '<div><label>Packs (cajas completas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.packs)+'" oninput="envFIn(\'packs\',this)"></div>'+
       '<div><label>Unidades sueltas</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.und)+'" oninput="envFIn(\'und\',this)"></div></div>'+
       '<div class="evcf-eq" id="evcf-b"></div></div>'+
-    '<div class="evcf-box"><div class="evcf-bt"><b>2 · Cajas plásticas</b><span>'+(f.tam?ENV_CAJA[f.tam].split(' ')[0]:'—')+'</span></div><div class="evcf-g">'+
+    '<div class="evcf-box"><div class="evcf-bt"><b>2 · Cajas plásticas</b><span>'+(f.tam?ENV_CAJA[f.tam].split(' ')[0]:'-')+'</span></div><div class="evcf-g">'+
       '<div><label>Con botellas</label><div class="evcf-auto"><em>AUTO</em><b id="evcf-auto">'+(_evNum(f.packs)||0)+'</b></div></div>'+
       '<div><label>Solas (sin botellas)</label><input class="inp" inputmode="numeric" placeholder="0" value="'+esc(f.solas)+'" oninput="envFIn(\'solas\',this)"></div></div>'+
       '<div class="evcf-eq" id="evcf-c"></div></div>'+
@@ -712,7 +712,7 @@ function _evPfnPinta(){
     tot+=cur[j]||0;
     if(r.g) h+='<div class="ev-gp" style="grid-column:1/-1">'+r.g+'</div>';
     h+='<div class="ev-n1"><b>'+r.t+'</b><small>'+r.sku+' · '+r.n+'</small></div>'+
-       '<div class="ev-c mut" style="text-align:center">'+(cur[j]||'—')+'</div>'+
+       '<div class="ev-c mut" style="text-align:center">'+(cur[j]||'-')+'</div>'+
        '<input class="inp ev-in" id="evp-'+j+'" inputmode="numeric" placeholder="0" value="'+(cur[j]||'')+'">';
   });
   el.innerHTML=
@@ -787,7 +787,7 @@ function _evHisPinta(){
     var r=x.r, h=r&&r.n?Math.max(3,Math.abs(r.n)/mx*44):0, lb=parseInt(x.a.slice(8),10)+' '+ENV_MES[parseInt(x.a.slice(5,7),10)-1].slice(0,3);
     var inner=r&&r.n
       ? '<i class="'+(r.n<0?'f':'s')+'" style="'+(r.n<0?'top':'bottom')+':50%;height:'+h+'%"></i><em class="'+_evCls(r.n)+'" style="'+(r.n<0?'top':'bottom')+':calc('+(50+h)+'% + 3px)">'+fm(r.n)+'</em>'
-      : '<span>'+(x.est==='sin'?'sin<br>conteo':r?'cuadra':'—')+'</span>';
+      : '<span>'+(x.est==='sin'?'sin<br>conteo':r?'cuadra':'-')+'</span>';
     return '<div class="evh-col'+(x.est==='cerrada'?'':' ab')+'" onclick="envHisIr(\''+x.lunes+'\')" title="Semana del '+_evSemEtq(x.a,x.z)+'"><div class="evh-pl">'+inner+'</div><b>'+lb+'</b></div>';
   }).join('');
   var est={ cerrada:['ok','Cerrada'], curso:['w','En curso'], ini:['w','Solo inicial'], sin:['no','Sin conteo'] };
@@ -797,11 +797,11 @@ function _evHisPinta(){
     return '<div class="evh-r" onclick="envHisIr(\''+x.lunes+'\')">'+
       '<div class="evh-w"><b>Semana del '+_evSemEtq(x.a,x.z)+'</b><small>'+nota+'</small></div>'+
       '<span class="evh-st '+e[0]+'">'+e[1]+'</span>'+
-      '<div class="evh-n" data-l="Faltante"><b class="ev-neg">'+(r?ff(r.f):'—')+'</b></div>'+
-      '<div class="evh-n" data-l="Sobrante"><b class="ev-pos">'+(r?fs(r.s):'—')+'</b></div>'+
-      '<div class="evh-n" data-l="Neto"><b class="'+(r?_evCls(r.n):'')+'">'+(r?fm(r.n):'—')+'</b></div>'+
+      '<div class="evh-n" data-l="Faltante"><b class="ev-neg">'+(r?ff(r.f):'-')+'</b></div>'+
+      '<div class="evh-n" data-l="Sobrante"><b class="ev-pos">'+(r?fs(r.s):'-')+'</b></div>'+
+      '<div class="evh-n" data-l="Neto"><b class="'+(r?_evCls(r.n):'')+'">'+(r?fm(r.n):'-')+'</b></div>'+
       '<div class="evh-fm">'+fams.map(function(k){ var u=x.o?x.o[k]:null;
-        return '<span class="'+(u==null?'dim':u<0?'f':u>0?'s':'ok')+'" title="'+ENV_FAM[k].n+'"><i style="background:'+ENV_FCOL[k]+'"></i>'+(u==null?'—':u===0?'0':(u>0?'+':'−')+Math.abs(u))+'</span>'; }).join('')+'</div>'+
+        return '<span class="'+(u==null?'dim':u<0?'f':u>0?'s':'ok')+'" title="'+ENV_FAM[k].n+'"><i style="background:'+ENV_FCOL[k]+'"></i>'+(u==null?'-':u===0?'0':(u>0?'+':'−')+Math.abs(u))+'</span>'; }).join('')+'</div>'+
       '<svg class="evh-go" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>'+
     '</div>';
   }).join('');

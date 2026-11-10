@@ -9,7 +9,7 @@ function abrirEditarSkuFila(rowNum){
   var row=(DATA.salidas||[]).find(function(r){ return r._row===rowNum; });
   if(!row) return;
   _eskuRow=row; _eskuNuevoSKU=''; _eskuNuevaDesc='';
-  document.getElementById('esku-info').textContent='Fila '+rowNum+' · SKU actual: '+row.sku+' — '+row.desc;
+  document.getElementById('esku-info').textContent='Fila '+rowNum+' · SKU actual: '+row.sku+' · '+row.desc;
   document.getElementById('esku-busq').value='';
   document.getElementById('esku-busq-results').style.display='none';
   document.getElementById('esku-sel-card').style.display='none';

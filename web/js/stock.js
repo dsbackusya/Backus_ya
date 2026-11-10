@@ -45,7 +45,7 @@ function _dashModelo(d){
     else if(dias<0){ col='v'; txt='Vencida '+(-dias)+(dias===-1?' día':' d'); }
     else if(dias===0){ col='h'; txt='Hoy'; }
     else { col='p'; txt=dias===1?'Mañana':'En '+dias+' d'; }
-    return {oc:o.oc,pv:o.proveedor||'—',sedeId:o.sede_id,sede:sedeN(o.sede_id),col:col,txt:txt,fecha:o.fecha,dias:dias};
+    return {oc:o.oc,pv:o.proveedor||'-',sedeId:o.sede_id,sede:sedeN(o.sede_id),col:col,txt:txt,fecha:o.fecha,dias:dias};
   });
   var al=[];
   (d.stock_negativo||[]).forEach(function(x){
@@ -430,7 +430,7 @@ function _stkFila(r,mx){
     '<td class="r"><div class="stk-mv"><span class="e" title="Entradas">+'+fmt(r.entradas)+'</span><span class="s" title="Salidas">−'+fmt(r.salidas)+'</span>'+(r.mt?'<span class="m" title="Mermas y traslados">M-T '+fmt(r.mt)+'</span>':'')+'</div></td>'+
     '<td class="r"><div class="stk-stk"><div class="stk-bar"><i style="width:'+Math.min(100,Math.abs(r.stock)/mx*100)+'%;background:'+_STK_COL[e]+'"></i></div><b'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'</b></div></td>'+
     '<td class="r">'+Math.round(r.stockPack)+'</td>'+
-    '<td class="r">'+(r.costo?'S/ '+fmt(r.costo):'—')+'</td>'+
+    '<td class="r">'+(r.costo?'S/ '+fmt(r.costo):'-')+'</td>'+
     '<td><span class="stk-pill '+e+'">'+_STK_LAB[e]+'</span></td>'+
     '<td class="r"><button class="stk-ed" onclick="event.stopPropagation();abrirSKUForm('+r._row+')">Editar</button></td>'+
   '</tr>';
@@ -505,7 +505,7 @@ function stkAbrir(row){
     '<div class="stk-big"><div><div class="v"'+(e==='ng'?' style="color:var(--danger)"':'')+'>'+fmt(r.stock)+'<small>und.</small></div>'+(r.packs>0?'<div class="stk-vp">≈ '+_stkPk(r.stock,r)+'</div>':'')+'</div><span class="stk-pl '+e+'">'+_STK_LAB[e]+'</span></div>'+
     '<div class="stk-chart" id="stk-ch"><div class="stk-chl">Cargando evolución…</div></div>'+
     '<div class="stk-st3"><div><span>Entradas</span><b class="e">+'+fmt(r.entradas)+'</b>'+pk(r.entradas)+'</div><div><span>Salidas</span><b>−'+fmt(r.salidas)+'</b>'+pk(r.salidas)+'</div><div><span>M-T</span><b class="m">'+fmt(r.mt)+'</b>'+pk(r.mt)+'</div></div>'+
-    '<div class="stk-st3 d2"><div><span>Costo en inventario</span><b>'+(r.costo?'S/ '+fmt(r.costo):'—')+'</b></div><div><span>Unidades por pack</span><b>'+(r.packs>0?fmt(r.packs):'—')+'</b></div></div>'+
+    '<div class="stk-st3 d2"><div><span>Costo en inventario</span><b>'+(r.costo?'S/ '+fmt(r.costo):'-')+'</b></div><div><span>Unidades por pack</span><b>'+(r.packs>0?fmt(r.packs):'-')+'</b></div></div>'+
     (e==='ng'?'<div class="stk-warn">Salieron más unidades de las que entraron. Revisa las entradas o haz un conteo.</div>':'')+
     '<div class="stk-btns">'+(tienda?'<button type="button" class="stk-b e" onclick="stkIr(\'entradas\')">'+_stkIc('<path d="M12 4v13"/><path d="M6 12l6 6 6-6"/>')+'Entrada</button><button type="button" class="stk-b s" onclick="stkIr(\'salidas\')">'+_stkIc('<path d="M12 20V7"/><path d="M6 12l6-6 6 6"/>')+'Salida</button><button type="button" class="stk-b g" onclick="stkIr(\'conteo\')">'+_stkIc('<path d="M5 9h14M5 15h14M9 4L7 20M17 4l-2 16"/>')+'Contar</button>':'')+
     '<button type="button" class="stk-b g'+(tienda?'':' w')+'" onclick="stkCerrar();abrirSKUForm('+r._row+')">'+_stkIc('<path d="M4 20h4l11-11-4-4L4 16z"/>')+'Editar SKU</button></div></div>';
@@ -517,7 +517,7 @@ function stkAbrir(row){
     '<div class="stk-rowm"><span>Entradas</span><b style="color:var(--ok)">+'+fmt(r.entradas)+'</b></div>'+
     '<div class="stk-rowm"><span>Salidas</span><b>−'+fmt(r.salidas)+'</b></div>'+
     '<div class="stk-rowm"><span>Mermas y traslados</span><b>'+fmt(r.mt)+'</b></div>'+
-    '<div class="stk-rowm"><span>Costo en inventario</span><b>'+(r.costo?'S/ '+fmt(r.costo):'—')+'</b></div>'+
+    '<div class="stk-rowm"><span>Costo en inventario</span><b>'+(r.costo?'S/ '+fmt(r.costo):'-')+'</b></div>'+
     (e==='ng'?'<div class="stk-warn">Salieron más unidades de las que entraron. Revisa las entradas o haz un conteo.</div>':'')+
     '<div style="margin-top:18px"><button class="btn btn-primary" style="width:100%" onclick="stkCerrar();abrirSKUForm('+r._row+')">Editar SKU</button></div></div>';
   document.getElementById('stk-dr').classList.add('on');
@@ -807,7 +807,7 @@ function skCambios(){
   var out=[];
   [['Código',o.sku,SK.sku.trim()],['Descripción',o.desc,SK.desc.trim()],['Pack',o.pack?'de '+o.pack:'',SK.pack?'de '+SK.pack:''],
    ['Marca',o.marca,SK.marca.trim()],['Categoría',o.cat,SK.cat.trim()],['Código SAP',o.sap,SK.sap],['Precio',o.precio?'S/ '+o.precio:'',SK.precio?'S/ '+SK.precio:'']].forEach(function(c){
-    if(String(c[1]||'')!==String(c[2]||'')) out.push({k:c[0],a:c[1]||'—',d:c[2]||'—'});
+    if(String(c[1]||'')!==String(c[2]||'')) out.push({k:c[0],a:c[1]||'-',d:c[2]||'-'});
   });
   return out;
 }
@@ -891,7 +891,7 @@ function skPintarRevisar(){
   var stock=fila?fila.stock:0, ent=fila?fila.entradas:0, sal=fila?fila.salidas:0, pk=SK.pack, pr=parseFloat(SK.precio)||0;
   var est=stock>0?'ok':(stock<0?'ng':'no');
   var c=skCambios();
-  var kv=function(k,v,mut){ return '<div class="sk-kv"><span>'+k+'</span><b'+(mut?' class="mut"':'')+'>'+(v?esc(v):'—')+'</b></div>'; };
+  var kv=function(k,v,mut){ return '<div class="sk-kv"><span>'+k+'</span><b'+(mut?' class="mut"':'')+'>'+(v?esc(v):'-')+'</b></div>'; };
   var sedeTxt=admin&&!edit&&SK.sede?SK.sede:(edit&&SK.sede?SK.sede:'tu tienda');
   var diff='';
   if(edit) diff='<div class="sk-diff"><h4>Cambios</h4>'+(c.length?c.map(function(x){return '<div class="sk-dr"><span>'+x.k+'</span><span class="a">'+esc(x.a)+'</span><span class="ar">→</span><span class="d">'+esc(x.d)+'</span></div>';}).join(''):'<div class="sk-sinc">Todavía no cambiaste nada. Vuelve atrás para editar.</div>')+'</div>';
@@ -908,7 +908,7 @@ function skPintarRevisar(){
     '<div class="sk-pw-row"><div><div class="sk-pn">'+esc(SK.desc)+'</div><div class="sk-ps"><span class="sk-sku">'+esc(SK.sku)+'</span>'+(SK.sap?'<span class="sk-sku sap">SAP '+esc(SK.sap)+'</span>':'')+'<i class="sk-dotp"></i><span>'+esc(SK.marca||'Sin marca')+'</span><i class="sk-dotp"></i><span>'+esc(SK.cat||'Sin categoría')+'</span></div></div>'+
     '<div class="sk-pw-c"><b class="mv num"><i>+'+fmt(ent)+'</i> −'+fmt(sal)+'</b></div>'+
     '<div class="sk-pw-c"><b class="num">'+fmt(stock)+'</b><span class="sk-bar0"><i style="width:'+Math.max(0,Math.min(100,stock/4))+'%"></i></span></div>'+
-    '<div class="sk-pw-c"><b class="num">'+(pk?fmt(Math.round(stock/pk*100)/100):'—')+'</b><small>'+(pk?(pk===1?'por unidad':'pack de '+pk):'sin definir')+'</small></div>'+
+    '<div class="sk-pw-c"><b class="num">'+(pk?fmt(Math.round(stock/pk*100)/100):'-')+'</b><small>'+(pk?(pk===1?'por unidad':'pack de '+pk):'sin definir')+'</small></div>'+
     '<div class="sk-pw-c"><b class="num">S/ '+_skMoney(stock*pr)+'</b><small>'+(pr?'S/ '+_skMoney(pr)+' c/u':'sin precio')+'</small></div>'+
     '<div class="sk-pw-c"><span class="sk-est '+est+'">'+(est==='ok'?'Con stock':(est==='ng'?'Negativo':'Sin stock'))+'</span></div></div></div>'+
     donde+pend+diff+

@@ -55,7 +55,7 @@ function _mtBadgeTipo(t,raw){
   return '<span class="mt2-bd n">'+esc(raw||'SIN TIPO')+'</span>';
 }
 function _mtBadgeEstado(r,t){
-  if(t!=='MERMA'&&t!=='NC') return '<span class="mt2-bd n">—</span>';
+  if(t!=='MERMA'&&t!=='NC') return '<span class="mt2-bd n">-</span>';
   return _mtPend(r)?'<span class="mt2-bd w">Pendiente</span>':'<span class="mt2-bd ok">Retirado</span>';
 }
 
@@ -252,7 +252,7 @@ function renderMtEvolTable(root){
       var prevU=i>0?Number(us[i-1])||0:0, curU=Number(u)||0, curV=Number(vs[i])||0, cls='';
       if(curU===0) cls='mte-zero'; else if(i>0&&curU>prevU) cls='mte-up'; else if(i>0&&curU<prevU) cls='mte-down';
       var title=esc(mesLblLarga(meses[i]))+': '+curU+' und. · S/ '+curV.toLocaleString('es-PE',{minimumFractionDigits:2});
-      return '<td class="'+cls+'" title="'+title+'"><span class="mte-und">'+(curU===0?'—':fmt(curU))+'</span>'+(curU?'<span class="mte-cost">S/ '+Math.round(curV).toLocaleString('es-PE')+'</span>':'')+'</td>';
+      return '<td class="'+cls+'" title="'+title+'"><span class="mte-und">'+(curU===0?'-':fmt(curU))+'</span>'+(curU?'<span class="mte-cost">S/ '+Math.round(curV).toLocaleString('es-PE')+'</span>':'')+'</td>';
     }).join('');
     return '<tr><td title="'+esc(f.sku)+'">'+esc(f.desc||f.sku)+'</td>'+cells+'</tr>';
   }).join('');
@@ -330,10 +330,10 @@ function _mtItem(it){
     '<div class="mt2-p"><b title="'+esc(r.desc)+'">'+esc(r.desc)+'</b><span>'+esc(r.sku)+'</span></div>'+
     '<div class="mt2-t">'+_mtBadgeTipo(t,r.tipo)+'</div>'+
     '<div class="mt2-q">'+fmt(r.cant)+'<small> und.</small></div>'+
-    '<div class="mt2-c">'+(r.costo?_mtMoney(r.costo):'—')+'</div>'+
-    '<div class="mt2-m"><b>'+esc(r.motivo||'—')+'</b>'+(r.obs?'<span>'+esc(r.obs)+'</span>':'')+'</div>'+
+    '<div class="mt2-c">'+(r.costo?_mtMoney(r.costo):'-')+'</div>'+
+    '<div class="mt2-m"><b>'+esc(r.motivo||'-')+'</b>'+(r.obs?'<span>'+esc(r.obs)+'</span>':'')+'</div>'+
     '<div class="mt2-e">'+_mtBadgeEstado(r,t)+'</div>'+
-    '<div class="mt2-f'+((r.nroFactura||r.fechaRetiro)?'':' mt2-vacio')+'"><b>'+esc(r.nroFactura||'—')+'</b>'+(r.fechaRetiro?'<span>Retiro '+esc(r.fechaRetiro)+'</span>':'')+'</div>'+
+    '<div class="mt2-f'+((r.nroFactura||r.fechaRetiro)?'':' mt2-vacio')+'"><b>'+esc(r.nroFactura||'-')+'</b>'+(r.fechaRetiro?'<span>Retiro '+esc(r.fechaRetiro)+'</span>':'')+'</div>'+
     '<div class="mt2-a"><button class="mt2-ib" title="Editar" onclick="editarMTRow('+r._row+')">'+ICO('edit',14,'s')+'</button>'+
       '<button class="mt2-ib d" title="Eliminar" onclick="eliminarMTRow('+r._row+')">'+ICO('trash',14,'s')+'</button></div>'+
   '</div>';
@@ -528,7 +528,7 @@ function _mtPintarLineas(){
   _mtEl('mt-ln-list').innerHTML=_MTF.lineas.map(function(l,i){
     var inf=l.s===Infinity, mal=!inf&&l.c>l.s;
     return '<div class="mt3-ln"><div class="n"><b title="'+esc(l.d)+'">'+esc(l.d)+'</b><span>'+esc(l.sku)+'</span></div>'+
-      '<div class="st'+(mal?' mal':'')+'">'+(inf?'—':fmt(l.s))+'</div>'+
+      '<div class="st'+(mal?' mal':'')+'">'+(inf?'-':fmt(l.s))+'</div>'+
       '<input class="inp" type="number" '+((_MTF.edit||_MTF.tipo==='AJUSTE')?'':'min="1" ')+'value="'+l.c+'" oninput="mtCantLinea('+i+',this.value)"/>'+
       (_MTF.edit?'<span></span>':'<button type="button" class="x" title="Quitar" onclick="mtQuitar('+i+')">×</button>')+'</div>';
   }).join('');
@@ -538,11 +538,11 @@ function _mtExceso(){ return _MTF.lineas.filter(function(l){ return l.s!==Infini
 function mtPintar(sinLineas){
   if(!sinLineas) _mtPintarLineas();
   var t=_MTF.tipo||(_MTF.edit&&!_MTF.cambiado?_MTF.tipoOrig:''), tot=_MTF.lineas.reduce(function(a,l){ return a+(l.c||0); },0), td=_MTF.tipo==='TRASLADO'&&!_MTF.edit;
-  var vacio='<span style="color:var(--text4)">—</span>';
+  var vacio='<span style="color:var(--text4)">-</span>';
   _mtEl('mt-r-tipo').innerHTML=t?'<span class="mt3-bd '+(t==='MERMA'?'merma':t==='TRASLADO'?'':t==='AJUSTE'?'ajuste':'nc')+'">'+esc(_MT_NOMBRE[t]||t)+'</span>':vacio;
   _mtEl('mt-r-mot').innerHTML=_MTF.motivo?esc(_MTF.motivo):vacio;
   _mtEl('mt-r-dest-wrap').classList.toggle('mt3-oculto',!td);
-  _mtEl('mt-r-dest').textContent=_MTF.dest||'—';
+  _mtEl('mt-r-dest').textContent=_MTF.dest||'-';
   _mtEl('mt-r-n').textContent=_MTF.lineas.length; _mtEl('mt-r-tot').textContent=fmt(tot);
   var exceso=_mtExceso().length, m, ok=false, aju=t==='AJUSTE', step=_MTF.step||1;
   var cantInvalida=function(l){ return _MTF.edit||aju?!isFinite(l.c)||l.c===0:l.c<=0; };
@@ -588,7 +588,7 @@ function _mtPintarPasos(){
   sum1.classList.toggle('mt3-oculto',step<=1);
   sum2.classList.toggle('mt3-oculto',step<=2);
   if(step>1){
-    _mtEl('mt-sum-1-tipo').textContent=_MT_NOMBRE[_MTF.tipo]||_MTF.tipo||'—';
+    _mtEl('mt-sum-1-tipo').textContent=_MT_NOMBRE[_MTF.tipo]||_MTF.tipo||'-';
     _mtEl('mt-sum-1-mot').textContent=_MTF.motivo||'Sin motivo';
   }
   if(step>2){

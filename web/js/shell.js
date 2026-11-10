@@ -166,7 +166,7 @@ function _setOnlineState(online) {
     if (banner) banner.classList.remove('show');
     // Al volver online: delegar en _intentarSyncOffline que ya valida buffer, sesión y conexión
     if (_conteoBuffer && _conteoBuffer.length > 0) {
-      showToast('Conexión restaurada — sincronizando conteos pendientes...', 'ok');
+      showToast('Conexión restaurada, sincronizando conteos pendientes...', 'ok');
       setTimeout(_intentarSyncOffline, 1200);
     } else {
       showToast('Conexión restaurada', 'ok');

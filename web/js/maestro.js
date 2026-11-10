@@ -110,7 +110,7 @@ function _maeFila(m,i){
     : '<span style="color:var(--warn)" title="Este SKU no existe en el Stock de la sede">'+ICO('warn',12)+'SKU no está en Stock</span>';
   return '<tr>'+
     '<td class="td-desc" title="'+esc(m.descripcion)+'">'+esc(m.descripcion)+'</td>'+
-    '<td class="mono" style="font-weight:600">'+esc(m.sku||'—')+'</td>'+
+    '<td class="mono" style="font-weight:600">'+esc(m.sku||'-')+'</td>'+
     '<td class="td-desc" style="font-size:12px;color:var(--text3)">'+celdaProd+'</td>'+
     '<td class="r">'+fmt(m.factor)+'</td>'+
     '<td class="c" style="white-space:nowrap">'+

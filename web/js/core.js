@@ -252,7 +252,7 @@ function _pgSub(){
   var sede=(document.getElementById('sb-sede')||{}).textContent||'';
   var f=new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long',timeZone:'America/Lima'});
   sede=String(sede).replace(/^DS\s+/i,'');
-  el.textContent=(sede&&sede!=='—'?sede+' · ':'')+f.charAt(0).toUpperCase()+f.slice(1);
+  el.textContent=(sede&&sede!=='-'?sede+' · ':'')+f.charAt(0).toUpperCase()+f.slice(1);
 }
 function toggleSidebar(){
   var sb=document.getElementById('sidebar');
@@ -283,7 +283,7 @@ function _sedeBonita(n){
 function _sedeIniciales(n){
   var p=String(n||'').trim().split(/\s+/).filter(Boolean);
   if(p.length>1&&p[0].toUpperCase()==='DS') p.shift();
-  if(!p.length) return '—';
+  if(!p.length) return '-';
   return (p.length===1?p[0].slice(0,2):p[0].charAt(0)+p[1].charAt(0)).toUpperCase();
 }
 
@@ -314,7 +314,7 @@ setInterval(function(){ if(document.visibilityState==='visible') _sbSalidasRefre
 function initApp(){
   document.getElementById('s-login').classList.remove('active');
   document.getElementById('s-app').classList.add('active');
-  var sede=_sedeBonita(S.usuario||'—');
+  var sede=_sedeBonita(S.usuario||'-');
   document.getElementById('sb-sede').textContent=sede;
   document.getElementById('sb-user-name').textContent=sede;
   var mk=document.getElementById('sb-logomark'); if(mk) mk.textContent=_sedeIniciales(sede);

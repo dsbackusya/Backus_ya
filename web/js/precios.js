@@ -98,7 +98,7 @@ function _prCelda(r,campo){
   if(campo==='precio') val=_prTieneP(r)?'S/ '+_prM2(r.precio):null;
   else val=r.sap||null;
   var mal=campo==='sap'&&r.sap&&!_prSapOk(r.sap);
-  if(!_prPuede()) return '<span class="pr-cell sol'+(mal?' mal':'')+'">'+(val===null?'—':esc(val))+'</span>';
+  if(!_prPuede()) return '<span class="pr-cell sol'+(mal?' mal':'')+'">'+(val===null?'-':esc(val))+'</span>';
   return '<span class="pr-cell'+(val===null?' vac':'')+(mal?' mal':'')+'" data-s="'+esc(r.sku)+'" data-c="'+campo+'" onclick="prEditar(this)"'+(mal?' title="Código SAP inválido: debe tener solo números"':'')+'>'+
     (val===null?'agregar '+(campo==='precio'?'precio':'SAP'):esc(val))+'<span class="pen">✎</span></span>';
 }
@@ -108,7 +108,7 @@ function _prFilaHTML(r){
   return '<div class="pr-tr'+(r.nuevo?' nuevo':'')+'" id="pr-r-'+esc(r.sku)+'"><span class="sku">'+esc(r.sku)+'</span>'+
     '<div class="dsc" onclick="prDetalle(this.dataset.s)" data-s="'+esc(r.sku)+'" title="Ver detalle">'+esc(r.desc)+'<span class="dots">'+dots+'</span><small>Stock total: '+fmt(tot)+' u.</small></div>'+
     '<div class="r">'+_prCelda(r,'sap')+'</div><div class="r">'+_prCelda(r,'precio')+'</div>'+
-    '<div class="r val">'+(val===null?'—':'S/ '+_prM2(val))+'</div><div class="r"><span class="pr-pill '+e[0]+'">'+e[1]+'</span></div></div>';
+    '<div class="r val">'+(val===null?'-':'S/ '+_prM2(val))+'</div><div class="r"><span class="pr-pill '+e[0]+'">'+e[1]+'</span></div></div>';
 }
 // Actualiza solo una fila (si no es la que se está editando) y los indicadores
 function _prRefrescar(r,flash){
@@ -234,7 +234,7 @@ function _prDetalleHTML(){
     '<div class="sk-f"><label><span>Descripción</span></label><input class="sk-in" id="pd-desc" value="'+esc(D.desc)+'" maxlength="120" autocomplete="off"'+(_prPuede()?'':' disabled')+'></div>'+
     '<div class="pr-imp" id="pd-imp"></div>'+
     '<div class="pr-usos"><div><span>Tienda</span><span>Stock</span><span>Valor</span></div>'+PR.sedes.map(function(s,k){
-      var v=_prTieneP(r)?'S/ '+_prM2(r.stock[k]*r.precio):'—';
+      var v=_prTieneP(r)?'S/ '+_prM2(r.stock[k]*r.precio):'-';
       return '<div><span>'+esc(s.nombre)+'</span><b class="num">'+fmt(r.stock[k])+' u.</b><b class="num">'+v+'</b></div>'; }).join('')+'</div>'+
     (_prAdmin()?'<label class="pr-keep"><input type="checkbox" id="pd-rc" onchange="PR.det.recalc=this.checked"><span>Recalcular el costo de las mermas ya registradas de este SKU<small id="pd-mn">Cada merma guardó el precio del día en que se registró. Déjalo desmarcado si es un cambio de precio real; márcalo solo si corriges un error.</small></span></label>':'');
   if(!_prPuede()){ _prImpacto(); return; }
@@ -551,8 +551,8 @@ function _piFila(it,idx){
   if(it.tipo==='error') return '<div class="pi-cr err"><span></span><span class="sku">'+esc(it.sku)+'</span><span class="dd">'+esc(it.desc||'')+'</span><span class="errt">⚠ '+esc(it.err)+' · no se aplicará</span></div>';
   var pct=(it.pA&&it.hasPrecio)?Math.round((it.pD-it.pA)/it.pA*1000)/10:null, alto=pct!==null&&Math.abs(pct)>=25;
   var sapC=it.hasSap&&it.sapA!==it.sapD, pC=it.hasPrecio&&it.pA!==it.pD;
-  var sapH=!it.hasSap?'<span class="mut">—</span>':(sapC?(it.sapA?'<span class="a">'+esc(it.sapA)+'</span><span class="ar">→</span><span class="n">'+esc(it.sapD)+'</span>':'<span class="nuev">+ '+esc(it.sapD)+'</span>'):'<span class="mut">'+esc(it.sapD)+'</span>');
-  var preH=!it.hasPrecio?'<span class="mut">—</span>':(pC?(it.pA!==null?'<span class="a">'+_prM2(it.pA)+'</span><span class="ar">→</span><span class="n">'+_prM2(it.pD)+'</span>':'<span class="nuev">+ '+_prM2(it.pD)+'</span>'):'<span class="mut">'+_prM2(it.pD)+'</span>');
+  var sapH=!it.hasSap?'<span class="mut">-</span>':(sapC?(it.sapA?'<span class="a">'+esc(it.sapA)+'</span><span class="ar">→</span><span class="n">'+esc(it.sapD)+'</span>':'<span class="nuev">+ '+esc(it.sapD)+'</span>'):'<span class="mut">'+esc(it.sapD)+'</span>');
+  var preH=!it.hasPrecio?'<span class="mut">-</span>':(pC?(it.pA!==null?'<span class="a">'+_prM2(it.pA)+'</span><span class="ar">→</span><span class="n">'+_prM2(it.pD)+'</span>':'<span class="nuev">+ '+_prM2(it.pD)+'</span>'):'<span class="mut">'+_prM2(it.pD)+'</span>');
   return '<div class="pi-cr'+(it.inc?'':' off')+'"><input type="checkbox" class="pv-ck" '+(it.inc?'checked':'')+' onchange="piMarcar('+idx+',this.checked)" aria-label="Incluir"><span class="sku">'+esc(it.sku)+'</span><span class="dd" title="'+esc(it.desc)+'">'+esc(it.desc)+'</span>'+
     '<span class="ba">'+sapH+'</span><span class="ba">'+preH+'</span><span class="pc'+(pct===null?'':(pct>0?' up':' dn'))+(alto?' alto':'')+'">'+(pct===null?'':(alto?'⚠ ':'')+(pct>0?'+':'')+pct+'%')+'</span></div>';
 }

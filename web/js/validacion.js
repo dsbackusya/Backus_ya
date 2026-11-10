@@ -260,7 +260,7 @@ function renderValSKU(body){
         '<div class="vk-sub">'+(desv?desv+(desv===1?' producto con desvío':' productos con desvío'):'Sin desvíos en este conteo')+'</div>'+
         '<div class="vk-dv"><i style="flex:'+(Math.abs(falt)||(!sob?1:0))+';background:#CC7A83"></i><i style="flex:'+Math.abs(sob)+';background:#7B61EF"></i></div>'+
         '<div class="vk-lr"><span style="color:#CC7A83">Faltante '+_valMoney(falt)+'</span><span style="color:#C4B8FA">Sobrante '+_valMoney(sob)+'</span></div>'+
-        (skusSinPrecio>0?'<div class="vk-warn" title="Estos SKUs no aparecen en la hoja MAESTRO (Cod_Lovis) o no tienen columna Precio — su costo se muestra como S/ 0.00 pero no está calculado">'+ICO('warn',12)+skusSinPrecio+' SKU sin precio en MAESTRO</div>':'')+
+        (skusSinPrecio>0?'<div class="vk-warn" title="Estos SKUs no aparecen en la hoja MAESTRO (Cod_Lovis) o no tienen columna Precio, su costo se muestra como S/ 0.00 pero no está calculado">'+ICO('warn',12)+skusSinPrecio+' SKU sin precio en MAESTRO</div>':'')+
       '</div>'+
     '</div>';
   var kp=document.getElementById('val-kpis');
@@ -302,27 +302,27 @@ function renderValSKU(body){
       var dif;
       if(e==='f'||e==='s') dif='<span class="vk-chip '+(r.diff<0?'f':'s')+'">'+(r.diff>0?'+':'−')+fmt(Math.abs(r.diff))+'</span>';
       else if(r.diff===0)  dif='<span class="vk-chip">0</span>';
-      else                 dif='<span class="vk-chip">—</span>';
+      else                 dif='<span class="vk-chip">-</span>';
       var costoTd;
       if(e==='f'||e==='s'){
         var tieneMaestro=Object.prototype.hasOwnProperty.call(VAL_MAESTRO,r.sku), cs=costo(r);
         costoTd=tieneMaestro
           ? '<td class="r vk-cost '+(cs<0?'f':'s')+'">'+_valMoney(cs)+'</td>'
-          : '<td class="r vk-cost" style="color:var(--warn)" title="SKU no encontrado en la hoja MAESTRO (Cod_Lovis) — costo no calculado">'+ICO('warn',12)+_valMoney(cs)+'</td>';
-      } else costoTd='<td class="r vk-cost">—</td>';
+          : '<td class="r vk-cost" style="color:var(--warn)" title="SKU no encontrado en la hoja MAESTRO (Cod_Lovis), costo no calculado">'+ICO('warn',12)+_valMoney(cs)+'</td>';
+      } else costoTd='<td class="r vk-cost">-</td>';
       var mov=function(tipo,v){
         return v>0 ? '<td class="r val-mov-cell vk-mov" data-tipo="'+tipo+'" data-sku="'+esc(r.sku)+'">'+fmt(v)+'</td>'
-                   : '<td class="r vk-mut">'+(v!==null?fmt(v):'—')+'</td>';
+                   : '<td class="r vk-mut">'+(v!==null?fmt(v):'-')+'</td>';
       };
       var accion = e==='nc'
         ? '<button class="btn btn-ghost btn-sm val-ir-contar">Ir a contar</button>'
         : ((e==='f'||e==='s') ? '<button class="btn btn-ghost btn-sm val-recontar" data-sku="'+esc(r.sku)+'">Recontar</button>' : '');
       html+='<tr'+rowCls+'>'+
         '<td><div class="vk-pr"><i>'+esc(_valIni(r.desc))+'</i><div><b title="'+esc(r.desc)+'">'+esc(r.desc)+'</b><small>'+esc(r.sku)+(r.categoria?' · '+esc(r.categoria):'')+'</small></div></div></td>'+
-        '<td class="r vk-n">'+(r.cAnterior!==null?fmt(r.cAnterior):'—')+'</td>'+
+        '<td class="r vk-n">'+(r.cAnterior!==null?fmt(r.cAnterior):'-')+'</td>'+
         mov('sal',r.salidas)+mov('mt',r.mt)+mov('ent',r.entradas)+
-        '<td class="r vk-n vk-em">'+(r.real!==null?fmt(r.real):'—')+'</td>'+
-        '<td class="r vk-n"><b>'+(r.cActual!==null?fmt(r.cActual):'—')+'</b></td>'+
+        '<td class="r vk-n vk-em">'+(r.real!==null?fmt(r.real):'-')+'</td>'+
+        '<td class="r vk-n"><b>'+(r.cActual!==null?fmt(r.cActual):'-')+'</b></td>'+
         '<td class="r">'+dif+'</td>'+
         costoTd+
         '<td style="padding-left:16px !important"><span class="sal-est '+e+'"><i></i>'+_VAL_LAB[e]+'</span></td>'+
@@ -532,7 +532,7 @@ function _vcTreeNode(cls,key,name,val,und,kind,active,dim,clickable,idx){
 function renderValTree(root,anim){
   var D=_vcTreeData();
   if(!D.n){
-    root.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">Sin desvíos — todos los SKUs contados cuadran '+ICO('check',14,'l')+'</div>';
+    root.innerHTML='<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">Sin desvíos: todos los SKUs contados cuadran '+ICO('check',14,'l')+'</div>';
     return;
   }
   var noanim=anim?'':' vc-noanim';
@@ -704,7 +704,7 @@ function recontar(sku){
       google.script.run
         .withSuccessHandler(function(r){
           if(!r.ok){showToast(r.error,'err');return;}
-          showToast('Conteo eliminado ('+r.eliminados+' fila'+(r.eliminados>1?'s':'')+') — ve a Conteo para recontar','ok');
+          showToast('Conteo eliminado ('+r.eliminados+' fila'+(r.eliminados>1?'s':'')+'), ve a Conteo para recontar','ok');
           // Marcar el producto como "sin contar" localmente (no quitarlo: seguiría contando en Stock,
           // categorías y KPIs, y desaparecería de la pantalla hasta la próxima validación completa)
           VAL_DATA.forEach(function(d){ if(d.sku===sku){ d.sinContar=true; d.real=null; d.diff=null; } });
@@ -777,7 +777,7 @@ function abrirModalMov(tipo, sku){
 
   var html='';
   if(tipo==='sal'){
-    title.textContent='Salidas — '+sku;
+    title.textContent='Salidas · '+sku;
     sub.textContent=row.desc+' · '+dStr;
     var items=row.salidasDet||[];
     if(!items.length){ html='<div style="color:var(--text3);font-size:13px;padding:20px 0">Sin salidas ese día</div>'; }
@@ -793,11 +793,11 @@ function abrirModalMov(tipo, sku){
       items.forEach(function(s,i){
         var bg=i%2===0?'':'background:var(--surface2)';
         html+='<tr style="'+bg+'">'+
-          '<td style="padding:7px 8px;font-family:var(--font-mono);font-size:11px;color:var(--p600)">'+esc(s.nroPedido||'—')+'</td>'+
+          '<td style="padding:7px 8px;font-family:var(--font-mono);font-size:11px;color:var(--p600)">'+esc(s.nroPedido||'-')+'</td>'+
           '<td style="padding:7px 8px;color:var(--text2)">'+esc(s.desc)+'</td>'+
           '<td style="padding:7px 8px;text-align:right">'+fmt(s.pack)+'</td>'+
           '<td style="padding:7px 8px;text-align:right;font-weight:700;color:var(--danger)">'+fmt(s.unidad)+'</td>'+
-          '<td style="padding:7px 8px;color:var(--text3);font-size:11px">'+esc(s.motorizado||'—')+'</td>'+
+          '<td style="padding:7px 8px;color:var(--text3);font-size:11px">'+esc(s.motorizado||'-')+'</td>'+
         '</tr>';
       });
       var total=items.reduce(function(a,s){return a+s.unidad;},0);
@@ -807,7 +807,7 @@ function abrirModalMov(tipo, sku){
         '<td></td></tr></tbody></table>';
     }
   } else if(tipo==='mt'){
-    title.textContent='Mermas / Traslados — '+sku;
+    title.textContent='Mermas / Traslados · '+sku;
     sub.textContent=row.desc+' · '+dStr;
     var items=row.mtDet||[];
     if(!items.length){ html='<div style="color:var(--text3);font-size:13px;padding:20px 0">Sin M-T ese día</div>'; }
@@ -824,9 +824,9 @@ function abrirModalMov(tipo, sku){
         var bc=m.tipo==='MERMA'?'var(--danger)':'var(--blue)';
         html+='<tr style="'+bg+'">'+
           '<td style="padding:7px 8px"><span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;border:1px solid '+bc+';color:'+bc+'">'+esc(m.tipo)+'</span></td>'+
-          '<td style="padding:7px 8px;color:var(--text2)">'+esc(m.motivo||'—')+'</td>'+
+          '<td style="padding:7px 8px;color:var(--text2)">'+esc(m.motivo||'-')+'</td>'+
           '<td style="padding:7px 8px;text-align:right;font-weight:700;color:var(--warn)">'+fmt(m.cant)+'</td>'+
-          '<td style="padding:7px 8px;color:var(--text3);font-size:11px">'+esc(m.obs||'—')+'</td>'+
+          '<td style="padding:7px 8px;color:var(--text3);font-size:11px">'+esc(m.obs||'-')+'</td>'+
         '</tr>';
       });
       var total=items.reduce(function(a,m){return a+m.cant;},0);
@@ -836,7 +836,7 @@ function abrirModalMov(tipo, sku){
         '<td></td></tr></tbody></table>';
     }
   } else if(tipo==='ent'){
-    title.textContent='Entradas — '+sku;
+    title.textContent='Entradas · '+sku;
     sub.textContent=row.desc+' · '+dStr;
     var items=row.entradasDet||[];
     if(!items.length){ html='<div style="color:var(--text3);font-size:13px;padding:20px 0">Sin entradas ese día</div>'; }
@@ -851,10 +851,10 @@ function abrirModalMov(tipo, sku){
       items.forEach(function(e,i){
         var bg=i%2===0?'':'background:var(--surface2)';
         html+='<tr style="'+bg+'">'+
-          '<td style="padding:7px 8px;font-family:var(--font-mono);font-size:11px;color:var(--p600)">'+esc(e.factura||'—')+'</td>'+
-          '<td style="padding:7px 8px;color:var(--text2)">'+esc(e.proveedor||'—')+'</td>'+
+          '<td style="padding:7px 8px;font-family:var(--font-mono);font-size:11px;color:var(--p600)">'+esc(e.factura||'-')+'</td>'+
+          '<td style="padding:7px 8px;color:var(--text2)">'+esc(e.proveedor||'-')+'</td>'+
           '<td style="padding:7px 8px;text-align:right;font-weight:700;color:var(--ok)">'+fmt(e.unidades)+'</td>'+
-          '<td style="padding:7px 8px;color:var(--text3);font-size:11px">'+esc(e.responsable||'—')+'</td>'+
+          '<td style="padding:7px 8px;color:var(--text3);font-size:11px">'+esc(e.responsable||'-')+'</td>'+
         '</tr>';
       });
       var total=items.reduce(function(a,e){return a+e.unidades;},0);

@@ -33,8 +33,7 @@ function acSearch(skuId,descId,marcaId,listId,onSelectFn){
         if(!r.ok)return;
         var list=document.getElementById(listId);
         if(!r.results.length){list.classList.remove('open');return;}
-        AC_CACHE[listId]=r.results; // mantener para acSelect con índice numérico
-        _acCacheSet(listId, r.results);
+        _acCacheSet(listId, r.results); // para acSelect con índice numérico (con tope de 20 listas)
         list.innerHTML=r.results.map(function(x,i){
           var clickHandler = onSelectFn
             ? onSelectFn+'('+i+')'
@@ -97,9 +96,11 @@ function eanFill(eanId,skuId,descId,marcaId){
 }
 
 /* ── FULL-SCREEN FORM HELPERS ── */
+var _fsHideT={}; // un cierre pendiente no debe ocultar una pantalla que se volvió a abrir
 function openFS(id){
   if(id==='fs-conteo') document.body.classList.add('cnt-open');
   var el=document.getElementById(id);
+  clearTimeout(_fsHideT[id]);
   el.style.display='flex';
   setTimeout(function(){el.classList.add('open');},10);
 }
@@ -107,7 +108,8 @@ function closeFS(id){
   if(id==='fs-conteo'){ document.body.classList.remove('cnt-open'); _cntCamDetener(); if(typeof _cntFlush==='function') _cntFlush(); }
   var el=document.getElementById(id);
   el.classList.remove('open');
-  setTimeout(function(){el.style.display='none';},200);
+  clearTimeout(_fsHideT[id]);
+  _fsHideT[id]=setTimeout(function(){el.style.display='none';},200);
 }
 
 // onSaved: cierra el form y marca páginas relacionadas como stale.

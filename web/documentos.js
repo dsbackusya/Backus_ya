@@ -163,12 +163,12 @@ function _dcMarcajeHtml(){
   DCX.gr.forEach(function(g,gi){
     h+='<div class="dm-grp">'+g.g+'</div>';
     g.rows.forEach(function(r,ri){
-      var id=gi+'_'+ri, q=function(l,p){ return '<div class="dm-q"><span class="dm-lb">'+l+'</span><b id="'+p+id+'">—</b></div>'; };
+      var id=gi+'_'+ri, q=function(l,p){ return '<div class="dm-q"><span class="dm-lb">'+l+'</span><b id="'+p+id+'">-</b></div>'; };
       h+='<div class="dm-r" data-g="'+gi+'" data-r="'+ri+'">'+
         '<div class="dm-n"><b>'+r.ref+(r.caja?' <em class="dm-x">× '+g.mult+'</em>':'')+'</b><small>'+(r.sku?r.sku+' · ':'')+r.code+(r.caja||g.barril?'':' · en cajas')+'</small></div>'+
         celda('Entrega','ei',r.ei)+celda('Devolución','di',r.di)+
         q('ENT','dm-e')+q('DEV','dm-v')+
-        '<div class="dm-d" id="dm-d'+id+'">0</div><div class="dm-c" id="dm-c'+id+'">—</div></div>';
+        '<div class="dm-d" id="dm-d'+id+'">0</div><div class="dm-c" id="dm-c'+id+'">-</div></div>';
     });
   });
   return '<div class="dc-card"><div class="dc-h"><span class="t">Conciliación de envases</span></div>'+
@@ -188,14 +188,14 @@ function dcMIn(el){
   dcCalcM();
 }
 function dcCalcM(){
-  var tot=0, num=function(n){ return n?n.toLocaleString('es-PE'):'—'; };
+  var tot=0, num=function(n){ return n?n.toLocaleString('es-PE'):'-'; };
   DCX.gr.forEach(function(g,gi){ g.rows.forEach(function(r,ri){
     var e=_dcEnt(g,r), v=_dcDev(g,r), d=e-v, c=g.barril?0:Math.abs(d)*_dcPrecio(g,r); tot+=c;
     var id=gi+'_'+ri, ee=document.getElementById('dm-e'+id), ve=document.getElementById('dm-v'+id), de=document.getElementById('dm-d'+id), ce=document.getElementById('dm-c'+id);
     if(!de||!ce) return;
     if(ee) ee.textContent=num(e); if(ve) ve.textContent=num(v);
     de.textContent=d>0?'+'+d:d; de.className='dm-d '+(d===0?'zero':d>0?'neg':'pos');
-    ce.textContent=(d===0||g.barril)?'—':_dcMoney(c);
+    ce.textContent=(d===0||g.barril)?'-':_dcMoney(c);
   }); });
   var te=document.getElementById('dm-tot');
   if(te){ te.textContent=_dcMoney(tot); te.className='v '+(tot===0?'zero':'neg'); }
@@ -475,9 +475,9 @@ function dcHistFiltrar(){
   });
   var bd={ marcaje:'<span class="dc-bd m">Marcaje</span>', nc:'<span class="dc-bd n">NC</span>', traslado:'<span class="dc-bd t">Traslado</span>' };
   el.innerHTML=rows.length ? rows.map(function(d){
-    var det=d.tipo==='marcaje' ? ('Reparto '+(d.reparto||'—')+(d.placa?' · '+d.placa:''))
-          : d.tipo==='nc' ? ('Factura '+(d.nroFactura||'—')+' · '+d.lineas.length+(d.lineas.length===1?' producto':' productos'))
-          : ('Destino '+(d.destino||'—')+' · '+d.lineas.length+(d.lineas.length===1?' producto':' productos'));
+    var det=d.tipo==='marcaje' ? ('Reparto '+(d.reparto||'-')+(d.placa?' · '+d.placa:''))
+          : d.tipo==='nc' ? ('Factura '+(d.nroFactura||'-')+' · '+d.lineas.length+(d.lineas.length===1?' producto':' productos'))
+          : ('Destino '+(d.destino||'-')+' · '+d.lineas.length+(d.lineas.length===1?' producto':' productos'));
     return '<div class="dc-hr"><div class="dc-hd">'+_dcF(d.fecha)+'</div><div>'+bd[d.tipo]+'</div><div class="dc-ht"><b>'+esc(det)+'</b><small>'+esc(d.usuario||'')+'</small></div>'+
       '<div class="dc-ha"><button class="btn btn-ghost btn-sm" onclick="dcVerId('+d.id+')">Ver / Imprimir</button>'+
       '<button class="btn btn-ghost btn-sm" onclick="dcEditar('+d.id+')">Editar</button>'+

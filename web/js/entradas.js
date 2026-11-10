@@ -313,14 +313,14 @@ function _filterEntradas(){
     var o=!!_ENT_ABIERTOS[g.key];
     return '<div class="ent-g"><div class="ent-rc'+(o?' open':'')+'" onclick="entTg('+i+')"><span class="ent-chev">'+chev+'</span>'+
       '<span class="mono">'+esc(g.fecha)+'</span>'+
-      '<div><div class="ent-fa mono">'+esc(g.factura||'—')+'</div><div class="ent-sb">'+esc(g.proveedor||'')+'</div></div>'+
+      '<div><div class="ent-fa mono">'+esc(g.factura||'-')+'</div><div class="ent-sb">'+esc(g.proveedor||'')+'</div></div>'+
       '<span>'+(g.oc?'<span class="ent-oc">'+esc(g.oc)+'</span>':'<span class="ent-sin">Sin OC</span>')+'</span>'+
       '<span class="r">'+g.items.length+'</span><span class="r"><b>'+fmt(g.und)+'</b></span>'+
       '<span>'+_entPillGrupo(g)+'</span><span class="ent-resp">'+esc(g.responsable||'')+'</span>'+
       '<span class="r ent-acc">'+(g.oc?lapiz(g.items[0]._row,'Cambiar el estado de Dynamics de toda la OC'):'')+delFac(i)+'</span></div>'+lineas(g,i)+'</div>';
   }).join('')||'<div class="ent-vacio">Sin registros</div>';
   document.getElementById('ent-lst').innerHTML=vis.map(function(g,i){
-    return '<div class="ent-cd"><div class="ent-h" onclick="entTg('+i+')"><div style="min-width:0"><div class="ent-fa mono">'+esc(g.factura||'—')+'</div>'+
+    return '<div class="ent-cd"><div class="ent-h" onclick="entTg('+i+')"><div style="min-width:0"><div class="ent-fa mono">'+esc(g.factura||'-')+'</div>'+
       '<div class="ent-sb">'+esc(g.proveedor||'')+' · '+esc(g.fecha)+'</div>'+
       '<div class="ent-tags">'+_entPillGrupo(g)+(g.oc?'<span class="ent-oc">'+esc(g.oc)+'</span>':'')+(g.oc?lapiz(g.items[0]._row,'Cambiar el estado de Dynamics de toda la OC'):'')+delFac(i)+'</div></div>'+
       '<div class="ent-u"><b>'+fmt(g.und)+'</b><span>'+g.items.length+' prod.</span></div></div>'+lineas(g,i)+'</div>';
@@ -331,7 +331,7 @@ function _filterEntradas(){
 function _entRecargar(){ reloadPage('entradas'); }
 function entEliminarLinea(row){
   var r=(window._ENT_ROWS||{})[row]; if(!r) return;
-  _confirmDialog('Eliminar producto','Se eliminará '+r.sku+' ('+fmt(r.unidades)+' und.) de la factura '+(r.factura||'—')+'. El stock se descuenta. No se puede deshacer.',function(){
+  _confirmDialog('Eliminar producto','Se eliminará '+r.sku+' ('+fmt(r.unidades)+' und.) de la factura '+(r.factura||'-')+'. El stock se descuenta. No se puede deshacer.',function(){
     google.script.run
       .withSuccessHandler(function(x){ if(!x.ok){ showToast(x.error,'err'); return; } showToast('Producto eliminado','ok'); PAGE_LOADED['stock']=false; _entRecargar(); })
       .withFailureHandler(function(e){ showToast(e.message,'err'); })
@@ -340,7 +340,7 @@ function entEliminarLinea(row){
 }
 function entEliminarFactura(i){
   var g=_ENT_GRUPOS[i]; if(!g) return;
-  _confirmDialog('Eliminar ingreso completo','Se eliminarán los '+g.items.length+' productos ('+fmt(g.und)+' und.) de la factura '+(g.factura||'—')+' del '+g.fecha+'. El stock se descuenta. No se puede deshacer.',function(){
+  _confirmDialog('Eliminar ingreso completo','Se eliminarán los '+g.items.length+' productos ('+fmt(g.und)+' und.) de la factura '+(g.factura||'-')+' del '+g.fecha+'. El stock se descuenta. No se puede deshacer.',function(){
     google.script.run
       .withSuccessHandler(function(x){ if(!x.ok){ showToast(x.error,'err'); return; } showToast('Ingreso eliminado ('+x.eliminados+' productos)','ok'); PAGE_LOADED['stock']=false; _entRecargar(); })
       .withFailureHandler(function(e){ showToast(e.message,'err'); })
@@ -426,7 +426,7 @@ function exportEntradas(){
 function editarDynamicsRow(rowNum, valorActual){
   // Obtener la OC de la fila para mostrarla en el título
   var item = DATA.entradas.find(function(x){ return x._row === rowNum; });
-  var oc   = item ? (item.oc || '—') : '—';
+  var oc   = item ? (item.oc || '-') : '-';
   _selectDialog(
     'Editar Dynamics · OC: ' + oc,
     'Dynamics',
@@ -678,7 +678,7 @@ function wzResumen(){
   var el=_wzEl('wz-resumen'); if(!el) return;
   var g=function(id){return (document.getElementById(id)||{}).value||'';};
   var c=_entCuenta();
-  function kv(k,v){ return '<div class="wz-kv"><span>'+k+'</span><b>'+(v?esc(v):'—')+'</b></div>'; }
+  function kv(k,v){ return '<div class="wz-kv"><span>'+k+'</span><b>'+(v?esc(v):'-')+'</b></div>'; }
   var origen=WZ.origen==='archivo'
     ? kv('Origen','Archivo ('+ARCH_ROWS.length+' líneas)')+kv('Orden de compra',g('ent-oc'))+kv('Proveedor',g('ent-proveedor'))
     : kv('Origen','Escrito a mano')+kv('Orden de compra',g('ent-oc'))+kv('Proveedor',g('ent-proveedor'));
@@ -731,7 +731,7 @@ function wzStagePag(i,n){
   var g=_wzEl('wz-pgi'); if(g&&n) g.textContent='Pág. '+Math.max(1,Math.min(n,i+(i<n?1:0)))+' de '+n;
 }
 function _wzLinea(it){
-  var q=it.cant>0?_numFmt2(it.cant):'—', m=typeof it.monto==='number'?_numFmt2(it.monto):'';
+  var q=it.cant>0?_numFmt2(it.cant):'-', m=typeof it.monto==='number'?_numFmt2(it.monto):'';
   return '<div class="wz-dl'+(it.cant>0?'':' sq')+'"><span>'+esc(it.linea)+'</span><span>'+esc(it.sku)+'</span><span class="d">'+esc(it.desc)+'</span><span class="q">'+q+'</span><span class="m">'+m+'</span></div>';
 }
 // Las líneas entran por tandas pequeñas: se ve fluido y no bloquea la pantalla con listas largas
@@ -1063,14 +1063,14 @@ function _pvFila(r){
     '<div class="pv-d"><span class="pv-n">#'+r.idx+'</span><span class="pv-d-t">'+esc(r.desc)+'</span>'+
       '<div class="pv-av"'+(r.aviso?'':' style="display:none"')+'>'+esc(r.aviso||'')+'</div></div>'+
     '<div class="pv-uc">'+cant+'</div>'+
-    '<div class="pv-m" id="pv-m-'+r.idx+'">'+(typeof r.monto==='number'?_soles(r.monto).replace('S/ ',''):'—')+'</div>'+
+    '<div class="pv-m" id="pv-m-'+r.idx+'">'+(typeof r.monto==='number'?_soles(r.monto).replace('S/ ',''):'-')+'</div>'+
   '</div>';
 }
 
 var PV_SOLO=false;
 function renderPreview(){
   document.getElementById('arch-preview-title').textContent=
-    'Vista previa — '+ARCH_ROWS.length+' producto(s) encontrados';
+    'Vista previa: '+ARCH_ROWS.length+' producto(s) encontrados';
   var list=document.getElementById('arch-preview-list');
   list.innerHTML=ARCH_ROWS.map(_pvFila).join('');
   // Al elegir un producto de la lista de sugerencias se verifica el SKU

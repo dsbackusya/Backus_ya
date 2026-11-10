@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
@@ -48,7 +48,7 @@ window.addEventListener('load', function(){
 <!-- ══ SPLASH de arranque: lente de vidrio sobre violeta que revela el logo (se quita solo cuando la app está lista; ver js/splash.js) ══ -->
 <div id="tsplash" role="status" aria-live="polite">
   <canvas id="ts-gl" aria-hidden="true"></canvas>
-  <img class="ts-logo" src="img/logo-dinet.png" alt="" aria-hidden="true" decoding="async"/>
+  <img class="ts-logo" src="img/logo-dinet.png" width="936" height="797" alt="" aria-hidden="true" decoding="async"/>
   <h1 class="ts-sr" id="ts-sr">Dinet e-Commerce. Cargando la aplicación.</h1>
   <div class="ts-bar" aria-hidden="true"><i></i></div>
   <div class="ts-stage">
@@ -121,8 +121,8 @@ window.addEventListener('load', function(){
     <!-- Sede de la sesión (la marca ya no se muestra) -->
     <div class="sb2-head">
       <div class="sb2-sede">
-        <div class="sb2-mark" id="sb-logomark" onclick="if(document.getElementById('sidebar').classList.contains('collapsed'))toggleSidebar()">—</div>
-        <div class="sb2-name" id="sb-sede">—</div>
+        <div class="sb2-mark" id="sb-logomark" onclick="if(document.getElementById('sidebar').classList.contains('collapsed'))toggleSidebar()">-</div>
+        <div class="sb2-name" id="sb-sede">-</div>
       </div>
       <button class="sb2-tg" onclick="toggleSidebar()" title="Colapsar menú" aria-label="Colapsar menú">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -194,9 +194,9 @@ window.addEventListener('load', function(){
         <span class="sb-logout-label">Instalar app</span>
       </button>
       <div class="sb2-usr">
-        <div class="sb-user-avatar" id="sb-avatar">—</div>
+        <div class="sb-user-avatar" id="sb-avatar">-</div>
         <div class="sb2-usr-info">
-          <div class="sb-user-name" id="sb-user-name">—</div>
+          <div class="sb-user-name" id="sb-user-name">-</div>
           <div class="sb-user-role">Dark Store</div>
         </div>
         <button class="sb2-out" onclick="doLogout()" title="Cerrar sesión" aria-label="Cerrar sesión">
@@ -820,7 +820,7 @@ window.addEventListener('load', function(){
 
       <!-- Cámara arriba -->
       <div class="cnt-cam" id="cnt-cam">
-        <video id="cnt-cam-v" playsinline muted autoplay></video>
+        <video id="cnt-cam-v" playsinline muted autoplay aria-label="Vista de la cámara para escanear el código"></video>
         <div class="cnt-dim" aria-hidden="true"><i class="d-t"></i><i class="d-b"></i><i class="d-l"></i><i class="d-r"></i></div>
         <div class="cnt-aim">
           <span class="cnt-cb cnt-tl"></span><span class="cnt-cb cnt-tr"></span><span class="cnt-cb cnt-bl"></span><span class="cnt-cb cnt-br"></span>
@@ -833,8 +833,9 @@ window.addEventListener('load', function(){
             </div>
           </div>
         </div>
-        <div class="cnt-cam-msg" id="cnt-cam-msg">Centra el código de barras en el marco</div>
-        <div class="cnt-cam-off" id="cnt-cam-off" style="display:none" onclick="cntCamToque()"></div>
+        <div class="cnt-cam-msg" id="cnt-cam-msg" role="status" aria-live="polite">Centra el código de barras en el marco</div>
+        <div class="cnt-cam-off" id="cnt-cam-off" style="display:none" role="button" tabindex="0" aria-label="Tocar para volver a escanear" onclick="cntCamToque()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();cntCamToque();}"></div>
+        <div class="cnt-sr" id="cnt-live" role="status" aria-live="polite"></div>
         <div class="cnt-top">
           <button class="cnt-gl" onclick="_cerrarFormConteo()" aria-label="Volver"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
           <div class="cnt-ttl">Conteo</div>
@@ -862,11 +863,11 @@ window.addEventListener('load', function(){
       <!-- Producto leído: campos y teclado propio (no se abre el teclado del celular) -->
       <section class="cnt-panel" id="cnt-entry">
         <div class="cnt-fields">
-          <div class="cnt-row on" id="cnt-row-p" onpointerdown="cntSelCampo('p')">
+          <div class="cnt-row on" id="cnt-row-p" role="button" tabindex="0" aria-pressed="true" aria-label="Editar packs" onpointerdown="cntSelCampo('p')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();cntSelCampo('p');}">
             <div class="cnt-nm"><b>Packs</b><small id="cnt-pack-sub">&nbsp;</small></div>
             <div class="cnt-vw"><input class="cnt-val" id="cnt-packs" type="text" readonly inputmode="none" placeholder="0" tabindex="-1" autocomplete="off"/><i class="cnt-caret"></i></div>
           </div>
-          <div class="cnt-row" id="cnt-row-s" onpointerdown="cntSelCampo('s')">
+          <div class="cnt-row" id="cnt-row-s" role="button" tabindex="0" aria-pressed="false" aria-label="Editar unidades sueltas" onpointerdown="cntSelCampo('s')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();cntSelCampo('s');}">
             <div class="cnt-nm"><b>Sueltas</b><small>unidades sin pack</small></div>
             <div class="cnt-vw"><input class="cnt-val" id="cnt-und-sueltas" type="text" readonly inputmode="none" placeholder="0" tabindex="-1" autocomplete="off"/><i class="cnt-caret"></i></div>
           </div>
@@ -1154,7 +1155,7 @@ window.addEventListener('load', function(){
 
 <!-- OFFLINE BANNER -->
 <div id="offline-banner">
-  <span><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Sin conexión — los conteos se guardan localmente</span>
+  <span><svg class="ico-s" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>Sin conexión: los conteos se guardan localmente</span>
   <span class="ob-badge" id="ob-pending" style="display:none"></span>
   <button class="ob-sync-btn" id="ob-sync-btn" style="display:none" onclick="_intentarSyncOffline()">Sincronizar ahora</button>
 </div>

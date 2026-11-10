@@ -31,10 +31,10 @@ function filterOC(){
   if(el)el.textContent=rows.length+' registros';
   var tbody=rows.map(function(r){
     return '<tr class="oc-row" data-oc="'+esc(r.oc)+'" style="cursor:pointer">'+
-      '<td class="mono" style="font-size:12px">'+esc(r.fechaRecepcion||'—')+'</td>'+
+      '<td class="mono" style="font-size:12px">'+esc(r.fechaRecepcion||'-')+'</td>'+
       '<td class="mono">'+esc(r.oc)+'</td>'+
       '<td class="td-desc" title="'+esc(r.proveedor)+'">'+esc(r.proveedor)+'</td>'+
-      '<td class="td-desc" title="'+esc(r.entrega)+'">'+esc(r.entrega||'—')+'</td>'+
+      '<td class="td-desc" title="'+esc(r.entrega)+'">'+esc(r.entrega||'-')+'</td>'+
       '<td class="c">'+_ocBadge(r.estado)+'</td>'+
     '</tr>';
   }).join('');
@@ -160,12 +160,12 @@ function renderDetalleOC(r){
   document.getElementById('detalle-oc-subtitle').textContent=tiendaTxt+' · '+r.data.length+' ítem(s) · '+fmt(totalUnd)+' und.';
   var rows=r.data.map(function(it){
     return '<tr>'+
-      '<td class="td-desc" style="font-size:11px;color:var(--text3)">'+esc(it.tienda||'—')+'</td>'+
+      '<td class="td-desc" style="font-size:11px;color:var(--text3)">'+esc(it.tienda||'-')+'</td>'+
       '<td class="mono">'+esc(it.sku)+'</td>'+
       '<td class="td-desc" title="'+esc(it.desc)+'">'+esc(it.desc)+'</td>'+
       '<td class="r" style="font-weight:600">'+fmt(it.unidades)+'</td>'+
-      '<td class="mono" style="font-size:11px;color:var(--text3)">'+esc(it.fecha||'—')+'</td>'+
-      '<td class="mono" style="font-size:11px;color:var(--text3)">'+esc(it.factura||'—')+'</td>'+
+      '<td class="mono" style="font-size:11px;color:var(--text3)">'+esc(it.fecha||'-')+'</td>'+
+      '<td class="mono" style="font-size:11px;color:var(--text3)">'+esc(it.factura||'-')+'</td>'+
     '</tr>';
   }).join('');
   body.innerHTML='<div class="table-wrap"><table><thead><tr><th>Tienda</th><th>SKU</th><th>Descripción</th><th class="r">Und.</th><th>Fecha</th><th>Factura</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
@@ -317,14 +317,14 @@ function handleOCFileSelect(file){
 
 function renderOCPreview(){
   document.getElementById('oc-preview-title').textContent=
-    'Vista previa — '+OC_ROWS_PARSED.length+' orden(es) encontradas';
+    'Vista previa: '+OC_ROWS_PARSED.length+' orden(es) encontradas';
   var tbody=OC_ROWS_PARSED.map(function(r,i){
     return '<tr>'+
       '<td class="mono" style="font-size:11px;color:var(--text3)">'+(i+1)+'</td>'+
       '<td class="mono">'+esc(r.oc)+'</td>'+
       '<td class="td-desc">'+esc(r.proveedor)+'</td>'+
-      '<td class="mono" style="font-size:12px">'+esc(r.fechaRecepcion||'—')+'</td>'+
-      '<td class="td-desc">'+esc(r.nombreEntrega||'—')+'</td>'+
+      '<td class="mono" style="font-size:12px">'+esc(r.fechaRecepcion||'-')+'</td>'+
+      '<td class="td-desc">'+esc(r.nombreEntrega||'-')+'</td>'+
       '<td class="c">'+_ocBadge('Pendiente')+'</td>'+
     '</tr>';
   }).join('');

@@ -72,13 +72,13 @@ function filterMconteo(){
   if(rows.length>MAX) rows=rows.slice(0,MAX);
   MCONTEO.vista=rows;
   var el=document.getElementById('mc-count');
-  if(el) el.textContent=total>MAX ? ('Mostrando '+MAX+' de '+total+' — usa el buscador') : (total+' registros');
+  if(el) el.textContent=total>MAX ? ('Mostrando '+MAX+' de '+total+'. Usa el buscador') : (total+' registros');
   var html=rows.map(function(m,i){
     return '<tr style="cursor:pointer" title="Tocar para editar" onclick="abrirMConteoForm('+i+')">'+
       '<td class="mono" style="font-weight:600">'+esc(m.ean)+'</td>'+
-      '<td class="mono">'+esc(m.sku||'—')+'</td>'+
-      '<td class="mono col-hide-mobile" style="color:var(--text3)">'+esc(m.sap||'—')+'</td>'+
-      '<td class="td-desc" title="'+esc(m.producto)+'">'+(m.producto?esc(m.producto):'<span style="color:var(--text3)">—</span>')+'</td>'+
+      '<td class="mono">'+esc(m.sku||'-')+'</td>'+
+      '<td class="mono col-hide-mobile" style="color:var(--text3)">'+esc(m.sap||'-')+'</td>'+
+      '<td class="td-desc" title="'+esc(m.producto)+'">'+(m.producto?esc(m.producto):'<span style="color:var(--text3)">-</span>')+'</td>'+
       '<td class="r">'+fmt(m.multiplicador)+'</td>'+
       '<td class="c" style="white-space:nowrap">'+
         '<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();abrirMConteoForm('+i+')">Editar</button> '+

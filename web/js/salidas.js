@@ -142,7 +142,7 @@ function _salEsDup(row){
 }
 function eliminarDuplicadoSalida(rowNum){
   var fila=DATA.salidas.find(function(r){return r._row===rowNum;});
-  if(!fila){ showToast('Recarga la página — los datos están desactualizados.','err'); return; }
+  if(!fila){ showToast('Recarga la página: los datos están desactualizados.','err'); return; }
   var k=_salDupClave(fila);
   var otras=DATA.salidas.filter(function(x){return x._row!==rowNum&&_salDupClave(x)===k;});
   if(!otras.length){ showToast('No es un duplicado: no se puede eliminar.','err'); return; }
@@ -168,23 +168,23 @@ function eliminarDuplicadoSalida(rowNum){
 
 function _salEstadoBadge(r){
   var cancelado=r.cancelado||r.estado==='cancelado'||r.estado==='CANCELADO';
-  if(cancelado) return '—';
+  if(cancelado) return '-';
   var e=String(r.estado||'').trim();
   var eL=e.toLowerCase();
   if(eL==='entregado') return '<span class="sal-est ok"><i></i>'+e+'</span>';
   if(e) return '<span class="sal-est"><i></i>'+e+'</span>';
-  return '<span style="color:var(--text3);font-size:12px">—</span>';
+  return '<span style="color:var(--text3);font-size:12px">-</span>';
 }
 
 function _salRevisionCell(r){
   var cancelado=r.cancelado||r.estado==='cancelado'||r.estado==='CANCELADO';
-  if(cancelado) return '—';
+  if(cancelado) return '-';
   var rev=String(r.revision||'').trim();
   var est=String(r.estado||'').trim();
   if(rev.toLowerCase()==='entregado') return '<span style="color:var(--teal,#065f46);font-size:16px;font-weight:600">'+ICO('check',16,'s')+'</span>';
   // Mostrar botón si estado tiene cualquier valor y revision está vacío
   // No comparar texto exacto — la fórmula puede devolver cualquier variante
-  if(!est) return '<span style="color:var(--text3);font-size:12px">—</span>';
+  if(!est) return '<span style="color:var(--text3);font-size:12px">-</span>';
   return '<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px;border-radius:5px;white-space:nowrap" '+
     'onclick="confirmarRecepcion('+r._row+',this)">Confirmar recepción</button>';
 }
@@ -317,14 +317,14 @@ function _salFila(r){
   return '<tr'+(_salFlash[r._row]?' class="flash-new"':'')+' style="'+trStyle+'">'+
     '<td class="mono" style="font-size:12px">'+esc(r.fecha)+'</td>'+
     '<td class="mono col-hide-mobile" style="font-size:12px;color:var(--text3)">'+esc(r.hora)+'</td>'+
-    '<td class="pedido-link">'+(r.nroPedido?'<span class="sal-ped">'+esc(r.nroPedido)+'</span>':'<span style="color:var(--text4)">—</span>')+'</td>'+
+    '<td class="pedido-link">'+(r.nroPedido?'<span class="sal-ped">'+esc(r.nroPedido)+'</span>':'<span style="color:var(--text4)">-</span>')+'</td>'+
     '<td class="mono col-hide-mobile">'+esc(r.sku)+'</td>'+
     descCell+
-    '<td class="col-hide-mobile" style="font-size:12px">'+(r.marca?'<span class="brand-pill">'+esc(r.marca)+'</span>':'<span style="color:var(--text4)">—</span>')+'</td>'+
+    '<td class="col-hide-mobile" style="font-size:12px">'+(r.marca?'<span class="brand-pill">'+esc(r.marca)+'</span>':'<span style="color:var(--text4)">-</span>')+'</td>'+
     '<td class="r col-hide-mobile">'+fmt(r.pack)+'</td>'+
     '<td class="r" style="font-weight:600">'+fmt(r.unidad)+'</td>'+
-    '<td class="c col-hide-mobile" style="font-size:11px;color:var(--text3);white-space:nowrap">'+esc(r.motorizado||'—')+'</td>'+
-    '<td class="r col-hide-mobile" style="font-size:12px">'+esc(r.envases||'—')+'</td>'+
+    '<td class="c col-hide-mobile" style="font-size:11px;color:var(--text3);white-space:nowrap">'+esc(r.motorizado||'-')+'</td>'+
+    '<td class="r col-hide-mobile" style="font-size:12px">'+esc(r.envases||'-')+'</td>'+
     '<td class="c col-hide-mobile">'+_salEstadoBadge(r)+'</td>'+
     '<td class="c col-hide-mobile" style="white-space:nowrap">'+_salRevisionCell(r)+'</td>'+
     '<td class="c col-hide-mobile" style="white-space:nowrap;width:210px;padding-right:16px">'+_salMenuContextual(r)+'</td>'+
@@ -564,7 +564,7 @@ function abrirModalCancelarBtn(btn){
 
 function abrirModalCancelar(rowNum, nroPedido){
   var fila = DATA.salidas.find(function(r){return r._row===rowNum;});
-  if(!fila){showToast('Recarga la página — los datos están desactualizados.','err');return;}
+  if(!fila){showToast('Recarga la página: los datos están desactualizados.','err');return;}
 
   CANCEL_ROW = rowNum;
   CANCEL_NRO = nroPedido;
@@ -576,8 +576,8 @@ function abrirModalCancelar(rowNum, nroPedido){
 
   document.getElementById('modal-cancelar-info').innerHTML =
     tieneNro
-      ? 'Pedido <strong>'+esc(nroPedido)+'</strong> — '+itemsDelPedido.length+' ítem(s) serán cancelados'
-      : 'Registro sin Nro. de Pedido — se cancelará este ítem';
+      ? 'Pedido <strong>'+esc(nroPedido)+'</strong>: '+itemsDelPedido.length+' ítem(s) serán cancelados'
+      : 'Registro sin Nro. de Pedido, se cancelará este ítem';
 
   // Preview tabla
   var previewHTML = '<table style="width:100%;border-collapse:collapse">'+

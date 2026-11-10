@@ -3,19 +3,16 @@
    Se queda hasta que la app esté lista:
    - sin sesión: cuando aparece el login
    - con sesión: cuando la primera pantalla terminó de cargar sus datos
-   La primera vez de cada sesión se ve la animación completa; las siguientes entran directo con el logo ya formado.
+   La animación completa se ve en cada carga y recarga.
    Si pasan MAX ms sin estar lista, ofrece Reintentar / Seguir esperando.
    Rendimiento: al terminar la animación se dibuja el último cuadro y se deja de dibujar (la barra de carga es CSS);
    al quitar el splash se libera el contexto de WebGL. Sin WebGL (o con error) se muestra el logo plano. */
 (function(){
   var sp=document.getElementById('tsplash'); if(!sp) return;
-  // La animación se ve en cada carga y recarga (no se salta ni por la sesión ni por "reducir movimiento").
-  var rep=false;
-  var DUR=2.4, MIN=rep?1200:2800, MAX=9000;
+  var DUR=2.4, MIN=2800, MAX=9000;
   var t0=Date.now(), terminado=false, esperando=false, timer=null, animFin=false, gl=null, raf=0, parar=false;
   var sr=document.getElementById('ts-sr');
   var canvas=document.getElementById('ts-gl');
-  if(rep) sp.classList.add('rep');
 
   function marcarListo(){ animFin=true; sp.classList.add('listo'); }
   function sinGL(){ parar=true; sp.classList.add('nogl'); marcarListo(); }
@@ -36,7 +33,6 @@
     'float inLogo(vec2 uv){return step(0.,uv.x)*step(uv.x,1.)*step(0.,uv.y)*step(uv.y,1.);}',
     'float A(vec2 lp){vec2 u=luv(lp);return texture2D(uLogo,u).a*inLogo(u);}',
     'float H(vec2 lp){vec2 u=luv(lp);return texture2D(uSuave,u).a*inLogo(u);}',
-    'float blob(vec2 p,vec2 c,float k){vec2 d=p-c;return exp(-k*dot(d,d));}',
     // fondo: negro liso
     'vec3 fondo(vec2 p){return vec3(0.);}',
     'void main(){',
@@ -138,11 +134,10 @@
     }
     function arrancar(){
       ajustar();
-      if(rep){ dibujar(DUR); marcarListo(); return; }  // otras veces en la sesión: el logo ya formado
       ini=performance.now(); raf=requestAnimationFrame(cuadro);
     }
-    addEventListener('resize',function(){ if(!gl||terminado) return; ajustar(); dibujar(rep?DUR:tAct); });
-    document.addEventListener('visibilitychange',function(){ if(!document.hidden&&!rep&&tAct<DUR&&!raf&&!terminado&&!parar){ ini=performance.now()-tAct*1000; raf=requestAnimationFrame(cuadro); } });
+    addEventListener('resize',function(){ if(!gl||terminado) return; ajustar(); dibujar(tAct); });
+    document.addEventListener('visibilitychange',function(){ if(!document.hidden&&tAct<DUR&&!raf&&!terminado&&!parar){ ini=performance.now()-tAct*1000; raf=requestAnimationFrame(cuadro); } });
     canvas.addEventListener('webglcontextlost',function(e){ e.preventDefault(); sinGL(); });
 
     var img=new Image();
@@ -173,7 +168,6 @@
   }
   function terminar(){
     if(terminado) return; terminado=true; clearInterval(timer);
-    try{ sessionStorage.setItem('ts_vista',String(Date.now())); }catch(e){}
     if(sr) sr.textContent='Aplicación lista.';
     sp.classList.remove('failed'); sp.classList.add('ready');
     setTimeout(function(){ sp.classList.add('out'); },200);

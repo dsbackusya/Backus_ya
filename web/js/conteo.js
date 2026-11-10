@@ -118,6 +118,18 @@ function renderConteo(r){
   filterConteo();
 }
 
+// Packs, unidades y multiplicador de una fila (la pantalla y el Excel exportado usan la misma cuenta)
+function _conteoCalcRow(r){
+  var p=r.packs||0, u=r.und||r.total||0, m=1;
+  if(p>0){ m=Math.round(u/p)||1; }
+  else if(u>0){
+    var sn=String(r.sku||'').toLowerCase();
+    if(_MCONTEO_SKU_IDX&&_MCONTEO_SKU_IDX[sn]){m=Number(_MCONTEO_SKU_IDX[sn].multiplicador)||1;p=Math.round(u/m);}
+    else{m=1;p=u;}
+  }
+  return {packsReal:p,undReal:u,mult:m};
+}
+
 function _filterConteo(){
   var q=((document.getElementById('cnt-busq')||{}).value||'').toLowerCase();
   var filtered=(DATA.conteo||[]).filter(function(r){
@@ -144,16 +156,7 @@ function _filterConteo(){
   if(btnElimEAN) btnElimEAN.style.display=qTrim?'inline-flex':'none';
 
   // Agrupar filas por SKU — badge de N conteos + total acumulado visible
-  function _calcRow(r){
-    var p=r.packs||0, u=r.und||r.total||0, m=1;
-    if(p>0){ m=Math.round(u/p)||1; }
-    else if(u>0){
-      var sn=String(r.sku||'').toLowerCase();
-      if(_MCONTEO_SKU_IDX&&_MCONTEO_SKU_IDX[sn]){m=Number(_MCONTEO_SKU_IDX[sn].multiplicador)||1;p=Math.round(u/m);}
-      else{m=1;p=u;}
-    }
-    return {packsReal:p,undReal:u,mult:m};
-  }
+  var _calcRow=_conteoCalcRow;
   var grupos = new Map(); // Map preserva orden de inserción + lookups O(1) sin colisiones de prototype
   // Índice global para evitar interpolación de strings en onclick
   window._CNT_ROWS = {};
@@ -170,7 +173,8 @@ function _filterConteo(){
   });
   // Rendimiento: solo se dibujan de a 40 productos (se agregan más al bajar) y las filas de cada producto se crean al abrirlo.
   _CNT.grupos=[]; _CNT.mapa={}; _CNT.n=0;
-  grupos.forEach(function(g, key){ g.gid='cg-'+key.replace(/[^a-zA-Z0-9]/g,'_'); _CNT.grupos.push(g); _CNT.mapa[g.gid]=g; });
+  // id por posición: sanear el SKU ('A-1' y 'A_1' darían el mismo id) mezclaría las filas de productos distintos
+  grupos.forEach(function(g){ g.gid='cg-'+_CNT.grupos.length; _CNT.grupos.push(g); _CNT.mapa[g.gid]=g; });
   var t=document.getElementById('conteo-tbody');
   if(!t) return;
   t.innerHTML='';
@@ -241,7 +245,7 @@ function _cntVigilar(marca){
 // Wrapper seguro — evita interpolar strings dentro del onclick (los SKUs con comillas rompían el handler)
 function editarConteoRowSafe(rowNum){
   var snap = (window._CNT_ROWS||{})[rowNum];
-  if(!snap){ showToast('Recarga la página — datos desactualizados.','err'); return; }
+  if(!snap){ showToast('Recarga la página: datos desactualizados.','err'); return; }
   var r = snap.r;
   editarConteoRow(rowNum, snap.packsReal, r.unds||0, r.sku||'', r.ean||'', r.producto||'', snap.mult);
 }
@@ -331,7 +335,7 @@ function eliminarEANDia(){
       r.producto.toLowerCase().indexOf(qL)>-1
     );
   });
-  if(!matches.length){ showToast('No hay registros de HOY que coincidan con "'+q+'" — verificá el filtro de fecha','warn'); return; }
+  if(!matches.length){ showToast('No hay registros de HOY que coincidan con "'+q+'", verificá el filtro de fecha','warn'); return; }
   var totalUndElim=matches.reduce(function(a,r){return a+(Number(r.total)||Number(r.und)||0);},0);
   _confirmDialog(
     'Eliminar '+matches.length+' registro(s) de hoy',
@@ -374,15 +378,7 @@ function exportConteo(){
   rows = _applyFiltroFecha('cnt', rows);
   if(!rows.length){ showToast('No hay datos para exportar','err'); return; }
   var data = rows.map(function(r){
-    var packsReal = r.packs || 0;
-    var undReal   = r.und || r.total || 0;
-    var mult = 1;
-    if(packsReal > 0){ mult = Math.round(undReal/packsReal)||1; }
-    else if(undReal > 0 && _MCONTEO_SKU_IDX){
-      var sn = String(r.sku||'').toLowerCase();
-      if(_MCONTEO_SKU_IDX[sn]){ mult=Number(_MCONTEO_SKU_IDX[sn].multiplicador)||1; packsReal=Math.round(undReal/mult); }
-      else { packsReal=undReal; }
-    }
+    var c = _conteoCalcRow(r), packsReal = c.packsReal, undReal = c.undReal, mult = c.mult;
     return {'Fecha':r.fecha,'Hora':r.hora||'','EAN':r.ean,'SKU / Lovis':r.sku,'Producto':r.producto,
       'Packs':packsReal,'Multiplicador':mult,'UND Packs':undReal,'UNDS':r.unds||0,'Total':r.total,'Ubicación':r.ubicacion||''};
   });
@@ -503,7 +499,7 @@ function resolverEAN(){
             st.textContent = '';
             setProductoConteo(r.ean, r.sku, r.sap || '', r.producto, r.multiplicador, r.stock);
                   })
-          .withFailureHandler(function(e) { st.textContent = 'Error: ' + e.message; st.style.color = 'var(--danger)'; })
+          .withFailureHandler(function(e) { st.textContent = 'Error: ' + e.message; st.style.color = 'var(--danger)'; _cntCamNoEncontrado(); })
           .buscarEAN(S.token, ean);
       }
     });
@@ -649,6 +645,7 @@ function cntSelCampo(k){
   var rp=document.getElementById('cnt-row-p'), rs=document.getElementById('cnt-row-s'), nt=document.getElementById('cnt-kp-nt');
   if(rp) rp.classList.toggle('on', k==='p');
   if(rs) rs.classList.toggle('on', k==='s');
+  if(rp) rp.setAttribute('aria-pressed', k==='p'); if(rs) rs.setAttribute('aria-pressed', k==='s');
   if(nt) nt.textContent = k==='p' ? 'Sueltas' : 'Packs';
 }
 function _cntKpReset(){ cntSelCampo('p'); }
@@ -854,11 +851,10 @@ function editBufferItem(idx) {
   // No se quita del buffer todavía: si el usuario abandona la edición (cierra el formulario,
   // pierde la conexión, se le cae el navegador) antes de volver a guardar, el conteo sin enviar
   // no debe desaparecer. Se quita recién cuando el reemplazo quede guardado o encolado (más abajo).
-  _cnt._editBufferRef = item;
-
   // Cargarlo en el formulario activo — guardar _editRow para que el servidor sobreescriba esa fila
   _cnt._editRow = item._row || null;
   setProductoConteo(item.ean, item.sku, item.sap, item.producto, item.multiplicador);
+  _cnt._editBufferRef = item;   // después de setProductoConteo: esa función reconstruye _cnt y borraría la referencia
   document.getElementById('cnt-packs').value = item.packs;
   document.getElementById('cnt-und-sueltas').value = item.sueltas || '';
   calcTotalConteo();
@@ -976,7 +972,6 @@ function guardarYContinuar(){
           if(btnR) btnR.textContent='Guardar y escanear siguiente';
           limpiarFormConteo();
           setTimeout(_intentarSyncOffline, 3000);
-          setTimeout(function() { openScannerConteo(); }, 400);
         } else {
           showToast(r.error,'err');
         }
@@ -1000,9 +995,8 @@ function guardarYContinuar(){
       _conteoUpsertLocal(r.inserted[0]);
       _cntSucio = true; // la tabla y los totales de la pantalla de atrás se actualizan al cerrar el formulario
 
-      // Preparar para el siguiente
+      // Preparar para el siguiente (limpiarFormConteo -> _cntVista vuelve a encender la cámara)
       limpiarFormConteo();
-      setTimeout(function() { openScannerConteo(); }, 400);
     })
     .withFailureHandler(function(e){
       // Fallback offline si el internet falla justo al guardar
@@ -1019,7 +1013,6 @@ function guardarYContinuar(){
       _actualizarBannerPendientes();
       
       limpiarFormConteo();
-      setTimeout(function() { openScannerConteo(); }, 400);
     })
     .registrarConteo(S.token, [fila]);
 }

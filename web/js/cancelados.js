@@ -65,7 +65,7 @@ function loadCancelados(){
 
 function renderCancelados(r){
   if(_handleExpired(r,'cancelados-root')) return;
-  if(!r||!r.ok){errBox('cancelados-root',r&&r.error?r.error:'Error al cargar cancelados — revisa la hoja "PD CANCELADOS" en el spreadsheet','cancelados');return;}
+  if(!r||!r.ok){errBox('cancelados-root',r&&r.error?r.error:'Error al cargar cancelados, revisa la hoja "PD CANCELADOS" en el spreadsheet','cancelados');return;}
   DATA.cancelados=r.data;
   var total=r.data.reduce(function(a,x){return a+(Number(x.unidad)||0);},0);
   var pedidos=[...new Set(r.data.map(function(x){return x.nroPedido;}).filter(Boolean))].length;
@@ -129,16 +129,16 @@ function _filterCancelados(){
       '<td class="mono" style="font-size:12px">'+esc(r.fecha)+'</td>'+
       '<td class="mono" style="font-size:12px;color:var(--text3)">'+esc(r.hora)+'</td>'+
       '<td class="mono">'+esc(r.sku)+'</td>'+
-      '<td class="mono pedido-link" style="font-size:11.5px;color:var(--danger)">'+esc(r.nroPedido||'—')+'</td>'+
+      '<td class="mono pedido-link" style="font-size:11.5px;color:var(--danger)">'+esc(r.nroPedido||'-')+'</td>'+
       '<td class="td-desc" title="'+esc(r.desc)+'">'+esc(r.desc)+'</td>'+
       '<td class="r">'+fmt(r.pack)+'</td>'+
       '<td class="r" style="font-weight:700;color:var(--danger)">'+fmt(r.unidad)+'</td>'+
-      '<td style="font-size:12px">'+(r.marca?'<span class="brand-pill">'+esc(r.marca)+'</span>':'<span style="color:var(--text4)">—</span>')+'</td>'+
-      '<td class="c" style="font-size:12px;color:var(--text3)">'+esc(r.motorizado||'—')+'</td>'+
-      '<td class="r" style="font-size:12px">'+esc(r.envases||'—')+'</td>'+
+      '<td style="font-size:12px">'+(r.marca?'<span class="brand-pill">'+esc(r.marca)+'</span>':'<span style="color:var(--text4)">-</span>')+'</td>'+
+      '<td class="c" style="font-size:12px;color:var(--text3)">'+esc(r.motorizado||'-')+'</td>'+
+      '<td class="r" style="font-size:12px">'+esc(r.envases||'-')+'</td>'+
       '<td class="c"><span class="sal-est cx"><i></i>'+esc(r.estado||'Cancelado')+'</span></td>'+
-      '<td class="c" style="font-size:12px;color:var(--text3)">'+esc(r.revision||'—')+'</td>'+
-      '<td style="font-size:12px" title="'+esc(r.motivo)+'">'+esc(r.motivo||'—')+'</td>'+
+      '<td class="c" style="font-size:12px;color:var(--text3)">'+esc(r.revision||'-')+'</td>'+
+      '<td style="font-size:12px" title="'+esc(r.motivo)+'">'+esc(r.motivo||'-')+'</td>'+
       (S&&S.rol==='store'&&r.nroPedido?'<td class="c" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" title="Devolver este pedido a Salidas" data-nro="'+esc(r.nroPedido)+'" onclick="anularCancAbrir(this.dataset.nro)">'+ICO('undo',12)+'Anular</button></td>':(S&&S.rol==='store'?'<td></td>':''))+
     '</tr>';
   }).join('');
@@ -150,7 +150,7 @@ function _filterCancelados(){
 var _ANUL_NRO=null;
 function anularCancAbrir(nro){
   var filas=(DATA.cancelados||[]).filter(function(r){return r.nroPedido===nro;});
-  if(!filas.length){showToast('Recarga la página — los datos están desactualizados.','err');return;}
+  if(!filas.length){showToast('Recarga la página: los datos están desactualizados.','err');return;}
   _ANUL_NRO=nro;
   var und=filas.reduce(function(a,x){return a+(Number(x.unidad)||0);},0);
   document.getElementById('modal-anular-canc-info').innerHTML=
