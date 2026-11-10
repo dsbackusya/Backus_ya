@@ -1,5 +1,5 @@
 /* Splash de arranque (Dinet): una lente de vidrio nace como círculo, se vuelve baldosa, refracta el logo con dispersión
-   cromática sobre el violeta de la app y se disuelve dejando el logo con un relieve suave (2.4 s). Va en WebGL puro.
+   cromática sobre fondo negro y se disuelve dejando el logo con un relieve suave (2.4 s). Va en WebGL puro.
    Se queda hasta que la app esté lista:
    - sin sesión: cuando aparece el login
    - con sesión: cuando la primera pantalla terminó de cargar sus datos
@@ -37,14 +37,8 @@
     'float A(vec2 lp){vec2 u=luv(lp);return texture2D(uLogo,u).a*inLogo(u);}',
     'float H(vec2 lp){vec2 u=luv(lp);return texture2D(uSuave,u).a*inLogo(u);}',
     'float blob(vec2 p,vec2 c,float k){vec2 d=p-c;return exp(-k*dot(d,d));}',
-    // fondo: violeta de la app
-    'vec3 fondo(vec2 p){',
-    '  float sa=uRes.x/uRes.y;',
-    '  float d=length(p-vec2(0.,.06));',
-    '  vec3 c=mix(vec3(.50,.40,.96),vec3(.09,.05,.22),smoothstep(.0,.95,d));',
-    '  c+=vec3(.55,.45,1.)*blob(p,vec2(-.35*sa,.38),2.2)*.18;',
-    '  c*=1.-.35*smoothstep(.55,1.2,d);',
-    '  return c;}',
+    // fondo: negro liso
+    'vec3 fondo(vec2 p){return vec3(0.);}',
     'void main(){',
     '  vec2 p=(gl_FragCoord.xy-.5*uRes)/uRes.y;',
     '  vec2 uLuz=vec2(-.55,.7);',
