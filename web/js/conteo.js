@@ -535,7 +535,7 @@ function setProductoConteo(ean,sku,sap,producto,multiplicador,stock){
   document.getElementById('cnt-producto-nombre').textContent=producto;
   document.getElementById('cnt-sku-display').textContent=sku;
   var multUnd=document.getElementById('cnt-mult-und');if(multUnd)multUnd.textContent=mult;
-  var packSub=document.getElementById('cnt-pack-sub');if(packSub)packSub.textContent='× '+mult+' unidades';
+  var packSub=document.getElementById('cnt-pack-sub');if(packSub)packSub.textContent='× '+mult+' u por pack';
   var eanIn=document.getElementById('cnt-ean');if(eanIn)eanIn.value='';
   var acL=document.getElementById('ac-cnt');if(acL)acL.classList.remove('open');
   _cntBuscaUI();

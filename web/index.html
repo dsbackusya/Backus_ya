@@ -853,6 +853,37 @@ window.addEventListener('load', function(){
       <input type="hidden" id="cnt-mult"/>
       <input type="hidden" id="cnt-producto-h"/>
 
+      <!-- Producto leído: el panel va dentro de la página, debajo de la cámara (sin modal ni stock) -->
+      <section class="cnt-panel" id="cnt-entry">
+        <div id="cnt-producto-card" class="cnt-prod" style="display:none">
+          <div class="cnt-eb"><span class="mono" id="cnt-sku-display">-</span><button class="cnt-x" onclick="limpiarProductoConteo()" aria-label="Cambiar producto">Cambiar</button></div>
+          <div class="cnt-nombre" id="cnt-producto-nombre">-</div>
+          <div class="cnt-prev" id="cnt-prev"><i></i><span id="cnt-prev-t"></span></div>
+        </div>
+        <div class="cnt-row">
+          <div class="cnt-nm"><b>Packs</b><small id="cnt-pack-sub">&nbsp;</small></div>
+          <div class="cnt-step">
+            <button type="button" onclick="cntMover('cnt-packs',-1)" aria-label="Un pack menos"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <input class="cnt-val" id="cnt-packs" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()" onfocus="this.select()"/>
+            <button type="button" class="pl" onclick="cntMover('cnt-packs',1)" aria-label="Un pack más"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          </div>
+        </div>
+        <div class="cnt-row">
+          <div class="cnt-nm"><b>Sueltas</b><small>unidades sin pack</small></div>
+          <div class="cnt-step">
+            <button type="button" onclick="cntMover('cnt-und-sueltas',-1)" aria-label="Una unidad menos"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+            <input class="cnt-val" id="cnt-und-sueltas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()" onfocus="this.select()"/>
+            <button type="button" class="pl" onclick="cntMover('cnt-und-sueltas',1)" aria-label="Una unidad más"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+          </div>
+        </div>
+        <div class="cnt-tot">
+          <span class="cnt-lab">Total</span>
+          <div><span class="cnt-totv"><b id="cnt-total-display">0</b><span>unidades</span></span><div class="cnt-calc" id="cnt-calc"></div></div>
+        </div>
+        <div id="cnt-err" class="cnt-err"></div>
+        <button class="cnt-save" id="btn-guardar-siguiente" onclick="guardarYContinuar()">Guardar y escanear siguiente</button>
+      </section>
+
       <!-- Historial de hoy -->
       <div class="cnt-list">
         <div id="cnt-ean-status" class="cnt-foot"></div>
@@ -868,39 +899,6 @@ window.addEventListener('load', function(){
     </div>
   </div>
 
-  <!-- Hoja inferior: producto y cantidades (sin stock) -->
-  <section class="cnt-sheet" id="cnt-entry">
-    <div class="cnt-grab"></div>
-    <div id="cnt-producto-card" class="cnt-prod" style="display:none">
-      <div class="cnt-eb"><span class="mono" id="cnt-sku-display">-</span><button class="cnt-x" onclick="limpiarProductoConteo()" aria-label="Cambiar producto">Cambiar</button></div>
-      <div class="cnt-nombre" id="cnt-producto-nombre">-</div>
-      <div class="cnt-prev" id="cnt-prev"><i></i><span id="cnt-prev-t"></span></div>
-    </div>
-    <div class="cnt-tiles">
-      <div class="cnt-tile">
-        <div class="cnt-lb">Packs</div><div class="cnt-sb" id="cnt-pack-sub">&nbsp;</div>
-        <input class="cnt-val" id="cnt-packs" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()" onfocus="this.select()"/>
-        <div class="cnt-ctl">
-          <button type="button" onclick="cntMover('cnt-packs',-1)" aria-label="Un pack menos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-          <button type="button" class="pl" onclick="cntMover('cnt-packs',1)" aria-label="Un pack más"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        </div>
-      </div>
-      <div class="cnt-tile">
-        <div class="cnt-lb">Sueltas</div><div class="cnt-sb">unidades sin pack</div>
-        <input class="cnt-val" id="cnt-und-sueltas" type="number" inputmode="numeric" min="0" placeholder="0" oninput="calcTotalConteo()" onfocus="this.select()"/>
-        <div class="cnt-ctl">
-          <button type="button" onclick="cntMover('cnt-und-sueltas',-1)" aria-label="Una unidad menos"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-          <button type="button" class="pl" onclick="cntMover('cnt-und-sueltas',1)" aria-label="Una unidad más"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
-        </div>
-      </div>
-    </div>
-    <div class="cnt-tot">
-      <span class="cnt-lab">Total</span>
-      <div><span class="cnt-totv"><b id="cnt-total-display">0</b><span>unidades</span></span><div class="cnt-calc" id="cnt-calc"></div></div>
-    </div>
-    <div id="cnt-err" class="cnt-err"></div>
-    <button class="cnt-save" id="btn-guardar-siguiente" onclick="guardarYContinuar()">Guardar y escanear siguiente</button>
-  </section>
 </div>
 
 <!-- FORM: NUEVO / EDITAR SKU (asistente de 2 pasos) -->
