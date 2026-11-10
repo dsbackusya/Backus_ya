@@ -2117,7 +2117,8 @@ input.filter-inp:focus{
 #fs-conteo .cnt-h-t{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap}
 #fs-conteo .cnt-h-t small{font-size:11.5px;font-weight:400;color:var(--text3);margin-left:3px}
 #fs-conteo .cnt-h-b{display:flex;gap:6px;flex:none}
-#fs-conteo .cnt-h-b button{background:var(--surface3);border:0;color:var(--text);border-radius:10px;font-size:12.5px;min-width:44px;min-height:44px;padding:6px 12px;cursor:pointer;font-family:inherit}
+#fs-conteo .cnt-h-b button{background:var(--surface3);border:0;color:var(--text);border-radius:10px;font-size:12.5px;min-width:44px;min-height:44px;padding:6px 12px;cursor:pointer;font-family:inherit;opacity:.7}
+#fs-conteo .cnt-h-b button:hover,#fs-conteo .cnt-h-b button:focus-visible,#fs-conteo .cnt-h-b button:active{opacity:1}
 
 /* ── Producto leído: dentro del marco de la cámara ── */
 #fs-conteo .cnt-found{position:absolute;inset:0;pointer-events:auto}
@@ -2144,7 +2145,7 @@ input.filter-inp:focus{
 #fs-conteo .cnt-caret{display:none;width:2px;height:28px;margin-left:3px;background:var(--accent2);animation:cntBl 1s steps(1) infinite}
 #fs-conteo .cnt-row.on .cnt-caret{display:block}
 @keyframes cntBl{50%{opacity:0}}
-#fs-conteo .cnt-tline{display:flex;align-items:baseline;justify-content:space-between;padding:8px 4px 6px}
+#fs-conteo .cnt-tline{display:flex;align-items:baseline;justify-content:space-between;padding:8px 4px 12px}
 #fs-conteo .cnt-lab{font-size:13px;color:var(--text3)}
 #fs-conteo .cnt-tr2{display:flex;align-items:baseline;gap:8px}
 #fs-conteo .cnt-calc{font-size:13px;color:var(--text3)}
