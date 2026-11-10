@@ -744,15 +744,7 @@ function eliminarMTRow(rowNum){
 /* ── HELPER FILTRADO COMPARTIDO — usado por _filterXxx y exportXxx ──
    Evita duplicar la misma lógica de filtro en cada función de exportación. */
 function _getFilteredRows(name) {
-  if (name === 'stock') {
-    var q   = ((document.getElementById('stock-busq')||{}).value||'').toLowerCase();
-    var cat = ((document.getElementById('stock-cat') ||{}).value||'');
-    var mar = ((document.getElementById('stock-mar') ||{}).value||'');
-    return DATA.stock.filter(function(r) {
-      return (!q  || r.sku.toLowerCase().indexOf(q)>-1 || r.desc.toLowerCase().indexOf(q)>-1) &&
-             (!cat || r.categoria===cat) && (!mar || r.marca===mar);
-    });
-  }
+  if (name === 'stock') return _stkFiltrados();   // mismo filtro y orden que la pantalla (incluye el estado)
   if (name === 'salidas') {
     var base = _salBase();
     return _SAL_EST ? base.filter(function(r){return _salEstadoLinea(r)===_SAL_EST;}) : base;
