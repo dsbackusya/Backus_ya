@@ -84,35 +84,26 @@ function renderConteo(r){
   if(_handleExpired(r,'conteo-root')) return;
   if(!r||!r.ok){errBox('conteo-root',r?r.error:'Respuesta inválida del servidor');return;}
   DATA.conteo=r.data;
-  var totalUnd=r.data.reduce(function(a,x){return a+x.total;},0);
-  var skusU=new Set(r.data.map(function(x){ return x.sku; }));
-
+  var icoBuscar='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+  var icoScan='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="15"/></svg>';
   var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   document.getElementById('conteo-root').innerHTML=
-    '<div class="stats">'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg></div><div class="stat-label">Registros</div><div class="stat-val-row"><div class="stat-val" id="cnt-stat-total">'+r.data.length+'</div><span class="stat-unit-pill">filas</span></div></div>'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="stat-label">SKUs únicos</div><div class="stat-val-row"><div class="stat-val" id="cnt-stat-skus" style="color:var(--blue)">'+skusU.size+'</div><span class="stat-unit-pill">SKUs</span></div></div>'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="stat-label">Unidades contadas</div><div class="stat-val-row"><div class="stat-val" id="cnt-stat-und" style="color:var(--ok)">'+fmt(totalUnd)+'</div><span class="stat-unit-pill">und.</span></div></div>'+
+    '<div class="ci">'+
+    '<div class="ci-sum">'+
+      '<div class="ci-big"><div class="ci-k">Unidades contadas</div><div class="ci-v"><span id="cnt-stat-und">0</span><small>und.</small></div></div>'+
+      '<div class="ci-mini"><div class="ci-k">Registros</div><div class="ci-v" id="cnt-stat-total">0</div></div>'+
+      '<div class="ci-mini"><div class="ci-k">SKUs únicos</div><div class="ci-v" id="cnt-stat-skus">0</div></div>'+
+      '<div class="ci-mini"><div class="ci-k">Último conteo</div><div class="ci-v" id="cnt-stat-hora">-</div></div>'+
     '</div>'+
-    '<div class="sal2-pnl">'+
-    '<div class="sal2-fl">'+
-      '<div style="display:flex;gap:6px;align-items:center">'+
-        '<div class="sal2-srch"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="cnt-busq" placeholder="Buscar SKU, EAN, producto..." oninput="filterConteo()"/></div>'+
-        '<button class="cam-btn" title="Escanear" onclick="openScannerConteoFiltro()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="11"/></svg></button>'+
-        '<button class="btn btn-danger btn-sm" id="btn-eliminar-ean-dia" style="display:none;white-space:nowrap" onclick="eliminarEANDia()">'+ICO('x',13)+'Eliminar EAN del día</button>'+
-      '</div>'+
+    '<div class="ci-tools">'+
+      '<label class="ci-srch"><span class="ci-srch-i">'+icoBuscar+'</span><input id="cnt-busq" placeholder="Buscar SKU, EAN o producto" autocomplete="off" aria-label="Buscar SKU, EAN o producto" oninput="filterConteo()"/></label>'+
+      '<button type="button" class="ci-ib sq" title="Escanear para buscar" aria-label="Escanear para buscar" onclick="openScannerConteoFiltro()">'+icoScan+'</button>'+
       _fechaFiltroHTML('cnt','filterConteo','cntRangoCambio')+
-      '<span class="sal2-cnt" id="cnt-count"></span>'+
-      '<button id="btn-export-conteo" class="sal2-exp" onclick="exportConteo()">'+icoExportar+'Exportar</button>'+
+      '<button type="button" id="btn-export-conteo" class="ci-btn" onclick="exportConteo()">'+icoExportar+'Exportar</button>'+
     '</div>'+
-    '<div class="table-wrap"><table>'+
-      '<thead><tr>'+
-        '<th>Fecha</th><th class="col-hide-mobile">Hora</th><th class="col-hide-mobile">EAN</th><th>SKU/Lovis</th><th>Producto</th>'+
-        '<th class="r col-hide-mobile">PACKS</th><th class="r col-hide-mobile">x Mult.</th>'+
-        '<th class="r col-hide-mobile">UND PACKS</th><th class="r col-hide-mobile">UNDS</th><th class="r">TOTAL</th><th class="c">Editar</th><th class="c">-</th>'+
-      '</tr></thead>'+
-      '<tbody id="conteo-tbody"></tbody>'+
-    '</table></div>'+
+    '<div class="ci-strip" id="cnt-strip"><span id="cnt-strip-t"></span><button type="button" class="ci-del" id="btn-eliminar-ean-dia" onclick="eliminarEANDia()">Eliminar estos del día</button></div>'+
+    '<div class="ci-lh"><b>Por producto</b><span id="cnt-count"></span></div>'+
+    '<div id="conteo-list"></div>'+
     '</div>';
   _initFiltroFecha('cnt','filterConteo',{page:'conteo'});
   filterConteo();
@@ -129,108 +120,89 @@ function _conteoCalcRow(r){
   }
   return {packsReal:p,undReal:u,mult:m};
 }
+function _cntHoyStr(){
+  var h=new Date();
+  return String(h.getDate()).padStart(2,'0')+'/'+String(h.getMonth()+1).padStart(2,'0')+'/'+h.getFullYear();
+}
+function _cntCoincide(r,qL){
+  return !qL||r.sku.toLowerCase().indexOf(qL)>-1||r.producto.toLowerCase().indexOf(qL)>-1||r.ean.toLowerCase().indexOf(qL)>-1;
+}
 
 function _filterConteo(){
-  var q=((document.getElementById('cnt-busq')||{}).value||'').toLowerCase();
-  var filtered=(DATA.conteo||[]).filter(function(r){
-    return !q||r.sku.toLowerCase().indexOf(q)>-1||
-           r.producto.toLowerCase().indexOf(q)>-1||
-           r.ean.toLowerCase().indexOf(q)>-1;
-  });
+  var qRaw=((document.getElementById('cnt-busq')||{}).value||'').trim(), q=qRaw.toLowerCase();
+  var filtered=(DATA.conteo||[]).filter(function(r){ return _cntCoincide(r,q); });
   filtered=_applyFiltroFecha('cnt',filtered);
 
-  // Actualizar stat cards con los datos filtrados
-  var totalUnd=filtered.reduce(function(a,x){return a+x.total;},0);
-  var skusU=new Set();
-  filtered.forEach(function(x){ skusU.add(x.sku); });
-  var st=document.getElementById('cnt-stat-total'); if(st)st.textContent=filtered.length;
-  var ss=document.getElementById('cnt-stat-skus');  if(ss)ss.textContent=skusU.size;
-  var su=document.getElementById('cnt-stat-und');   if(su)su.textContent=fmt(totalUnd);
+  // Resumen con los datos filtrados
+  var totalUnd=0, skusU=new Set(), hora='';
+  filtered.forEach(function(x){ totalUnd+=x.total; skusU.add(x.sku); if(x.hora&&String(x.hora)>hora) hora=String(x.hora); });
+  var put=function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
+  put('cnt-stat-total',filtered.length); put('cnt-stat-skus',skusU.size); put('cnt-stat-und',fmt(totalUnd)); put('cnt-stat-hora',hora?hora.slice(0,5):'-');
 
-  var el=document.getElementById('cnt-count');
-  if(el)el.textContent=filtered.length+' registros';
-
-  // Mostrar/ocultar botón "Eliminar EAN del día" según si hay búsqueda activa
-  var qTrim=((document.getElementById('cnt-busq')||{}).value||'').trim();
-  var btnElimEAN=document.getElementById('btn-eliminar-ean-dia');
-  if(btnElimEAN) btnElimEAN.style.display=qTrim?'inline-flex':'none';
-
-  // Agrupar filas por SKU — badge de N conteos + total acumulado visible
-  var _calcRow=_conteoCalcRow;
-  var grupos = new Map(); // Map preserva orden de inserción + lookups O(1) sin colisiones de prototype
-  // Índice global para evitar interpolación de strings en onclick
-  window._CNT_ROWS = {};
+  // Agrupar filas por SKU
+  var grupos=new Map(); // Map preserva el orden de inserción
+  window._CNT_ROWS={};   // índice por fila: editarConteoRowSafe lee de aquí (sin interpolar strings en onclick)
   filtered.forEach(function(r){
-    var c=_calcRow(r), key=r.sku||r.ean;
-    if(!grupos.has(key)){
-      grupos.set(key, {sku:r.sku,ean:r.ean,producto:r.producto,mult:c.mult,filas:[],totalUnd:0,totalPacks:0,totalUnds:0});
-    }
-    var g = grupos.get(key);
+    var c=_conteoCalcRow(r), key=r.sku||r.ean;
+    if(!grupos.has(key)) grupos.set(key,{sku:r.sku,ean:r.ean,producto:r.producto,mult:c.mult,filas:[],totalUnd:0,totalPacks:0,totalUnds:0});
+    var g=grupos.get(key);
     g.filas.push({r:r,packsReal:c.packsReal,undReal:c.undReal,mult:c.mult});
     g.totalUnd+=c.undReal; g.totalPacks+=c.packsReal; g.totalUnds+=Number(r.unds||0);
-    // Snapshot por fila para que editarConteoRowSafe lea desde aquí
-    window._CNT_ROWS[r._row] = {r:r, packsReal:c.packsReal, mult:c.mult};
+    window._CNT_ROWS[r._row]={r:r,packsReal:c.packsReal,mult:c.mult};
   });
-  // Rendimiento: solo se dibujan de a 40 productos (se agregan más al bajar) y las filas de cada producto se crean al abrirlo.
-  _CNT.grupos=[]; _CNT.mapa={}; _CNT.n=0;
+  // Rendimiento: solo se dibujan de a 40 productos (se agregan más al bajar) y los conteos de cada producto se crean al abrirlo.
   // id por posición: sanear el SKU ('A-1' y 'A_1' darían el mismo id) mezclaría las filas de productos distintos
+  _CNT.grupos=[]; _CNT.mapa={}; _CNT.n=0;
   grupos.forEach(function(g){ g.gid='cg-'+_CNT.grupos.length; _CNT.grupos.push(g); _CNT.mapa[g.gid]=g; });
-  var t=document.getElementById('conteo-tbody');
-  if(!t) return;
-  t.innerHTML='';
-  if(!_CNT.grupos.length){ t.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:40px">Sin registros</td></tr>'; _cntVigilar(null); return; }
+
+  var el=document.getElementById('cnt-count');
+  if(el) el.textContent=_CNT.grupos.length+(_CNT.grupos.length===1?' producto':' productos')+' · '+filtered.length+(filtered.length===1?' registro':' registros');
+
+  // "Eliminar estos del día": solo aparece con una búsqueda y dice cuántos registros de HOY borraría
+  var strip=document.getElementById('cnt-strip');
+  if(strip){
+    var hoy=_cntHoyStr(), nHoy=qRaw?(DATA.conteo||[]).filter(function(r){ return r.fecha===hoy&&_cntCoincide(r,q); }).length:0;
+    strip.classList.toggle('on',nHoy>0);
+    if(nHoy>0){ var t=document.getElementById('cnt-strip-t'); if(t) t.innerHTML='<b>'+nHoy+(nHoy===1?' registro':' registros')+'</b> de hoy coinciden con «'+esc(qRaw)+'».'; }
+  }
+
+  var host=document.getElementById('conteo-list');
+  if(!host) return;
+  host.innerHTML='';
+  if(!_CNT.grupos.length){ host.innerHTML='<div class="ci-empty">'+(qRaw?'No hay conteos que coincidan.<br>Prueba con otro SKU, EAN o nombre.':'Sin registros')+'</div>'; _cntVigilar(null); return; }
   _cntMas();
 }
 
 var _CNT={ grupos:[], mapa:{}, n:0, lote:40, obs:null };
-function _cntFila(item, gid, display){
-  var r=item.r;
-  return '<tr class="cg-rows-'+gid+'" style="display:'+display+'">'+
-    '<td class="mono" style="font-size:11px;color:var(--text3);padding-left:28px">'+esc(r.fecha)+'</td>'+
-    '<td class="mono col-hide-mobile" style="font-size:11px;color:var(--text3)">'+esc(r.hora||'')+'</td>'+
-    '<td class="mono col-hide-mobile" style="font-size:10px;color:var(--text3)">'+esc(r.ean)+'</td>'+
-    '<td class="mono" style="color:var(--text3);font-size:12px">'+esc(r.sku)+'</td>'+
-    '<td class="td-desc" style="color:var(--text3);font-size:12px">'+esc(r.producto)+'</td>'+
-    '<td class="r col-hide-mobile" style="font-size:15px;font-weight:600">'+fmt(item.packsReal)+'</td>'+
-    '<td class="r col-hide-mobile" style="color:var(--text3)">x'+item.mult+'</td>'+
-    '<td class="r col-hide-mobile">'+fmt(item.undReal)+'</td>'+
-    '<td class="r col-hide-mobile" style="color:var(--text2)">'+fmt(r.unds||0)+'</td>'+
-    '<td class="r" style="color:var(--ok)">'+fmt(r.total)+'</td>'+
-    '<td class="c"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editarConteoRowSafe('+r._row+')">Editar</button></td>'+
-    '<td class="c"><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();eliminarConteoRow('+r._row+')">'+ICO('x',14,'s')+'</button></td>'+
-  '</tr>';
+// Un conteo dentro de un producto: hora, packs × multiplicador + sueltas, total y acciones
+function _cntFila(item){
+  var r=item.r, h=String(r.hora||'').slice(0,5);
+  var cuando=(r.fecha&&r.fecha!==_cntHoyStr()?String(r.fecha).slice(0,5)+' ':'')+h;
+  var sueltas=Number(r.unds||0);
+  return '<div class="cr"><span class="cr-h">'+esc(cuando)+'</span>'+
+    '<span class="cr-f"><b>'+fmt(item.packsReal)+'</b> '+(item.packsReal===1?'pack':'packs')+' × '+item.mult+(sueltas?' + <b>'+fmt(sueltas)+'</b> '+(sueltas===1?'suelta':'sueltas'):'')+'</span>'+
+    '<span class="cr-t">'+fmt(r.total)+'</span>'+
+    '<span class="cr-a"><button type="button" class="ci-ib" onclick="editarConteoRowSafe('+r._row+')" aria-label="Editar el conteo de '+esc(cuando)+'">Editar</button>'+
+    '<button type="button" class="ci-ib del" onclick="eliminarConteoRow('+r._row+')" aria-label="Eliminar el conteo de '+esc(cuando)+'">'+ICO('x',14,'s')+'</button></span></div>';
 }
 function _cntGrupo(g){
-  var n=g.filas.length, gid=g.gid;
-  var badge=n>1?'<span style="background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px">'+n+'×</span>':'';
-  var chevron=n>1?'<span id="chv-'+gid+'" style="margin-left:auto;font-size:11px;color:var(--text3);transition:transform .2s">'+ICO('right',12,'s')+'</span>':'';
-  var cursor=n>1?'cursor:pointer;user-select:none;':'';
-  var html='<tr id="cgh-'+gid+'" style="background:var(--surface2);border-top:2px solid var(--border2);'+cursor+'" '+(n>1?'onclick="_toggleGrupoConteo(\''+gid+'\')"':'')+'>' +
-    '<td colspan="4" style="padding:8px 12px">'+
-      '<div style="display:flex;align-items:center;gap:6px">'+badge+
-        '<span class="mono" style="font-weight:700;font-size:13px;margin-left:'+(n>1?'6':'0')+'px">'+esc(g.sku)+'</span>'+
-        '<span style="color:var(--text3);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.producto)+'</span>'+
-        chevron+
-      '</div>'+
-    '</td>'+
-    '<td class="r col-hide-mobile" style="font-weight:700;color:var(--accent)">'+fmt(g.totalPacks)+'</td>'+
-    '<td class="r col-hide-mobile" style="color:var(--text3);font-size:11px">x'+g.mult+'</td>'+
-    '<td class="r col-hide-mobile" style="font-weight:700">'+fmt(g.totalUnd)+'</td>'+
-    '<td class="r col-hide-mobile" style="font-weight:700;color:var(--text2)">'+fmt(g.totalUnds||0)+'</td>'+
-    '<td class="r" style="font-weight:700;font-size:15px;color:var(--ok)">'+fmt(g.totalUnd+(g.totalUnds||0))+'</td>'+
-    '<td class="c" colspan="'+(window.matchMedia('(max-width:900px)').matches?2:3)+'"></td>'+
-  '</tr>';
-  // Un solo registro: se muestra de una vez. Varios: se crean al abrir el producto.
-  if(n===1) html+=_cntFila(g.filas[0],gid,'table-row');
-  return html;
+  var n=g.filas.length, gid=g.gid, tot=g.totalUnd+(g.totalUnds||0);
+  var ini=esc(String(g.producto||g.sku||'?').charAt(0).toUpperCase());
+  return '<div class="cg" id="'+gid+'"><button type="button" class="cg-h" aria-expanded="false" aria-controls="'+gid+'-b" onclick="_toggleGrupoConteo(\''+gid+'\')">'+
+    '<span class="cg-av" aria-hidden="true">'+ini+'</span>'+
+    '<span class="cg-m"><span class="cg-n">'+esc(g.producto)+'</span><span class="cg-s"><i>'+esc(g.sku)+'</i>'+(g.ean?'<i>'+esc(g.ean)+'</i>':'')+'</span></span>'+
+    '<span class="cg-c"><span class="ci-pill">'+n+(n===1?' conteo':' conteos')+'</span></span>'+
+    '<span class="cg-t">'+fmt(tot)+'<small>unidades</small></span>'+
+    '<span class="cg-chev" aria-hidden="true">'+ICO('right',16,'s')+'</span></button>'+
+    '<div class="cg-b" id="'+gid+'-b" hidden></div></div>';
 }
 function _cntMas(){
-  var t=document.getElementById('conteo-tbody'); if(!t) return;
+  var t=document.getElementById('conteo-list'); if(!t) return;
   var marca=document.getElementById('cnt-mas'); if(marca) marca.remove();
   var desde=_CNT.n, hasta=Math.min(desde+_CNT.lote,_CNT.grupos.length), h='', i;
   for(i=desde;i<hasta;i++) h+=_cntGrupo(_CNT.grupos[i]);
   _CNT.n=hasta;
-  if(hasta<_CNT.grupos.length) h+='<tr id="cnt-mas"><td colspan="12" style="text-align:center;color:var(--text3);padding:14px;font-size:12px">Mostrando '+hasta+' de '+_CNT.grupos.length+' productos…</td></tr>';
+  if(hasta<_CNT.grupos.length) h+='<div id="cnt-mas" class="ci-more">Mostrando '+hasta+' de '+_CNT.grupos.length+' productos…</div>';
   t.insertAdjacentHTML('beforeend',h);
   _cntVigilar(document.getElementById('cnt-mas'));
 }
@@ -251,11 +223,12 @@ function editarConteoRowSafe(rowNum){
 }
 
 function _toggleGrupoConteo(gid){
-  var rows=document.querySelectorAll('.cg-rows-'+gid), chv=document.getElementById('chv-'+gid);
-  if(rows.length){ rows.forEach(function(tr){ tr.remove(); }); if(chv) chv.style.transform=''; return; }   // cerrar
-  var g=_CNT.mapa[gid], cab=document.getElementById('cgh-'+gid); if(!g||!cab) return;                       // abrir: se crean ahora
-  cab.insertAdjacentHTML('afterend',g.filas.map(function(item){ return _cntFila(item,gid,'table-row'); }).join(''));
-  if(chv) chv.style.transform='rotate(90deg)';
+  var el=document.getElementById(gid), b=document.getElementById(gid+'-b'), g=_CNT.mapa[gid]; if(!el||!b||!g) return;
+  var abrir=b.hasAttribute('hidden');
+  if(abrir&&!b.firstChild) b.innerHTML=g.filas.map(function(item){ return _cntFila(item); }).join('');   // los conteos se crean al abrir
+  if(abrir) b.removeAttribute('hidden'); else b.setAttribute('hidden','');
+  el.classList.toggle('open',abrir);
+  var h=el.querySelector('.cg-h'); if(h) h.setAttribute('aria-expanded',abrir?'true':'false');
 }
 
 function eliminarConteoRow(rowNum){
@@ -325,16 +298,8 @@ function editarConteoRow(rowNum, packs, unds, sku, ean, producto, mult){
 function eliminarEANDia(){
   var q=((document.getElementById('cnt-busq')||{}).value||'').trim();
   if(!q){ showToast('Escribe un EAN, SKU o nombre en el buscador primero','warn'); return; }
-  var hoy=new Date();
-  var hoyStr=String(hoy.getDate()).padStart(2,'0')+'/'+String(hoy.getMonth()+1).padStart(2,'0')+'/'+hoy.getFullYear();
-  var matches=(DATA.conteo||[]).filter(function(r){
-    var qL=q.toLowerCase();
-    return r.fecha===hoyStr && (
-      r.sku.toLowerCase().indexOf(qL)>-1 ||
-      r.ean.toLowerCase().indexOf(qL)>-1 ||
-      r.producto.toLowerCase().indexOf(qL)>-1
-    );
-  });
+  var hoyStr=_cntHoyStr(), qL=q.toLowerCase();
+  var matches=(DATA.conteo||[]).filter(function(r){ return r.fecha===hoyStr&&_cntCoincide(r,qL); });
   if(!matches.length){ showToast('No hay registros de HOY que coincidan con "'+q+'", verificá el filtro de fecha','warn'); return; }
   var totalUndElim=matches.reduce(function(a,r){return a+(Number(r.total)||Number(r.und)||0);},0);
   _confirmDialog(
@@ -370,11 +335,8 @@ function exportConteo(){
     });return;
   }
   var rows = DATA.conteo || [];
-  var q=((document.getElementById('cnt-busq')||{}).value||'').toLowerCase();
-  rows = rows.filter(function(r){
-    return !q || r.sku.toLowerCase().indexOf(q)>-1 ||
-           r.producto.toLowerCase().indexOf(q)>-1 || r.ean.toLowerCase().indexOf(q)>-1;
-  });
+  var q=((document.getElementById('cnt-busq')||{}).value||'').trim().toLowerCase();
+  rows = rows.filter(function(r){ return _cntCoincide(r,q); });
   rows = _applyFiltroFecha('cnt', rows);
   if(!rows.length){ showToast('No hay datos para exportar','err'); return; }
   var data = rows.map(function(r){
@@ -909,7 +871,7 @@ var _cntSucio=false;
 function _cntFlush(){
   if(!_cntSucio) return;
   _cntSucio=false;
-  setTimeout(function(){ if(typeof filterConteo==='function') filterConteo(); _updateConteoStats(); }, 250);
+  setTimeout(function(){ if(typeof filterConteo==='function') filterConteo(); }, 250);
 }
 function _conteoUpsertLocal(row){
   if(!DATA.conteo) DATA.conteo=[];

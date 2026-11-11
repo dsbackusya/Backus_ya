@@ -576,15 +576,3 @@ function _llenarCamposSKU(skuId, descId, marcaId, resolved){
   // Cerrar cualquier lista de autocomplete abierta
   document.querySelectorAll('.ac-list.open').forEach(function(el){ el.classList.remove('open'); });
 }
-function _updateConteoStats() {
-  if (!DATA.conteo) return;
-  var totalUnd = 0, skusU = new Set();
-  DATA.conteo.forEach(function(x) { totalUnd += x.total; skusU.add(x.sku); });
-  // Actualizar stat cards si están visibles (la página de conteo está activa)
-  var sReg = document.querySelector('#conteo-root .stat-val');
-  if (!sReg) return; // página no está renderizada aún
-  var cards = document.querySelectorAll('#conteo-root .stat-val');
-  if (cards[0]) cards[0].textContent = DATA.conteo.length;
-  if (cards[1]) cards[1].textContent = skusU.size;
-  if (cards[2]) cards[2].textContent = fmt(totalUnd);
-}

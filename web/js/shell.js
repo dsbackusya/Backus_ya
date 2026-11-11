@@ -231,7 +231,6 @@ function _intentarSyncOffline() {
         if (!DATA.conteo) DATA.conteo = [];
         r.inserted.forEach(function(row) { _conteoUpsertLocal(row); });
         if (typeof filterConteo === 'function') filterConteo();
-        _updateConteoStats();
       }
       // Marcar conteo como stale para que recargue al navegar
       PAGE_LOADED['conteo'] = false;
