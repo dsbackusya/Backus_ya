@@ -1129,12 +1129,13 @@
     return { ok: true, data: r.data };
   });
 
-  // Elimina una orden de compra. Solo el administrador (la base también lo exige); las entradas ya registradas con esa OC no se tocan.
+  // Elimina una orden de compra. El administrador, cualquiera; una tienda, solo las VENCIDAS de su sede (la base lo exige).
+  // Las entradas ya registradas con esa OC no se tocan.
   API.eliminarOC = guard(async function (p, oc) {
-    if (p.rol !== 'admin') return { ok: false, error: 'Solo el administrador puede eliminar órdenes de compra' };
+    if (p.rol !== 'admin' && p.rol !== 'store') return { ok: false, error: 'Tu cuenta no puede eliminar órdenes de compra' };
     var r = await sb.from('ordenes_compra').delete().eq('oc', str(oc)).select('oc');
     if (r.error) throw r.error;
-    if (!r.data || !r.data.length) return { ok: false, error: 'No se pudo eliminar la orden: ya no existe o no tienes permiso' };
+    if (!r.data || !r.data.length) return { ok: false, error: p.rol === 'store' ? 'Solo puedes eliminar órdenes vencidas de tu sede' : 'No se pudo eliminar la orden: ya no existe o no tienes permiso' };
     return { ok: true };
   });
 

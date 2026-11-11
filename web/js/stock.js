@@ -355,7 +355,7 @@ function _dashOCFilas(){
     var o=m.ocMap[r.oc], sede=ids[r.sedeId]||'';
     var col=o?o.col:(r.estado==='Recibido'?'r':r.estado==='Cancelada'?'x':'p');
     var txt=o?o.txt:(r.estado==='Recibido'?'Recibida':r.estado==='Cancelada'?'Cancelada':'Pendiente');
-    return {oc:r.oc,pv:r.proveedor,en:r.entrega,sede:sede,f:r.fechaRecepcion,col:col,txt:txt};
+    return {oc:r.oc,pv:r.proveedor,en:r.entrega,sede:sede,sedeId:r.sedeId,f:r.fechaRecepcion,col:col,txt:txt};
   }).filter(function(x){ return !DASH.sede||x.sede===DASH.sede; });
 }
 var _DASH_RANK={v:0,h:1,p:2,r:3,x:4};
@@ -375,21 +375,27 @@ function dashOCTabla(){
     var fa=iso(a.f), fb=iso(b.f); return (a.col==='r'||a.col==='x')?(fa<fb?1:fa>fb?-1:0):(fa<fb?-1:fa>fb?1:0);
   });
   var n=document.getElementById('db-ocn'); if(n) n.textContent=L.length+(L.length===1?' orden':' órdenes');
-  var admin=S&&S.rol==='admin';
-  var h='<div class="table-wrap"><table><thead><tr><th>Orden de compra</th><th class="col-hide-mobile">Proveedor</th><th class="col-hide-mobile">Entrega</th><th class="col-hide-mobile">Sede</th><th class="col-hide-mobile">Fecha</th><th>Estado</th>'+(admin?'<th class="col-hide-mobile" style="width:1%"></th>':'')+'</tr></thead><tbody>';
+  var hayDel=L.some(_dashPuedeEliminar);
+  var h='<div class="table-wrap"><table><thead><tr><th>Orden de compra</th><th class="col-hide-mobile">Proveedor</th><th class="col-hide-mobile">Entrega</th><th class="col-hide-mobile">Sede</th><th class="col-hide-mobile">Fecha</th><th>Estado</th>'+(hayDel?'<th class="col-hide-mobile" style="width:1%"></th>':'')+'</tr></thead><tbody>';
   h+=L.length?L.map(function(x){
-    var del=admin?'<button class="db-x" data-oc="'+esc(x.oc)+'" aria-label="Eliminar la orden '+esc(x.oc)+'" onclick="event.stopPropagation();dashEliminarOC(this.dataset.oc)">'+_DASH_ICO_TR+'Eliminar</button>':'';
+    var del=_dashPuedeEliminar(x)?'<button class="db-x" data-oc="'+esc(x.oc)+'" aria-label="Eliminar la orden '+esc(x.oc)+'" onclick="event.stopPropagation();dashEliminarOC(this.dataset.oc)">'+_DASH_ICO_TR+'Eliminar</button>':'';
     return '<tr class="db-oc" data-oc="'+esc(x.oc)+'" tabindex="0" role="button" aria-label="Ver el detalle de '+esc(x.oc)+'" onclick="abrirDetalleEntradaOCGlobal(this.dataset.oc)">'+
-      '<td><div class="db-n">'+esc(x.oc)+'</div><div class="db-mm">'+esc(x.pv)+(x.sede?' · '+esc(x.sede):'')+'</div>'+(admin?'<div class="db-am">'+del+'</div>':'')+'</td>'+
+      '<td><div class="db-n">'+esc(x.oc)+'</div><div class="db-mm">'+esc(x.pv)+(x.sede?' · '+esc(x.sede):'')+'</div>'+(del?'<div class="db-am">'+del+'</div>':'')+'</td>'+
       '<td class="db-pv col-hide-mobile" title="'+esc(x.pv)+'">'+esc(x.pv)+'</td><td class="db-pv col-hide-mobile" title="'+esc(x.en)+'">'+esc(x.en||'-')+'</td><td class="db-pv col-hide-mobile">'+esc(x.sede||'-')+'</td>'+
       '<td class="db-m col-hide-mobile">'+esc(x.f||'-')+'</td><td><span class="db-pill '+x.col+'"><i></i>'+esc(x.txt)+'</span></td>'+
-      (admin?'<td class="col-hide-mobile"><div class="db-a">'+del+'</div></td>':'')+'</tr>';
+      (hayDel?'<td class="col-hide-mobile"><div class="db-a">'+del+'</div></td>':'')+'</tr>';
   }).join(''):'<tr><td colspan="7" class="db-vacio">Ninguna orden coincide.<br>Prueba con otro estado, proveedor o número.</td></tr>';
   el.innerHTML=h+'</tbody></table></div>';
 }
+/* Quién puede eliminar una OC: el administrador, cualquiera; una tienda, solo las vencidas de su sede */
+function _dashPuedeEliminar(x){
+  if(!S) return false;
+  if(S.rol==='admin') return true;
+  return S.rol==='store'&&x.col==='v'&&String(x.sedeId)===String(S.sheetId);
+}
 function dashOCChip(f){ DASH.oc=f||''; dashOCTabla(); }
 
-// Eliminar una OC (solo el administrador): las entradas ya registradas con esa OC no se borran
+// Eliminar una OC (administrador: cualquiera; tienda: las vencidas de su sede): las entradas ya registradas con esa OC no se borran
 function dashEliminarOC(oc){
   var o=(DATA.oc||[]).filter(function(x){return x.oc===oc;})[0]; if(!o) return;
   _confirmDialog('Eliminar orden de compra',
