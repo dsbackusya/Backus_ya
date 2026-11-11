@@ -561,21 +561,20 @@ function renderStock(r){
   var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   var pctCon=rows.length?Math.round(conStock/rows.length*100):0;
   var cn={}; rows.forEach(function(x){ if(x.categoria) cn[x.categoria]=(cn[x.categoria]||0)+1; });
-  var catCirc=cats.slice().sort(function(a,b){return cn[b]-cn[a];}).map(function(c){
-    return '<button type="button" class="stk-ci" data-cat="'+esc(c)+'" onclick="stkCat(this.dataset.cat)"><span class="c">'+esc(c.charAt(0).toUpperCase())+'<em>'+cn[c]+'</em></span>'+esc(c)+'</button>';}).join('');
-  var alerta=function(k,n,txt,acc,col,ico){ return n>0?'<div class="stk-al" style="--c:'+col+'" onclick="stkAl(\''+k+'\')" tabindex="0" role="button" data-kb><div class="t"><div class="ic">'+ico+'</div><div class="n">'+fmt(n)+'</div></div><div class="l">'+txt+'</div><div class="go">'+acc+' →</div></div>':''; };
-  var alertas=alerta('neg',negativos,'Negativos: salieron más unidades de las que entraron','Revisar','#E39AA2','<svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17v.5"/></svg>')+
-    alerta('sp',sinCosto,'Con stock pero sin costo: falta el precio en el maestro','Ver productos','#E8B84A','<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5M12 15.5v.5"/></svg>');
+  var alerta=function(k,n,txt,col,ico){ return n>0?'<button type="button" class="stk-ap" data-k="'+k+'" style="--c:'+col+'" onclick="stkAl(\''+k+'\')">'+ico+'<b>'+fmt(n)+'</b><span>'+txt+'</span></button>':''; };
+  var alertas=alerta('neg',negativos,'negativos por revisar','#FF8A9B','<svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4"/><path d="M12 17v.5"/></svg>')+
+    alerta('sp',sinCosto,'con stock y sin costo','#F2B04B','<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5M12 15.5v.5"/></svg>');
+  _STK_CNT={all:rows.length,con:conStock,sin:sinStock,neg:negativos};
+  _STK_CATS=cats.slice().sort(function(a,b){return cn[b]-cn[a];}).map(function(c){return [c,cn[c]];});
   var anillo=function(){ var C=188.5, a=conStock/tot*C, b=sinStock/tot*C, g=negativos/tot*C;
     var seg=function(l,o,col){ return l>0?'<circle cx="40" cy="40" r="30" fill="none" stroke="'+col+'" stroke-width="9" class="stk-rs" stroke-dasharray="0 '+C+'" data-da="'+Math.max(l-2,1).toFixed(1)+'" stroke-dashoffset="'+(-o).toFixed(1)+'" transform="rotate(-90 40 40)"/>':''; };
     return '<svg class="stk-ring" viewBox="0 0 80 80" width="96" height="96" aria-hidden="true"><circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="9"/>'+seg(a,0,'#5AD19A')+seg(b,a,'rgba(255,255,255,.55)')+seg(g,a+b,'#E39AA2')+'<text x="40" y="39" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">'+pctCon+'%</text><text x="40" y="51" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.8)">con stock</text></svg>'; };
   document.getElementById('stock-root').innerHTML=
     '<div class="stk-hero">'+
       '<div class="stk-top"><button type="button" class="stk-hb" onclick="toggleMobileMenu()" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>'+
-        '<div class="stk-ms"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><input id="stock-busq-m" placeholder="Buscar SKU…" oninput="stkBusqM(this.value)" autocomplete="off"/></div>'+
-        '<div class="stk-sd">'+esc(_sedeBonita(S.usuario||'').replace(/^DS\s+/i,''))+'<svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg></div></div>'+
-      '<div class="stk-hello"><i></i><span id="stk-upd">Actualizado ahora</span></div>'+
-      '<h1 class="stk-h1">Tu stock,<br><span>bajo control</span></h1>'+
+        '<div class="stk-tt">Stock</div>'+
+        '<div class="stk-sd">'+esc(_sedeBonita(S.usuario||'').replace(/^DS\s+/i,''))+'<svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg></div>'+
+        '<button type="button" class="stk-hb stk-plus" onclick="abrirSKUForm(null)" aria-label="Nuevo producto"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>'+
     '<div class="stk-sum">'+
       '<div class="stk-card stk-card-h">'+anillo()+'<div class="stk-cb"><div class="stk-k">Control de inventario</div>'+
         '<div class="stk-v"><span data-n="'+rows.length+'">'+fmt(rows.length)+'</span><small>SKUs</small></div>'+
@@ -584,10 +583,14 @@ function renderStock(r){
       '<div class="stk-card"><div class="stk-k">Unidades en stock</div><div class="stk-v"><span data-n="'+totalUnd+'">'+fmt(totalUnd)+'</span><small>und.</small></div><div class="stk-n">Solo stock positivo'+(packTot?' · '+fmt(Math.round(packTot))+' packs':'')+'</div></div>'+
       '<div class="stk-card"><div class="stk-k">Costo total</div><div class="stk-v">S/ '+(costoTotal>=1000?'<span data-n="'+(costoTotal/1000).toFixed(1)+'" data-d="1">'+(costoTotal/1000).toFixed(1)+'</span> K':fmt(Math.round(costoTotal)))+'</div><div class="stk-n">S/ '+fmt(Math.round(costoTotal*10)/10)+' en total</div></div>'+
     '</div></div>'+
-    (alertas?'<div class="stk-alw"><div class="stk-sec"><b>Requiere atención</b><span>Toca para filtrar</span></div><div class="stk-als">'+alertas+'</div></div>':'')+
-    '<div class="stk-sec"><b>Categorías</b><a onclick="stkVerCats()" id="stk-vc">Ver todas</a></div>'+
-    '<div class="stk-cats" id="stk-cats"><button type="button" class="stk-ci add" onclick="abrirSKUForm(null)"><span class="c">+</span>Nuevo</button>'+catCirc+'</div>'+
+    (alertas?'<div class="stk-aw">'+alertas+'</div>':'')+
     '<div class="sal2-pnl">'+
+    '<div id="stk-sent"></div>'+
+    '<div class="stk-fx" id="stk-fx"><div class="stk-sr">'+
+      '<button type="button" class="stk-hb stk-mn" onclick="toggleMobileMenu()" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>'+
+      '<label class="stk-in" id="stk-inw"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><input id="stock-busq-m" type="text" placeholder="Buscar SKU o producto" oninput="stkBusqM(this.value)" autocomplete="off" enterkeyhint="search"/><button type="button" class="x" onclick="stkBorrarQ()" aria-label="Borrar búsqueda"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></label>'+
+      '<button type="button" class="stk-fb" id="stk-fb" onclick="stkFiltros(true)" aria-label="Filtros"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg><i id="stk-fbn">0</i></button></div>'+
+      '<div class="stk-ch" id="stk-ch"></div></div>'+
     '<div class="sal2-fl">'+
       '<div class="sal2-seg">'+seg('sbtn-todos','','Todos',rows.length)+seg('sbtn-con','con','Con stock',conStock)+seg('sbtn-sin','sin','Sin stock',sinStock)+seg('sbtn-neg','neg','Negativos',negativos)+'</div>'+
       '<div class="sal2-srch">'+icoBuscar+'<input id="stock-busq" placeholder="Buscar SKU o producto…" oninput="filterStock()"/></div>'+
@@ -605,16 +608,11 @@ function renderStock(r){
     '</div>';
 
   var ob=document.getElementById('stk-cbar'); if(ob) ob.remove();
-  var cb=document.createElement('div'); cb.id='stk-cbar'; cb.className='stk-cbar';
-  cb.innerHTML='<button type="button" class="stk-hb" onclick="toggleMobileMenu()" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="stk-pk"><span>'+fmt(rows.length)+' SKUs</span><b>'+undK+' und.</b><b>S/ '+costoK+'</b></div>';
-  document.body.appendChild(cb);
   if(_STK_IO) _STK_IO.disconnect();
-  if('IntersectionObserver' in window){
-    _STK_IO=new IntersectionObserver(function(es){
-      var e=es[es.length-1], r=e.boundingClientRect;
-      cb.classList.toggle('on', !e.isIntersecting && r.height>0 && r.bottom<70 && window.innerWidth<=820);
-    },{rootMargin:'-70px 0px 0px 0px'});
-    _STK_IO.observe(document.querySelector('.stk-hero'));
+  var fx=document.getElementById('stk-fx'), se=document.getElementById('stk-sent');
+  if('IntersectionObserver' in window&&fx&&se){
+    _STK_IO=new IntersectionObserver(function(es){ var e=es[es.length-1]; fx.classList.toggle('stuck', !e.isIntersecting && e.boundingClientRect.top<0 && window.innerWidth<=820); });
+    _STK_IO.observe(se);
   }
   _STK_H={};
   if(!document.getElementById('stk-dr')){
@@ -664,13 +662,14 @@ function _filterStock(){
   var el=document.getElementById('stock-count');
   if(el)el.textContent=filtered.length+' productos';
   var sn=document.getElementById('stk-sec-n'); if(sn) sn.textContent=filtered.length+' productos';
+  _stkUiMovil();
   _STK.lista=filtered; _STK.n=0; _STK.tabla=!_STK.mq.matches;
   var t=document.getElementById('stock-tbody'), c=document.getElementById('stock-cards');
   if(t) t.innerHTML='';
   if(c) c.innerHTML='';
   if(!filtered.length){
     if(t&&_STK.tabla) t.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:40px">Sin resultados</td></tr>';
-    if(c&&!_STK.tabla) c.innerHTML='<div style="text-align:center;color:var(--text3);padding:40px">Sin resultados</div>';
+    if(c&&!_STK.tabla) c.innerHTML='<div class="stk-vc"><b>Sin resultados</b>Prueba con otra búsqueda o quita los filtros.<br><button type="button" onclick="stkLimpiar()">Quitar filtros</button></div>';
     _stkVigilar(null);
     return;
   }
@@ -697,11 +696,9 @@ function _stkFila(r,mx){
 }
 function _stkPk(v,r){ if(!(r&&r.packs>0)) return ''; var x=v/r.packs, e=Math.abs(x-Math.round(x))<.05; return (e?fmt(Math.round(x)):x.toLocaleString('es-PE',{minimumFractionDigits:1,maximumFractionDigits:1}))+' packs'; }
 var _STK_IO=null, _STK_H={}, _STK_ROW=0;
-var _STK_CAT='', _STK_T=0, _STK_ORD=0, _STK_ORDL=['Mayor stock','Menor stock','A–Z'];
+var _STK_CAT='', _STK_T=0, _STK_ORD=0, _STK_CNT={}, _STK_CATS=[], _STK_ORDL=['Mayor stock','Menor stock','A–Z'];
 function stkOrden(){ _STK_ORD=(_STK_ORD+1)%3; var e=document.getElementById('stk-ord'); if(e) e.textContent=_STK_ORDL[_STK_ORD]; filterStock(); }
-function stkAl(k){ setStockFiltroEstado(_STOCK_ESTADO_FILTRO===k?'':k); var c=document.getElementById('stk-cats'); if(c&&c.parentNode) c.scrollIntoView({block:'start',behavior:'smooth'}); }
-function stkUpd(){ var e=document.getElementById('stk-upd'); if(!e||!_STK_T) return; var m=Math.floor((Date.now()-_STK_T)/60000); e.textContent=m<1?'Actualizado ahora':'Actualizado hace '+m+' min'; }
-setInterval(function(){ if(!document.hidden) stkUpd(); },30000);
+function stkAl(k){ setStockFiltroEstado(_STOCK_ESTADO_FILTRO===k?'':k); var c=document.getElementById('stk-fx'); if(c) c.scrollIntoView({block:'start',behavior:'smooth'}); }
 
 /* Entrada suave: los números suben contando y el anillo se dibuja (solo en móvil y sin "reducir movimiento") */
 function stkAnim(){
@@ -716,18 +713,82 @@ function stkAnim(){
   });
 }
 function stkBusqM(v){ var i=document.getElementById('stock-busq'); if(i){ i.value=v; filterStock(); } }
-function stkVerCats(){ var c=document.getElementById('stk-cats'), a=document.getElementById('stk-vc'); if(!c) return; var on=c.classList.toggle('all'); if(a) a.textContent=on?'Ver menos':'Ver todas'; }
 function stkCat(c){
   _STK_CAT=(_STK_CAT===c?'':c);
   var s=document.getElementById('stock-cat'); if(s) s.value=_STK_CAT;
-  document.querySelectorAll('.stk-ci[data-cat]').forEach(function(b){ b.classList.toggle('on',b.dataset.cat===_STK_CAT); });
   filterStock();
 }
 function _stkCard(r){
-  var e=r.stock>0?'ok':(r.stock<0?'ng':'no'), ini=esc((r.desc||'?').charAt(0).toUpperCase()), t=((r.desc||'?').charCodeAt(0)||0)%5;
-  return '<div class="stk-cd" onclick="stkAbrir('+r._row+')" tabindex="0" role="button" data-kb aria-label="Abrir detalle de '+esc(r.desc)+'"><div class="stk-av t'+t+'">'+ini+'<i class="'+e+'"></i></div>'+
-    '<div class="stk-m"><div class="stk-t1"><b>'+esc(r.desc)+'</b><span>'+_STK_LAB[e]+'</span></div>'+
-    '<p><u'+(e==='ng'?' class="ng"':'')+'>'+fmt(r.stock)+' und.</u>'+(r.packs>0?' · '+_stkPk(r.stock,r):'')+' · '+esc(r.sku)+(r.marca?' · '+esc(r.marca):'')+'</p></div></div>';
+  var e=r.stock>0?'ok':(r.stock<0?'ng':'no'), mx=DATA._stockMax||1;
+  var tag=e==='no'?'<span class="stk-tg no">Sin stock</span>':(e==='ng'?'<span class="stk-tg ng">Negativo</span>':'');
+  return '<div class="stk-cd" onclick="stkAbrir('+r._row+')" tabindex="0" role="button" data-kb aria-label="Abrir detalle de '+esc(r.desc)+'">'+
+    '<div class="stk-n1">'+esc(r.desc)+'</div>'+
+    '<div class="stk-m1"><span class="sk">'+esc(r.sku)+'</span>'+(r.marca?'<i></i><span>'+esc(r.marca)+'</span>':'')+tag+'</div>'+
+    '<div class="stk-s1 '+e+'"><b>'+fmt(r.stock)+'</b><small>und.'+((r.packs>0&&e!=='no')?' · '+_stkPk(r.stock,r):'')+'</small></div>'+
+    '<div class="stk-b1"><i style="width:'+Math.max(Math.min(100,Math.abs(r.stock)/mx*100),e==='no'?0:2)+'%;background:'+_STK_COL[e]+'"></i></div></div>';
+}
+
+/* Stock móvil: chips de estado y categoría, insignia de filtros y hoja de filtros */
+function _stkChips(){
+  var el=document.getElementById('stk-ch'); if(!el) return;
+  var c=_STK_CNT, est=_STOCK_ESTADO_FILTRO, h='', sl=el.scrollLeft;
+  [['','Todos',c.all],['con','Con stock',c.con],['sin','Sin stock',c.sin],['neg','Negativos',c.neg]].forEach(function(x){
+    h+='<button type="button" class="stk-c'+(est===x[0]?' act':'')+'" onclick="setStockFiltroEstado(\''+x[0]+'\')">'+x[1]+'<span>'+x[2]+'</span></button>'; });
+  var vis=_STK_CATS.slice(0,4);
+  if(_STK_CAT&&!vis.some(function(x){return x[0]===_STK_CAT;})){ var f=_STK_CATS.filter(function(x){return x[0]===_STK_CAT;})[0]; if(f) vis.unshift(f); }
+  vis.forEach(function(x){ h+='<button type="button" class="stk-c'+(x[0]===_STK_CAT?' act':'')+'" data-cat="'+esc(x[0])+'" onclick="stkCat(this.dataset.cat)">'+esc(x[0])+'<span>'+x[1]+'</span></button>'; });
+  el.innerHTML=h; el.scrollLeft=sl;
+  var a=el.querySelector('.act');
+  if(a&&(a.offsetLeft<el.scrollLeft||a.offsetLeft+a.offsetWidth>el.scrollLeft+el.clientWidth)) el.scrollLeft=Math.max(0,a.offsetLeft-16);
+  var ks=['con','sin','neg'];
+  document.querySelectorAll('#stock-root .stk-leg>span').forEach(function(s,i){ s.classList.toggle('on',est===ks[i]); });
+  document.querySelectorAll('#stock-root .stk-ap').forEach(function(b){ b.classList.toggle('on',est===b.dataset.k); });
+}
+function _stkUiMovil(){
+  _stkChips();
+  var mar=(document.getElementById('stock-mar')||{}).value||'';
+  var nf=(_STK_CAT?1:0)+(mar?1:0)+(_STK_ORD?1:0);
+  var fb=document.getElementById('stk-fb'), fn=document.getElementById('stk-fbn');
+  if(fb) fb.classList.toggle('on',nf>0); if(fn) fn.textContent=nf;
+  var q=document.getElementById('stock-busq-m'), w=document.getElementById('stk-inw'); if(w&&q) w.classList.toggle('has',!!q.value);
+  _stkFsSync();
+}
+function stkBorrarQ(){ var q=document.getElementById('stock-busq-m'); if(q){ q.value=''; q.focus(); } stkBusqM(''); }
+function stkLimpiar(){
+  _STK_CAT=''; _STK_ORD=0;
+  ['stock-cat','stock-mar','stock-busq','stock-busq-m'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+  var o=document.getElementById('stk-ord'); if(o) o.textContent=_STK_ORDL[0];
+  setStockFiltroEstado('');
+}
+function stkOrdenSet(i){ _STK_ORD=i; var e=document.getElementById('stk-ord'); if(e) e.textContent=_STK_ORDL[_STK_ORD]; filterStock(); }
+function stkMarca(v){ var s=document.getElementById('stock-mar'); if(s) s.value=v; filterStock(); }
+function _stkFsSync(){
+  var d=document.getElementById('stk-fs'); if(!d) return;
+  d.querySelectorAll('[data-cat]').forEach(function(b){ b.classList.toggle('act',b.dataset.cat===_STK_CAT); });
+  d.querySelectorAll('[data-o]').forEach(function(b){ b.classList.toggle('act',+b.dataset.o===_STK_ORD); });
+  var m=document.getElementById('stk-fm'), s=document.getElementById('stock-mar'); if(m&&s) m.value=s.value;
+  var ex=document.getElementById('stk-fex'), et=document.getElementById('stk-exp-t'); if(ex&&et) ex.textContent=et.textContent;
+}
+function stkFiltros(on){
+  var d=document.getElementById('stk-fs'), m=document.getElementById('stk-fdim');
+  if(!d){
+    m=document.createElement('div'); m.id='stk-fdim'; m.onclick=function(){ stkFiltros(false); }; document.body.appendChild(m);
+    d=document.createElement('div'); d.id='stk-fs'; d.setAttribute('role','dialog'); d.setAttribute('aria-label','Filtros'); d.setAttribute('aria-hidden','true'); document.body.appendChild(d);
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&d.classList.contains('on')) stkFiltros(false); });
+  }
+  if(on){
+    var ms=document.getElementById('stock-mar');
+    d.innerHTML='<div class="gr"></div><h4>Filtros</h4>'+
+      '<h5>Categoría</h5><div class="wr">'+_STK_CATS.map(function(x){return '<button type="button" class="stk-c" data-cat="'+esc(x[0])+'" onclick="stkCat(this.dataset.cat)">'+esc(x[0])+'<span>'+x[1]+'</span></button>';}).join('')+'</div>'+
+      '<h5>Marca</h5><select class="sel" id="stk-fm" onchange="stkMarca(this.value)">'+(ms?ms.innerHTML:'')+'</select>'+
+      '<h5>Ordenar por</h5><div class="or">'+_STK_ORDL.map(function(o,i){return '<button type="button" class="stk-c" data-o="'+i+'" onclick="stkOrdenSet('+i+')">'+o+'</button>';}).join('')+'</div>'+
+      '<button type="button" class="ex" onclick="exportStock()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span id="stk-fex">Exportar</span></button>'+
+      '<div class="ft"><button type="button" onclick="stkLimpiar()">Limpiar</button><button type="button" class="ok" onclick="stkFiltros(false)">Ver productos</button></div>';
+    _stkFsSync();
+  }
+  d.classList.toggle('on',!!on); m.classList.toggle('on',!!on); d.setAttribute('aria-hidden',on?'false':'true');
+  if(on){ var ok=d.querySelector('.ok'); if(ok) ok.focus({preventScroll:true}); }
+  else { var fb=document.getElementById('stk-fb'); if(fb&&document.activeElement&&d.contains(document.activeElement)) fb.focus({preventScroll:true}); }
 }
 // Dibuja el siguiente lote y deja una marca al final: cuando se acerca a la pantalla, se dibuja el que sigue.
 function _stkMas(){
