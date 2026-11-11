@@ -1115,31 +1115,20 @@
     return { ok: true, data: r.data };
   });
 
-  API.getRecepcionesPorTienda = guard(async function (p, fecha) {
-    var r = await sb.rpc('recepciones_por_sede', { p_fecha: parseFecha(fecha) });
+  // Salidas de los últimos 7 días por sede, día y hora, más retornables por confirmar y cancelados (una sola llamada)
+  API.getDashboardSalidas = guard(async function () {
+    var r = await sb.rpc('dashboard_salidas');
     if (r.error) throw r.error;
-    return {
-      ok: true,
-      data: r.data.map(function (x) { return { nombre: x.nombre, recepciones: x.recepciones, ocs: x.ocs || [] }; }),
-      fecha: fecha || fmtFecha(hoyISO())
-    };
+    return { ok: true, data: r.data };
   });
 
-  API.getDetalleEntradaOC = guard(async function (p, tiendaNombre, oc) {
-    var sede = (_sedes || []).find(function (s) { return s.nombre === tiendaNombre; });
-    if (!sede) return { ok: false, error: 'Tienda no encontrada: ' + tiendaNombre };
-    var r = await sb.from('entradas').select('*').eq('sede_id', sede.id).eq('oc', str(oc)).order('id');
+  // Elimina una orden de compra. Solo el administrador (la base también lo exige); las entradas ya registradas con esa OC no se tocan.
+  API.eliminarOC = guard(async function (p, oc) {
+    if (p.rol !== 'admin') return { ok: false, error: 'Solo el administrador puede eliminar órdenes de compra' };
+    var r = await sb.from('ordenes_compra').delete().eq('oc', str(oc)).select('oc');
     if (r.error) throw r.error;
-    return {
-      ok: true, tienda: tiendaNombre, oc: str(oc),
-      data: r.data.map(function (x) {
-        return {
-          tienda: tiendaNombre, fecha: fmtFecha(x.fecha), sku: str(x.sku), desc: str(x.descripcion),
-          unidades: num(x.unidades), factura: str(x.factura), proveedor: str(x.proveedor),
-          dynamics: str(x.dynamics), responsable: str(x.responsable)
-        };
-      })
-    };
+    if (!r.data || !r.data.length) return { ok: false, error: 'No se pudo eliminar la orden: ya no existe o no tienes permiso' };
+    return { ok: true };
   });
 
   API.getDetalleEntradaOCGlobal = guard(async function (p, oc) {
