@@ -4645,3 +4645,20 @@ tr.dx-h:focus-visible{outline:2px solid var(--accent2);outline-offset:-2px;borde
 #documentos-root .sal2-seg{flex-wrap:wrap}
 .sal2-pnl .dx-body .dx-hf{padding:0 0 14px}
 @media(max-width:900px){.dx-mf{display:inline}}
+
+/* Documentos: cabecera fija, indicador de pestañas, filas con datos, línea móvil, atajo y fila nueva */
+#documentos-root .sal2-pnl thead th{position:sticky;top:0;z-index:2;background:#0A0A0B !important}
+#documentos-root .sal2-seg#dc-seg{position:relative}
+#documentos-root #dc-seg button{position:relative;z-index:1}
+#documentos-root #dc-seg button.on,#documentos-root #dc-seg button.on:hover{background:transparent !important;box-shadow:none}
+.dx-pill{position:absolute;left:0;top:0;border-radius:13px;background:#fff;box-shadow:0 8px 20px -8px rgba(0,0,0,.7);transform-origin:0 0;transition:transform .22s cubic-bezier(.77,0,.175,1);z-index:0;pointer-events:none}
+.sal2-pnl tbody tr.dx-fl td:first-child{box-shadow:inset 3px 0 0 #7B61EF}
+.sal2-pnl tbody tr.dx-fl .dx-n b{color:var(--text)}
+.dx-mv{display:none;margin-top:3px;font:500 11px var(--font-mono);color:var(--accent2)}
+.dx-lk{background:none;border:0;padding:0;font:inherit;color:#FF8A9B;cursor:pointer;text-decoration:underline;text-underline-offset:3px;transition:opacity .15s}
+.dx-lk:hover{opacity:.8}.dx-lk:focus-visible{outline:2px solid var(--accent2);outline-offset:3px;border-radius:4px}
+.dx-bar .btn:disabled{opacity:.6;cursor:default}
+tr.dx-h.nw td{animation:dxFlash 1.8s cubic-bezier(.23,1,.32,1)}
+@keyframes dxFlash{from{background:rgba(123,97,239,.3)}to{background:transparent}}
+@media(max-width:900px){.dx-mv:not(:empty){display:block}}
+@media(prefers-reduced-motion:reduce){.dx-pill{transition:none}tr.dx-h.nw td{animation:none}}

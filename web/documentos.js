@@ -54,7 +54,7 @@ var DCX = {
   nc:{ fac:'', lineas:[] },
   tr:{ destino:'TADA EVENTOS', obs:'', lineas:[] },
   res:{ nc:[], tr:[] }, tm:{},
-  hist:[], filtro:'', q:'', edit:null, tot:0, hay:false, draftMsg:false
+  hist:[], filtro:'', q:'', edit:null, tot:0, hay:false, nDif:0, primDif:'', nuevoId:null, draftMsg:false
 };
 
 /* ── utilidades ── */
@@ -120,17 +120,36 @@ function renderDocumentos(foco){
       '<div class="sal2-card"><div class="sal2-k">Último documento</div><div class="sal2-v dx-ult" id="dc-s-ult">-</div><div class="sal2-n" id="dc-s-ultn"></div></div>'+
     '</div>'+
     '<div class="sal2-pnl">'+
-      '<div class="sal2-fl"><div class="sal2-seg" role="group" aria-label="Tipo de documento">'+DCX_TABS.map(function(t){
-        return '<button class="'+(DCX.tab===t[0]?'on':'')+'" aria-pressed="'+(DCX.tab===t[0])+'" onclick="dcTab(\''+t[0]+'\')">'+t[1]+(t[0]==='his'?' <span>'+DCX.hist.length+'</span>':'')+'</button>';
+      '<div class="sal2-fl"><div class="sal2-seg" id="dc-seg" role="group" aria-label="Tipo de documento"><span class="dx-pill" id="dc-pill" aria-hidden="true"></span>'+DCX_TABS.map(function(t){
+        return '<button data-t="'+t[0]+'" class="'+(DCX.tab===t[0]?'on':'')+'" aria-pressed="'+(DCX.tab===t[0])+'" onclick="dcTab(\''+t[0]+'\')">'+t[1]+(t[0]==='his'?' <span>'+DCX.hist.length+'</span>':'')+'</button>';
       }).join('')+'</div></div>'+
-      _dcAvisos()+
+      '<div id="dc-avisos">'+_dcAvisos()+'</div>'+
       '<div class="dx-body"><div class="dx-pane" id="dc-body"></div></div>'+
     '</div>';
+  dcPill(false);
+  requestAnimationFrame(function(){ dcPill(false); });   // otra vez cuando ya cargó la tipografía
   _dcCuerpo(foco);
 }
+/* El fondo blanco de la pestaña activa se desliza hasta la nueva (solo transform: no toca el layout) */
+function dcPill(anim){
+  var seg=document.getElementById('dc-seg'), p=document.getElementById('dc-pill'), b=seg&&seg.querySelector('button.on'); if(!p||!b) return;
+  p.style.transition=anim?'':'none';
+  p.style.height=b.offsetHeight+'px'; p.style.width='100px';
+  p.style.transform='translate('+b.offsetLeft+'px,'+b.offsetTop+'px) scale('+(b.offsetWidth/100)+',1)';
+  if(!anim){ void p.offsetWidth; p.style.transition=''; }
+}
+window.addEventListener('resize',function(){ dcPill(false); });
 function dcTab(t){
   if(DCX.edit && DCX.edit.tab!==t) dcCancelarEdicion(true);
-  DCX.tab=t; renderDocumentos();
+  if(DCX.tab===t) return;
+  DCX.tab=t;
+  var seg=document.getElementById('dc-seg'), body=document.getElementById('dc-body');
+  if(!seg||!body){ renderDocumentos(); return; }
+  [].forEach.call(seg.querySelectorAll('button'),function(b){ var on=b.dataset.t===t; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); });
+  dcPill(true);
+  var av=document.getElementById('dc-avisos'); if(av) av.innerHTML=_dcAvisos();
+  body.classList.remove('dx-pane'); void body.offsetWidth; body.classList.add('dx-pane');
+  _dcCuerpo();
 }
 function _dcAvisos(){
   var h='';
@@ -189,7 +208,9 @@ function dcResumen(){
   if(DCX.tab==='mar'){
     var t=DCX.tot||0, hay=!!DCX.hay;
     k.textContent='Diferencia valorizada'; v.textContent=_dcMoney(t); v.className='sal2-v dx-v'+(!hay?'':t===0?' zero':' neg');
-    n.textContent=!hay?'Escribe las cantidades para calcularla':t===0?'Entrega y devolución cuadran':'Envases no devueltos, valorizados';
+    if(!hay) n.textContent='Escribe las cantidades para calcularla';
+    else if(!DCX.nDif) n.textContent='Entrega y devolución cuadran';
+    else n.innerHTML='<button class="dx-lk" onclick="dcIrDif()">'+DCX.nDif+(DCX.nDif===1?' envase con diferencia':' envases con diferencia')+' · Ver</button>';
   } else if(DCX.tab==='his'){
     var hoy=H.filter(function(d){ return d.fecha===DCX.d.hoy; }).length;
     k.textContent='Documentos de hoy'; v.textContent=hoy; v.className='sal2-v dx-v'; n.textContent=hoy===1?'guardado con la fecha de hoy':'guardados con la fecha de hoy';
@@ -203,6 +224,12 @@ function dcResumen(){
   $('dc-s-ult').textContent=ul?(DCX_NOM[ul.tipo]||'Documento')+' N.º '+ul.id:'-';
   $('dc-s-ultn').textContent=ul?_dcF(ul.fecha)+(ul.usuario?' · '+ul.usuario:''):'';
 }
+/* atajo del resumen: lleva a la primera fila con diferencia y pone el cursor en su Entrega */
+function dcIrDif(){
+  var tr=document.getElementById('dm-r'+DCX.primDif); if(!tr) return;
+  tr.scrollIntoView({block:'center'});
+  var i=tr.querySelector('input'); if(i){ i.focus({preventScroll:true}); i.select(); }
+}
 var DCX_NOM = { marcaje:'Marcaje', nc:'NC', traslado:'Traslado' };
 
 /* ── Marcaje ── */
@@ -214,7 +241,7 @@ function _dcMarcajeHtml(){
     h+='<tr class="dx-grp"><td colspan="7">'+esc(g.g)+'</td></tr>';
     g.rows.forEach(function(r,ri){
       var id=gi+'_'+ri;
-      h+='<tr><td class="dx-n"><b>'+esc(r.ref)+(r.caja?'<span class="dx-x">× '+g.mult+'</span>':'')+'</b><small>'+(r.sku?r.sku+' · ':'')+esc(r.code)+(r.caja||g.barril?'':' · en cajas')+'</small></td>'+
+      h+='<tr id="dm-r'+id+'"><td class="dx-n"><b>'+esc(r.ref)+(r.caja?'<span class="dx-x">× '+g.mult+'</span>':'')+'</b><small>'+(r.sku?r.sku+' · ':'')+esc(r.code)+(r.caja||g.barril?'':' · en cajas')+'</small><small class="dx-mv" id="dm-m'+id+'"></small></td>'+
         ia(gi,ri,r,'ei',r.ei,'Entrega')+ia(gi,ri,r,'di',r.di,'Devolución')+
         '<td class="c col-hide-mobile dx-m" id="dm-e'+id+'">-</td><td class="c col-hide-mobile dx-m" id="dm-v'+id+'">-</td>'+
         '<td class="dx-d" id="dm-d'+id+'">0</td><td class="r col-hide-mobile dx-m" id="dm-c'+id+'">-</td></tr>';
@@ -240,7 +267,7 @@ function dcMIn(el){
 }
 /* Diferencia: cualquier diferencia va en rojo; si entrega y devolución cuadran y hay datos, en verde; sin datos, en gris */
 function dcCalcM(){
-  var tot=0, hay=false, num=function(n){ return n?n.toLocaleString('es-PE'):'-'; };
+  var tot=0, hay=false, nDif=0, prim='', num=function(n){ return n?n.toLocaleString('es-PE'):'-'; };
   DCX.gr.forEach(function(g,gi){ g.rows.forEach(function(r,ri){
     var e=_dcEnt(g,r), v=_dcDev(g,r), d=e-v, c=g.barril?0:Math.abs(d)*_dcPrecio(g,r); tot+=c;
     if(r.ei||r.di) hay=true;
@@ -249,8 +276,12 @@ function dcCalcM(){
     if(ee) ee.textContent=num(e); if(ve) ve.textContent=num(v);
     de.textContent=d>0?'+'+d:d; de.className='dx-d'+(d!==0?' neg':(r.ei||r.di)?' zero':'');
     ce.textContent=(d===0||g.barril)?'-':_dcMoney(c);
+    if(d!==0){ nDif++; if(!prim) prim=id; }
+    var tr=document.getElementById('dm-r'+id), mv=document.getElementById('dm-m'+id);
+    if(tr) tr.classList.toggle('dx-fl',!!(r.ei||r.di));           // fila con cantidades: barra violeta a la izquierda
+    if(mv) mv.textContent=(e||v)?'ENT '+num(e)+' · DEV '+num(v)+(d===0||g.barril?'':' · '+_dcMoney(c)):'';   // en el celular las columnas ENT, DEV y Costo se ocultan
   }); });
-  DCX.tot=tot; DCX.hay=hay;
+  DCX.tot=tot; DCX.hay=hay; DCX.nDif=nDif; DCX.primDif=prim;
   var te=document.getElementById('dc-bar-tot');
   if(te){ te.textContent=_dcMoney(tot); te.className='dx-v'+(!hay?'':tot===0?' zero':' neg'); }
   var h='';
@@ -445,12 +476,13 @@ function dcGuardar(tipo,imprimir){
       if(!d.destino){ dcMal('dc-dest-otro'); return; }
     }
   }
-  DCX.busy=true;
+  DCX.busy=true; _dcBusy(true,imprimir);
   var editando=DCX.edit&&DCX.edit.tipo===tipo ? DCX.edit : null;
   var llamada=google.script.run
     .withSuccessHandler(function(r){
       DCX.busy=false;
-      if(!r||!r.ok){ showToast((r&&r.error)||'No se pudo guardar','err'); return; }
+      if(!r||!r.ok){ _dcBusy(false); showToast((r&&r.error)||'No se pudo guardar','err'); return; }
+      DCX.nuevoId=editando?editando.id:r.id;
       var doc;
       if(editando){
         doc=DCX.hist.filter(function(x){ return x.id===editando.id; })[0];
@@ -477,8 +509,15 @@ function dcGuardar(tipo,imprimir){
       renderDocumentos();
       if(imprimir&&doc) dcVer(doc);
     })
-    .withFailureHandler(function(e){ DCX.busy=false; showToast(e.message,'err'); });
+    .withFailureHandler(function(e){ DCX.busy=false; _dcBusy(false); showToast(e.message,'err'); });
   if(editando) llamada.actualizarDocumento(S.token,editando.id,d); else llamada.guardarDocumento(S.token,d);
+}
+/* mientras guarda: los botones se bloquean y el que se pulsó dice «Guardando…» */
+function _dcBusy(on,imp){
+  [].forEach.call(document.querySelectorAll('.dx-bar .btn'),function(b,i){
+    if(on){ b.dataset.t=b.textContent; b.disabled=true; if(i===(imp?1:0)) b.textContent='Guardando…'; }
+    else { b.disabled=false; if(b.dataset.t) b.textContent=b.dataset.t; }
+  });
 }
 /* limpia el formulario del tipo (Reparto, Transporte y Placa se conservan al crear: sirven para la NC del mismo reparto) */
 function _dcReset(tipo){
@@ -586,6 +625,7 @@ function dcHistFiltrar(){
     var txt=[d.reparto,d.nroFactura,d.destino,d.placa,d.transporte].concat((d.lineas||[]).map(function(l){ return (l.desc||'')+' '+(l.sku||'')+' '+(l.code||''); })).join(' ').toLowerCase();
     return txt.indexOf(q)>-1;
   });
+  if(DCX.nuevoId&&rows.some(function(d){ return d.id===DCX.nuevoId; })){ var nid=DCX.nuevoId; setTimeout(function(){ if(DCX.nuevoId===nid) DCX.nuevoId=null; },3500); }   // la fila nueva se resalta solo unos segundos
   var ct=document.getElementById('dc-hcount'); if(ct) ct.textContent=rows.length+(rows.length===1?' documento':' documentos');
   var bd={ marcaje:'m', nc:'n', traslado:'t' };
   el.innerHTML=rows.length ? rows.map(function(d){
@@ -594,7 +634,7 @@ function dcHistFiltrar(){
           : d.tipo==='nc' ? ('Factura '+(d.nroFactura||'-')+' · '+pr)
           : ('Destino '+(d.destino||'-')+' · '+pr);
     var est=d.tipo==='marcaje' ? (DCX.d.conEnv&&DCX.d.conEnv[d.id]?'En Envases':'Solo el documento') : 'En M-T';
-    return '<tr class="dx-h" data-id="'+d.id+'" tabindex="0" role="button" aria-label="Ver '+esc(DCX_NOM[d.tipo])+' N.º '+d.id+'" onclick="dcVerId('+d.id+')">'+
+    return '<tr class="dx-h'+(d.id===DCX.nuevoId?' nw':'')+'" data-id="'+d.id+'" tabindex="0" role="button" aria-label="Ver '+esc(DCX_NOM[d.tipo])+' N.º '+d.id+'" onclick="dcVerId('+d.id+')">'+
       '<td><span class="dx-bd '+bd[d.tipo]+'">'+esc(DCX_NOM[d.tipo])+'</span><div class="dx-n" style="margin-top:6px"><b>'+esc(det)+'</b><small>N.º '+d.id+'<span class="dx-mf"> · '+_dcF(d.fecha)+'</span>'+(d.usuario?' · '+esc(d.usuario):'')+'</small></div></td>'+
       '<td class="col-hide-mobile dx-m">'+_dcF(d.fecha)+'</td><td class="col-hide-mobile dx-es">'+est+'</td>'+
       '<td class="r"><div class="dx-a"><button class="dx-b" onclick="event.stopPropagation();dcVerId('+d.id+')">Ver / Imprimir</button>'+
