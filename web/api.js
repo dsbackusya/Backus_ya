@@ -1122,6 +1122,13 @@
     return { ok: true, data: r.data };
   });
 
+  // Análisis de salidas para un rango de fechas ISO (yyyy-mm-dd): por día (con el periodo anterior), hora, mes, productos y cancelaciones
+  API.getSalidasAnalisis = guard(async function (p, desde, hasta) {
+    var r = await sb.rpc('dashboard_salidas_analisis', { p_desde: parseFecha(desde), p_hasta: parseFecha(hasta) });
+    if (r.error) throw r.error;
+    return { ok: true, data: r.data };
+  });
+
   // Elimina una orden de compra. Solo el administrador (la base también lo exige); las entradas ya registradas con esa OC no se tocan.
   API.eliminarOC = guard(async function (p, oc) {
     if (p.rol !== 'admin') return { ok: false, error: 'Solo el administrador puede eliminar órdenes de compra' };

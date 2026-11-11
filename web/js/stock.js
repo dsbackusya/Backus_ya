@@ -116,7 +116,7 @@ function dashDibujar(){
     '</div>'+
     '<div id="db-det"'+(det?'':' hidden')+' class="'+(DASH.go?'db-go':'')+'"></div>';
   dashKpis(); if(document.getElementById('db-sedes3')) dashSedes3(); if(DASH.sal) dashSalidas(); dashOCTabla();
-  if(det) dashDetalle();
+  if(det){ dashDetalle(); dashAnCargar(); }
   if(!DASH.go) requestAnimationFrame(function(){ requestAnimationFrame(function(){ DASH.go=true; DASH.visto=true; ['db-main','db-det'].forEach(function(i){ var e=document.getElementById(i); if(e) e.classList.add('db-go'); }); var mn=document.getElementById('db-main'); if(mn) mn.classList.add('seen'); }); });
 }
 function dashSede(s){ DASH.sede=s||''; dashDibujar(); }
@@ -182,13 +182,9 @@ function _dashSalModelo(){
     var nm=fmtDia.format(new Date(f+'T12:00:00Z')).replace('.',''); nm=nm.charAt(0).toUpperCase()+nm.slice(1);
     return {f:f,n:nm,fd:_dashFecha(f),por:por,p:p,u:u};
   });
-  var canc7={}, cancHoy=0; (s.canc||[]).forEach(function(r){ if(!ids[r.sede_id]) return; canc7[r.sede_id]=(canc7[r.sede_id]||0)+r.p; if(r.fecha===s.hoy) cancHoy+=r.p; });
+  var cancHoy=0; (s.canc||[]).forEach(function(r){ if(ids[r.sede_id]&&r.fecha===s.hoy) cancHoy+=r.p; });
   var ret=0, pend=0; (s.retornables||[]).forEach(function(r){ if(ids[r.sede_id]){ ret+=r.total; pend+=r.pend; } });
-  var horas={}; (s.horas||[]).forEach(function(r){ if(!ids[r.sede_id]) return; var h=horas[r.h]||(horas[r.h]=[r.h,0,0]); h[1]+=r.p; h[2]+=r.u; });
-  var hs=Object.keys(horas).map(Number), hMin=Math.min.apply(null,hs.concat([8])), hMax=Math.max.apply(null,hs.concat([23]));
-  var HRS=[]; for(var h=hMin;h<=hMax;h++) HRS.push(horas[h]||[h,0,0]);
-  var sm={}; (s.sin_motorizado||[]).forEach(function(r){ sm[r.sede_id]=[r.total,r.sin]; });
-  return {ses:ses,dias:dias,hoy:dias[dias.length-1],ayer:dias[dias.length-2],cancHoy:cancHoy,canc7:canc7,ret:ret,pend:pend,HRS:HRS,sm:sm};
+  return {ses:ses,dias:dias,hoy:dias[dias.length-1],ayer:dias[dias.length-2],cancHoy:cancHoy,ret:ret,pend:pend};
 }
 function dashSalidas(){
   var el=document.getElementById('db-sal'); if(!el||!DASH.sal) return;
@@ -208,118 +204,195 @@ function dashSalidas(){
         return '<div class="db-sr"><span>'+esc(x.nombre)+'</span><b>'+d[0]+' pedidos</b><div class="bar"><i style="width:'+(d[0]/mxs*100)+'%"></i></div><small>'+fmt(d[1])+' unidades</small></div>'; }).join('')+'</div></div>')+'</div>';
 }
 
-/* ── Vista detallada de Salidas ── */
+/* ── Salidas · análisis (se abre con «Ver detalle»): filtros de sede y fechas, KPIs sin montos, sedes, horas y meses ── */
+var DASH_AN={pre:'7',d0:'',d1:'',data:null,cargando:false,err:'',cache:{}};
+var _AN_PRES=[['7','Últimos 7 días'],['sp','Semana pasada'],['mes','Este mes'],['mp','Mes pasado'],['rg','Rango']];
+var _AN_COL=['#7B61EF','#B9AEFF','#5C5C80','#8A7BF0'];
+
+function _anMas(iso,n){ return new Date(Date.parse(iso+'T00:00:00Z')+n*86400000).toISOString().slice(0,10); }
+function _anDM(iso){ return String(iso||'').slice(8,10)+'/'+String(iso||'').slice(5,7); }
+function _anRango(){
+  var hoy=DASH.d.hoy, pre=DASH_AN.pre;
+  if(pre==='rg') return [DASH_AN.d0||_anMas(hoy,-6), DASH_AN.d1||hoy];
+  if(pre==='sp'){ var dow=new Date(hoy+'T12:00:00Z').getUTCDay()||7; return [_anMas(hoy,-dow-6),_anMas(hoy,-dow)]; }
+  if(pre==='mes') return [hoy.slice(0,8)+'01',hoy];
+  if(pre==='mp'){ var ini=hoy.slice(0,8)+'01', fin=_anMas(ini,-1); return [fin.slice(0,8)+'01',fin]; }
+  return [_anMas(hoy,-6),hoy];
+}
 function dashVista(v){
   DASH.vista=v;
   var mn=document.getElementById('db-main'), dt=document.getElementById('db-det'); if(!mn||!dt) return;
-  if(v==='det'){ mn.classList.add('seen'); DASH.visto=true; mn.hidden=true; dt.hidden=false; dashDetalle(); }
+  if(v==='det'){ mn.classList.add('seen'); DASH.visto=true; mn.hidden=true; dt.hidden=false; dashDetalle(); dashAnCargar(); }
   else { dt.hidden=true; mn.hidden=false; }
   window.scrollTo(0,0); var pg=document.getElementById('p-dashboard'); if(pg&&pg.scrollTo) pg.scrollTo(0,0);
 }
-function _dashEscala(max){   // tope «redondo» del eje: 1, 2, 2,5, 5 o 10 por una potencia de 10
-  if(max<=0) return 1;
-  var p=Math.pow(10,Math.floor(Math.log10(max))), c=[1,2,2.5,5,10];
-  for(var i=0;i<c.length;i++){ if(c[i]*p>=max) return c[i]*p; }
-  return 10*p;
-}
-function dashDetalle(){
-  var el=document.getElementById('db-det'); if(!el||!DASH.sal) return;
-  var s=DASH.sal, M=_dashSalModelo();
-  var P=M.dias.reduce(function(a,d){return a+d.p;},0), U=M.dias.reduce(function(a,d){return a+d.u;},0)||0;
-  var pico=M.dias.slice().sort(function(a,b){return b.p-a.p;})[0];
-  var an=DASH.visto&&el._visto?';animation:none;opacity:1;transform:none':''; el._visto=true;
-  var st=function(i){ return 'style="animation-delay:'+(i*45)+'ms'+an+'"'; };
-  var sede=DASH.sede;
-  var filas=M.ses.map(function(x){
-    var p=M.dias.reduce(function(a,d){return a+d.por[x.nombre][0];},0), u=M.dias.reduce(function(a,d){return a+d.por[x.nombre][1];},0), c=M.canc7[x.id]||0, sm=M.sm[x.id]||[0,0];
-    var pc=(p+c)?c/(p+c)*100:0, ps=sm[0]?sm[1]/sm[0]*100:0;
-    return '<tr'+(sede===x.nombre?' class="dt-sel"':'')+'><td><div class="db-n" style="font-family:Inter">'+esc(x.nombre)+'</div></td><td class="r dt-n em">'+fmt(p)+'</td><td class="r dt-n col-hide-mobile">'+fmt(u)+'</td>'+
-      '<td class="r dt-n col-hide-mobile">'+(p?(u/p).toFixed(1).replace('.',','):'-')+'</td><td class="r dt-n">'+c+'</td><td class="r"><span class="dt-p'+(pc>7?' warn':'')+'">'+pc.toFixed(1).replace('.',',')+'%</span></td>'+
-      '<td class="r col-hide-mobile"><span class="dt-sin"><i style="width:'+ps+'%"></i></span><span class="dt-n">'+Math.round(ps)+'%</span></td></tr>';
-  }).join('');
-  var dias=M.dias.map(function(d,i){
-    return '<tr'+(i===6?' class="dt-sel"':'')+'><td><div class="db-n" style="font-family:Inter">'+esc(d.n)+' <span class="db-m">'+d.fd+'</span></div></td>'+
-      M.ses.map(function(x){ return '<td class="r dt-n col-hide-mobile">'+d.por[x.nombre][0]+'</td>'; }).join('')+'<td class="r dt-n em">'+fmt(d.p)+'</td><td class="r dt-n">'+fmt(d.u)+'</td></tr>';
-  }).join('');
-  var top=s.top||[], mot=s.motivos||[];
-  var smT=0, smS=0; M.ses.forEach(function(x){ var v=M.sm[x.id]; if(v){ smT+=v[0]; smS+=v[1]; } });
-  var smPct=smT?Math.round(smS/smT*100):0;
-  var todas=sede?'Todas las sedes · ':'';
+function dashDetalle(){   // armazón de la vista: botón de volver, título, filtros y el cuerpo que se llena con los datos
+  var el=document.getElementById('db-det'); if(!el) return;
   el.innerHTML=
     '<button class="dt-back" onclick="dashVista(\'main\')">'+_DASH_ICO_LOGO+'Dashboard</button>'+
-    '<div class="db-top"><div><div class="db-h1">Salidas · detalle</div><div class="db-sub">Últimos 7 días · del '+M.dias[0].fd+' al '+M.dias[6].fd+'</div></div><div class="db-tools">'+_dashChipsSede()+'</div></div>'+
-    '<div class="dt-k">'+
-      '<div class="sal2-card db-s db-k" '+st(0)+'><div class="sal2-k">Pedidos · 7 días</div><div class="sal2-v">'+fmt(P)+'</div><div class="sal2-n">'+Math.round(P/7)+' por día en promedio</div></div>'+
-      '<div class="sal2-card db-s db-k" '+st(1)+'><div class="sal2-k">Unidades · 7 días</div><div class="sal2-v">'+fmt(U)+'<small>und.</small></div><div class="sal2-n">'+(P?(U/P).toFixed(1).replace('.',','):'0')+' und. por pedido</div></div>'+
-      '<div class="sal2-card db-s db-k" '+st(2)+'><div class="sal2-k">Día más fuerte</div><div class="sal2-v" style="font-size:26px">'+esc(pico.n)+' '+pico.fd.slice(0,2)+'</div><div class="sal2-n">'+fmt(pico.p)+' pedidos</div></div>'+
-      '<div class="sal2-card db-s db-k" '+st(3)+'><div class="sal2-k">Hora pico</div><div class="sal2-v">'+_dashPico(M.HRS)+'</div><div class="sal2-n">'+_dashPicoN(M.HRS)+' pedidos en la semana</div></div></div>'+
-    '<div class="sal2-card dt-c"><h4>Pedidos por hora <small>suma de los 7 días</small></h4>'+_dashHoras(M.HRS)+'</div>'+
-    '<div class="db-sec" style="margin-top:20px"><b>Por sede</b><span>Cancelados y pedidos sin motorizado asignado</span></div>'+
-    '<div class="sal2-pnl"><div class="table-wrap dt-t"><table><thead><tr><th>Sede</th><th class="r">Pedidos</th><th class="r col-hide-mobile">Unidades</th><th class="r col-hide-mobile">Und. / pedido</th><th class="r">Cancelados</th><th class="r">% cancelación</th><th class="r col-hide-mobile">Sin motorizado</th></tr></thead><tbody>'+filas+'</tbody></table></div></div>'+
-    '<div class="db-sec"><b>Por día</b><span>Pedidos por sede</span></div>'+
-    '<div class="sal2-pnl"><div class="table-wrap dt-t"><table><thead><tr><th>Día</th>'+M.ses.map(function(x){ return '<th class="r col-hide-mobile">'+esc(x.nombre)+'</th>'; }).join('')+'<th class="r">Pedidos</th><th class="r">Unidades</th></tr></thead><tbody>'+dias+'</tbody></table></div></div>'+
-    '<div class="dt-2" style="margin-top:12px">'+
-      '<div class="sal2-card dt-c" style="margin:0"><h4>Productos más vendidos <small>'+todas+'por unidades</small></h4>'+
-        (top.length?top.map(function(t){ return '<div class="dt-li"><span title="'+esc(t.d)+'">'+esc(t.d)+'</span><b>'+fmt(t.u)+' und.</b><div class="bar"><i style="width:'+(t.u/top[0].u*100)+'%"></i></div><small>'+t.p+' pedidos</small></div>'; }).join(''):'<div class="dt-nota" style="border:0;margin:0;padding:0">Sin ventas en los últimos 7 días</div>')+'</div>'+
-      '<div class="sal2-card dt-c" style="margin:0"><h4>Motivos de cancelación <small>'+todas+'7 días</small></h4>'+
-        (mot.length?mot.map(function(x){ return '<div class="dt-li"><span>'+esc(x.m)+'</span><b>'+x.p+' pedidos</b><div class="bar"><i style="width:'+(x.p/mot[0].p*100)+'%"></i></div></div>'; }).join(''):'<div class="dt-nota" style="border:0;margin:0;padding:0">Sin cancelaciones en los últimos 7 días</div>')+
-        (smT&&smPct>=20?'<div class="dt-nota">'+smPct+'% de los pedidos de la semana no tiene motorizado asignado. El detalle por sede está en la tabla de arriba.</div>':'')+'</div></div>';
-  hrEventos();
+    '<div class="an-top"><div class="db-h1">Salidas · análisis</div><div class="db-sub" id="an-sub"></div></div>'+
+    '<div class="sal2-pnl" style="margin-bottom:12px"><div class="an-fl"><div class="sal2-seg" id="an-sedes" role="group" aria-label="Sede"></div><span class="an-sep"></span>'+
+      '<div class="sal2-seg" id="an-pres" role="group" aria-label="Periodo"></div>'+
+      '<div class="an-rng" id="an-rng"><input type="date" class="fh-in" id="an-d0" aria-label="Desde" onchange="dashAnRango()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><input type="date" class="fh-in" id="an-d1" aria-label="Hasta" onchange="dashAnRango()"></div>'+
+      '<span class="an-cnt" id="an-cnt"></span></div></div>'+
+    '<div id="an-body"></div>';
+  dashAnFiltros();
 }
-function _dashPicoFila(HRS){ return HRS.slice().sort(function(a,b){return b[1]-a[1];})[0]||[0,0,0]; }
-function _dashPico(HRS){ return _dashPicoFila(HRS)[0]+':00'; }
-function _dashPicoN(HRS){ return _dashPicoFila(HRS)[1]; }
+function dashAnFiltros(){
+  var sedes=document.getElementById('an-sedes'), pres=document.getElementById('an-pres'); if(!sedes||!pres) return;
+  sedes.innerHTML=[''].concat(DASH.m.sedes).map(function(s){ return '<button class="'+(s===DASH.sede?'on':'')+'" aria-pressed="'+(s===DASH.sede)+'" data-s="'+esc(s)+'" onclick="dashAnSede(this.dataset.s)">'+(s||'Todas')+'</button>'; }).join('');
+  pres.innerHTML=_AN_PRES.map(function(p){ return '<button class="'+(DASH_AN.pre===p[0]?'on':'')+'" aria-pressed="'+(DASH_AN.pre===p[0])+'" data-p="'+p[0]+'" onclick="dashAnPre(this.dataset.p)">'+p[1]+'</button>'; }).join('');
+  var rg=document.getElementById('an-rng'); if(rg) rg.classList.toggle('on',DASH_AN.pre==='rg');
+  var r=_anRango(), a=document.getElementById('an-d0'), b=document.getElementById('an-d1'); if(a) a.value=r[0]; if(b){ b.value=r[1]; b.max=DASH.d.hoy; }
+}
+function dashAnSede(s){ DASH.sede=s||''; dashAnFiltros(); dashAnCuerpo(); }   // la sede se filtra en pantalla: no hace falta volver a pedir datos
+function dashAnPre(p){ DASH_AN.pre=p; if(p==='rg'&&!DASH_AN.d0){ var r=_anRango(); DASH_AN.d0=r[0]; DASH_AN.d1=r[1]; } dashAnFiltros(); dashAnCargar(); }
+function dashAnRango(){
+  var a=document.getElementById('an-d0').value, b=document.getElementById('an-d1').value; if(!a||!b) return;
+  if(a>b){ var t=a; a=b; b=t; }
+  DASH_AN.d0=a; DASH_AN.d1=b>DASH.d.hoy?DASH.d.hoy:b; dashAnFiltros(); dashAnCargar();
+}
+function dashAnCargar(){
+  var r=_anRango(), key=r[0]+'|'+r[1], body=document.getElementById('an-body'); if(!body) return;
+  if(DASH_AN.cache[key]){ DASH_AN.data=DASH_AN.cache[key]; DASH_AN.err=''; dashAnCuerpo(); return; }
+  DASH_AN.cargando=true; DASH_AN.err='';
+  body.innerHTML=LD('Calculando salidas');
+  var tk=(DASH_AN.tk=(DASH_AN.tk||0)+1);
+  google.script.run
+    .withSuccessHandler(function(res){
+      if(tk!==DASH_AN.tk) return;   // se pidió otro rango mientras tanto
+      DASH_AN.cargando=false;
+      if(!res||!res.ok){ DASH_AN.err=(res&&res.error)||'No se pudo calcular'; dashAnCuerpo(); return; }
+      DASH_AN.cache[key]=res.data; DASH_AN.data=res.data; dashAnCuerpo();
+    })
+    .withFailureHandler(function(e){ if(tk!==DASH_AN.tk) return; DASH_AN.cargando=false; DASH_AN.err=e.message; dashAnCuerpo(); })
+    .getSalidasAnalisis(S.token,r[0],r[1]);
+}
+function _anDelta(cur,ant,ok){
+  if(!ok||!ant) return '<b>sin dato anterior</b>';
+  var d=(cur-ant)/ant*100, c=d>0.05?'up':d<-0.05?'dn':'';
+  return '<b class="'+c+'">'+(d>0?'+':'')+d.toFixed(1).replace('.',',')+'%</b>';
+}
+function _anPct(d){ return (d>0?'+':'')+d.toFixed(1).replace('.',',')+'%'; }
+function dashAnCuerpo(){
+  var body=document.getElementById('an-body'); if(!body) return;
+  if(DASH_AN.err){ body.innerHTML='<div class="err-box">'+esc(DASH_AN.err)+'</div>'; return; }
+  var D=DASH_AN.data; if(!D) return;
+  var r=_anRango(), a=r[0], b=r[1], n=Math.round((Date.parse(b+'T00:00:00Z')-Date.parse(a+'T00:00:00Z'))/86400000)+1;
+  var pa=_anMas(a,-n), pb=_anMas(a,-1), okPrev=pa>=D.primera;
+  var ses=(DASH.d.sedes||[]).filter(function(s){ return !DASH.sede||s.nombre===DASH.sede; }), ids={}; ses.forEach(function(s){ ids[s.id]=true; });
+  var suma=function(campo,x,y,id){ return (D.dias||[]).reduce(function(t,d){ return (d.fecha>=x&&d.fecha<=y&&(id?d.sede_id===id:ids[d.sede_id]))?t+d[campo]:t; },0); };
+  var p=suma('p',a,b), u=suma('u',a,b), pp=okPrev?suma('p',pa,pb):0, pu=okPrev?suma('u',pa,pb):0;
+  var sub=document.getElementById('an-sub'), cnt=document.getElementById('an-cnt'), anio=a.slice(0,4);
+  if(sub) sub.textContent=(DASH.sede?DASH.sede:(ses.length>1?'Las '+(ses.length===3?'tres':ses.length)+' sedes':'Sede'))+' · del '+_anDM(a)+' al '+_anDM(b)+' de '+anio;
+  if(cnt) cnt.textContent=n+(n===1?' día':' días')+' · comparado con '+(okPrev?'el '+_anDM(pa)+' al '+_anDM(pb):'el periodo anterior (sin datos)');
+  var dp=p/n, du=u/n, pdp=pp/n, pdu=pu/n;
+  var kpis='<div class="an-k">'+
+    '<div class="sal2-card an-c"><div class="sal2-k">Total de pedidos</div><div class="sal2-v">'+fmt(p)+'</div><div class="an-d">'+_anDelta(p,pp,okPrev)+'<span>vs periodo anterior ('+fmt(pp)+')</span></div></div>'+
+    '<div class="sal2-card an-c"><div class="sal2-k">Pedidos diarios · promedio</div><div class="sal2-v">'+dp.toFixed(1).replace('.',',')+'</div><div class="an-d">'+_anDelta(dp,pdp,okPrev)+'<span>por día</span></div></div>'+
+    '<div class="sal2-card an-c"><div class="sal2-k">Total de unidades</div><div class="sal2-v">'+fmt(u)+'<small>und.</small></div><div class="an-d">'+_anDelta(u,pu,okPrev)+'<span>vs periodo anterior ('+fmt(pu)+')</span></div></div>'+
+    '<div class="sal2-card an-c"><div class="sal2-k">Unidades diarias · promedio</div><div class="sal2-v">'+fmt(Math.round(du))+'<small>und.</small></div><div class="an-d">'+_anDelta(du,pdu,okPrev)+'<span>'+(p?(u/p).toFixed(1).replace('.',','):'0')+' und. por pedido</span></div></div></div>';
 
-/* Pedidos por hora: ejes, promedio, franjas del día y detalle al apuntar */
-function _dashHoras(HRS){
-  var maxH=Math.max.apply(null,HRS.map(function(h){return h[1];})), tot=HRS.reduce(function(a,h){return a+h[1];},0);
-  if(!tot) return '<div class="dt-nota" style="border:0;margin:0;padding:0">Sin pedidos con hora registrada en los últimos 7 días</div>';
-  var prom=Math.round(tot/HRS.length), pk=_dashPicoFila(HRS), top=_dashEscala(maxH);
-  var gr=[['Mañana',HRS.filter(function(h){return h[0]<12;})],['Tarde',HRS.filter(function(h){return h[0]>=12&&h[0]<18;})],['Noche',HRS.filter(function(h){return h[0]>=18;})]].filter(function(x){return x[1].length;}).map(function(x){
-    var p=x[1].reduce(function(a,h){return a+h[1];},0), a=x[1][0][0], b=x[1][x[1].length-1][0];
-    return {n:x[0],r:a+' a '+b+' h',p:p,pc:Math.round(p/tot*100),w:x[1].length};
-  });
-  var mejor=gr.slice().sort(function(a,b){return b.p-a.p;})[0];
-  var col=function(v){ return 'rgba(123,97,239,'+(0.25+v/maxH*0.55).toFixed(2)+')'; };   // más pedidos, más intenso
-  var n=HRS.length;
-  DASH._hrs=HRS; DASH._hrTot=tot;
-  return '<div class="hr-top">'+
-    '<div class="hr-st"><small>Hora pico</small><b>'+pk[0]+':00 a '+(pk[0]+1)+':00</b><span>'+pk[1]+' pedidos · '+fmt(pk[2])+' und.</span></div>'+
-    '<div class="hr-st"><small>Franja más fuerte</small><b>'+mejor.n+'</b><span>'+mejor.pc+'% de los pedidos · '+mejor.r+'</span></div>'+
-    '<div class="hr-st"><small>Promedio por hora</small><b>'+prom+'</b><span>pedidos, de '+HRS[0][0]+' a '+HRS[n-1][0]+' h</span></div></div>'+
-  '<div class="hr-ch"><div class="hr-plot" id="db-hrplot">'+
-    [0,0.5,1].map(function(t){ return '<div class="hr-gl" style="bottom:'+(t*100)+'%"><span>'+(Math.round(top*t*10)/10)+'</span></div>'; }).join('')+
-    '<div class="hr-av" style="bottom:'+(prom/top*100)+'%"><span>Promedio '+prom+'</span></div>'+
-    '<div class="hr-bars" style="grid-template-columns:repeat('+n+',1fr)" role="group" aria-label="Pedidos por hora. Usa las flechas para recorrer las horas.">'+
-      HRS.map(function(h,i){ return '<button class="hr-b'+(h[1]===maxH?' pk':'')+'" data-i="'+i+'" style="--c:'+col(h[1])+'" aria-label="De '+h[0]+':00 a '+(h[0]+1)+':00, '+h[1]+' pedidos, '+fmt(h[2])+' unidades, '+Math.round(h[1]/tot*100)+'% del total"><i style="height:'+Math.max(2,h[1]/top*100)+'%"></i></button>'; }).join('')+'</div>'+
-    '<div class="hr-tip" id="db-hrtip" role="status"></div></div>'+
-  '<div class="hr-x" style="grid-template-columns:repeat('+n+',1fr)">'+HRS.map(function(h){ return '<span'+(h[1]===maxH?' class="pk"':'')+'>'+h[0]+'</span>'; }).join('')+'</div>'+
-  '<div class="hr-fr" style="grid-template-columns:'+gr.map(function(x){return x.w+'fr';}).join(' ')+'">'+gr.map(function(x){ return '<div class="'+(x===mejor?'top':'')+'"><small>'+x.n+' · '+x.r+'</small><b>'+fmt(x.p)+'<span>'+x.pc+'%</span></b></div>'; }).join('')+'</div></div>';
+  // pedidos por sede: barras agrupadas (periodo elegido contra el anterior) y tabla
+  var canc={}; (D.canc||[]).forEach(function(c){ canc[c.sede_id]=c.p; });
+  var sm={}; (D.sin_motorizado||[]).forEach(function(c){ sm[c.sede_id]=[c.total,c.sin]; });
+  var mx=Math.max.apply(null,ses.map(function(s){ return Math.max(suma('p',a,b,s.id),okPrev?suma('p',pa,pb,s.id):0); }).concat([1]));
+  var grp=ses.map(function(s){
+    var c=suma('p',a,b,s.id), o=okPrev?suma('p',pa,pb,s.id):0;
+    return '<div class="an-gc"><div class="an-gb"><div class="ant"><b>'+(okPrev?fmt(o):'-')+'</b><i style="height:'+(o/mx*100)+'%"></i></div><div class="act"><b>'+fmt(c)+'</b><i style="height:'+Math.max(c/mx*100,1)+'%"></i></div></div><small>'+esc(s.nombre)+'</small></div>';
+  }).join('');
+  var filas=ses.map(function(s){
+    var c=suma('p',a,b,s.id), o=okPrev?suma('p',pa,pb,s.id):0, d=o?(c-o)/o*100:null, sh=p?c/p*100:0, cn=canc[s.id]||0, pc=(c+cn)?cn/(c+cn)*100:0, v=sm[s.id]||[0,0], ps=v[0]?v[1]/v[0]*100:0;
+    return '<tr><td><div class="an-nm">'+esc(s.nombre)+'</div></td><td class="r an-n em">'+fmt(c)+'</td>'+
+      '<td class="r">'+(d==null?'<span class="an-n">-</span>':'<span class="an-v '+(d>0.05?'up':d<-0.05?'dn':'')+'">'+_anPct(d)+'</span>')+'</td>'+
+      '<td class="r col-m"><span class="an-sh"><span class="an-n">'+sh.toFixed(1).replace('.',',')+'%</span><i style="--w:'+sh+'%"></i></span></td>'+
+      '<td class="r an-n col-m">'+fmt(suma('u',a,b,s.id))+'</td><td class="r an-n">'+cn+'</td><td class="r"><span class="an-v'+(pc>7?' warn':'')+'">'+pc.toFixed(1).replace('.',',')+'%</span></td>'+
+      '<td class="r an-n col-m">'+Math.round(ps)+'%</td></tr>';
+  }).join('');
+  var tabla='<table><thead><tr><th>Sede</th><th class="r">Pedidos</th><th class="r">Variación</th><th class="r col-m">% del total</th><th class="r col-m">Unidades</th><th class="r" title="Pedidos cancelados en el periodo">Cancel.</th><th class="r" title="Cancelados sobre pedidos más cancelados">% cancel.</th><th class="r col-m" title="Pedidos sin motorizado asignado">Sin moto.</th></tr></thead><tbody>'+filas+
+    '<tr class="an-tot"><td>Total</td><td class="r an-n em">'+fmt(p)+'</td><td class="r">'+(okPrev&&pp?'<span class="an-v '+(p>pp?'up':p<pp?'dn':'')+'">'+_anPct((p-pp)/pp*100)+'</span>':'-')+'</td><td class="r an-n col-m">100%</td><td class="r an-n col-m">'+fmt(u)+'</td><td colspan="3"></td></tr></tbody></table>';
+  var sedesHtml='<div class="an-2"><div class="sal2-card an-g"><h4>Pedidos por sede <small>'+ses.length+(ses.length===1?' sede':' sedes')+'</small></h4><div class="nota">Periodo elegido frente al periodo anterior de la misma duración</div><div class="an-grp">'+grp+'</div>'+
+    '<div class="an-lg"><span><em style="background:linear-gradient(180deg,#B9AEFF,#7B61EF)"></em>Periodo elegido</span><span><em style="background:rgba(255,255,255,.25)"></em>Periodo anterior</span></div></div>'+
+    '<div class="sal2-pnl" style="display:flex;flex-direction:column"><div class="table-wrap an-t" style="margin-top:18px">'+tabla+'</div></div></div>';
+
+  var top=D.top||[], mot=D.motivos||[];
+  var extra='<div class="dt-2" style="margin-top:12px">'+
+    '<div class="sal2-card dt-c" style="margin:0"><h4>Productos más vendidos <small>por unidades</small></h4>'+
+      (top.length?top.map(function(t){ return '<div class="dt-li"><span title="'+esc(t.d)+'">'+esc(t.d)+'</span><b>'+fmt(t.u)+' und.</b><div class="bar"><i style="width:'+(t.u/top[0].u*100)+'%"></i></div><small>'+t.p+' pedidos</small></div>'; }).join(''):'<div class="dt-nota" style="border:0;margin:0;padding:0">Sin ventas en el periodo</div>')+'</div>'+
+    '<div class="sal2-card dt-c" style="margin:0"><h4>Motivos de cancelación <small>todas las sedes</small></h4>'+
+      (mot.length?mot.map(function(x){ return '<div class="dt-li"><span>'+esc(x.m)+'</span><b>'+x.p+' pedidos</b><div class="bar"><i style="width:'+(x.p/mot[0].p*100)+'%"></i></div></div>'; }).join(''):'<div class="dt-nota" style="border:0;margin:0;padding:0">Sin cancelaciones en el periodo</div>')+'</div></div>';
+
+  body.innerHTML='<div class="'+(DASH.go?'an-go':'')+'" id="an-wrap">'+kpis+sedesHtml+'<div class="sal2-card an-g" id="an-hora"></div>'+_anMesesHtml(D,ses)+extra+'</div>';
+  _anHora(D,ids,a,b);
+  if(!DASH.go) requestAnimationFrame(function(){ requestAnimationFrame(function(){ var w=document.getElementById('an-wrap'); if(w) w.classList.add('an-go'); }); });
+  else requestAnimationFrame(function(){ var w=document.getElementById('an-wrap'); if(w) w.classList.add('an-go'); });
 }
-/* El detalle de cada hora aparece sobre la barra; al pasar de una a otra se mueve sin repetir la animación */
-function hrEventos(){
-  var plot=document.getElementById('db-hrplot'), tip=document.getElementById('db-hrtip'); if(!plot||!tip) return;
-  var HRS=DASH._hrs, tot=DASH._hrTot, bars=[].slice.call(plot.querySelectorAll('.hr-b'));
-  var mostrar=function(b){
-    var h=HRS[+b.dataset.i], pr=plot.getBoundingClientRect(), ir=b.firstElementChild.getBoundingClientRect(), br=b.getBoundingClientRect();
-    tip.innerHTML='<b>De '+h[0]+':00 a '+(h[0]+1)+':00</b><div>Pedidos<em>'+h[1]+'</em></div><div>Unidades<em>'+fmt(h[2])+'</em></div><div>Del total<em>'+(h[1]/tot*100).toFixed(1).replace('.',',')+'%</em></div>';
-    var x=br.left-pr.left+br.width/2, w=tip.offsetWidth||160; x=Math.max(w/2,Math.min(pr.width-w/2,x));
-    tip.style.left=x+'px'; tip.style.bottom=(pr.height-(ir.top-pr.top)+10)+'px';
-    bars.forEach(function(y){ y.classList.toggle('on',y===b); });
-    tip.classList.add('on');
+
+/* Pedidos por hora: curva con área y detalle al apuntar (horas reales de cada pedido) */
+function _anHora(D,ids,a,b){
+  var el=document.getElementById('an-hora'); if(!el) return;
+  var por={}, tot=0; (D.horas||[]).forEach(function(h){ if(ids[h.sede_id]){ por[h.h]=(por[h.h]||0)+h.p; tot+=h.p; } });
+  var sedeTxt=DASH.sede?DASH.sede+' · ':'';
+  if(!tot){ el.innerHTML='<h4>Pedidos por hora</h4><div class="nota">Sin pedidos con hora registrada en este periodo.</div>'; return; }
+  var hs=Object.keys(por).map(Number).filter(function(h){ return por[h]>=tot*0.01; });
+  var h0=Math.min.apply(null,hs.concat([8])), h1=Math.max.apply(null,hs.concat([22])), H=h1-h0+1, v=[];
+  for(var h=h0;h<=h1;h++) v.push(por[h]||0);
+  var mx=Math.max.apply(null,v), pk=v.indexOf(mx), p10=Math.pow(10,Math.floor(Math.log10(mx))), top=Math.max(mx,Math.ceil(mx/p10)*p10);
+  var W=800, Ht=200, L=34, R=8, T=14, B=26, iw=W-L-R, ih=Ht-T-B;
+  var X=function(i){ return L+i/(H-1)*iw; }, Y=function(x){ return T+ih-(x/top)*ih; };
+  var pts=v.map(function(x,i){ return [X(i),Y(x)]; });
+  var d='M'+pts[0][0]+' '+pts[0][1];
+  for(var i=0;i<pts.length-1;i++){ var p0=pts[Math.max(i-1,0)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(i+2,pts.length-1)];
+    d+=' C'+(p1[0]+(p2[0]-p0[0])/6)+' '+(p1[1]+(p2[1]-p0[1])/6)+' '+(p2[0]-(p3[0]-p1[0])/6)+' '+(p2[1]-(p3[1]-p1[1])/6)+' '+p2[0]+' '+p2[1]; }
+  var area=d+' L'+X(H-1)+' '+(T+ih)+' L'+X(0)+' '+(T+ih)+' Z';
+  var gl=[0,0.5,1].map(function(f){ var y=T+ih-f*ih; return '<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(L-6)+'" y="'+(y+3)+'" text-anchor="end">'+Math.round(top*f)+'</text>'; }).join('');
+  var xs=v.map(function(_,i){ return '<text x="'+X(i)+'" y="'+(Ht-6)+'" text-anchor="middle"'+(i===pk?' class="pk"':'')+'>'+(h0+i)+'</text>'; }).join('');
+  el.innerHTML='<h4>Pedidos por hora <small>'+esc(sedeTxt)+'del '+_anDM(a)+' al '+_anDM(b)+'</small></h4><div class="nota">Frecuencia de pedidos durante el día. Hora pico: '+(h0+pk)+':00 con '+mx+' pedidos.</div>'+
+    '<div class="an-area" id="an-ar"><svg viewBox="0 0 '+W+' '+Ht+'" preserveAspectRatio="none" role="img" aria-label="Pedidos por hora, pico a las '+(h0+pk)+':00">'+gl+
+    '<defs><linearGradient id="an-ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7B61EF" stop-opacity=".45"/><stop offset="1" stop-color="#7B61EF" stop-opacity="0"/></linearGradient></defs>'+
+    '<path class="area" d="'+area+'" fill="url(#an-ag)"/><path class="ln" d="'+d+'"/>'+xs+
+    '<text class="pk" x="'+X(pk)+'" y="'+(Y(mx)-8)+'" text-anchor="middle">'+mx+'</text>'+
+    '<line class="cur" id="an-cur" y1="'+T+'" y2="'+(T+ih)+'"/><circle class="dot" id="an-dot" r="4.5"/></svg><div class="an-tip" id="an-tip" role="status"></div></div>';
+  var ar=document.getElementById('an-ar'), svg=ar.querySelector('svg'), tip=document.getElementById('an-tip');
+  var mover=function(cx){
+    var rc=svg.getBoundingClientRect(), i=Math.max(0,Math.min(H-1,Math.round(((cx-rc.left)/rc.width*W-L)/iw*(H-1)))), px=X(i)/W*rc.width;
+    var cur=document.getElementById('an-cur'), dot=document.getElementById('an-dot');
+    cur.setAttribute('x1',X(i)); cur.setAttribute('x2',X(i)); dot.setAttribute('cx',X(i)); dot.setAttribute('cy',Y(v[i]));
+    tip.innerHTML='<b>De '+(h0+i)+':00 a '+(h0+i+1)+':00</b><div>Pedidos<em>'+v[i]+'</em></div><div>Del total<em>'+(v[i]/tot*100).toFixed(1).replace('.',',')+'%</em></div>';
+    var w=tip.offsetWidth||150, x=Math.max(w/2,Math.min(rc.width-w/2,px)); tip.style.left=x+'px'; tip.style.top=Math.max(0,(Y(v[i])/Ht*rc.height)-70)+'px';
+    ar.classList.add('on'); tip.classList.add('on');
   };
-  var ocultar=function(){ tip.classList.remove('on'); bars.forEach(function(y){ y.classList.remove('on'); }); };
-  bars.forEach(function(b,i){
-    b.onpointerenter=function(e){ if(e.pointerType==='mouse') mostrar(b); };
-    b.onfocus=function(){ mostrar(b); };
-    b.onclick=function(){ mostrar(b); };
-    b.onblur=function(){ setTimeout(function(){ if(!plot.contains(document.activeElement)) ocultar(); },0); };
-    b.onkeydown=function(e){
-      var n=e.key==='ArrowRight'?i+1:e.key==='ArrowLeft'?i-1:e.key==='Home'?0:e.key==='End'?bars.length-1:-1;
-      if(n>=0&&n<bars.length){ e.preventDefault(); bars[n].focus(); } else if(e.key==='Escape'){ ocultar(); b.blur(); }
-    };
-  });
-  plot.onpointerleave=function(e){ if(e.pointerType==='mouse') ocultar(); };
+  ar.onpointermove=function(e){ if(e.pointerType==='mouse'||e.buttons) mover(e.clientX); };
+  ar.onpointerdown=function(e){ mover(e.clientX); };
+  ar.onpointerleave=function(){ ar.classList.remove('on'); tip.classList.remove('on'); };
+}
+
+/* Pedidos por mes y sede (desde que hay datos). El mes en curso se marca como parcial. */
+function _anMesesHtml(D,ses){
+  var todas=DASH.d.sedes||[], meses=[], mapa={};
+  (D.meses||[]).forEach(function(m){ if(meses.indexOf(m.mes)<0) meses.push(m.mes); mapa[m.mes+'|'+m.sede_id]=m.p; });
+  meses.sort();
+  if(!meses.length) return '';
+  var nom=new Intl.DateTimeFormat('es-PE',{month:'short',timeZone:'UTC'});
+  var etq=function(mes){ var t=nom.format(new Date(mes+'-15T12:00:00Z')).replace('.',''); return t.charAt(0).toUpperCase()+t.slice(1); };
+  var hoyMes=DASH.d.hoy.slice(0,7), ultimoDia=_anMas(_anMas(hoyMes+'-01',32).slice(0,8)+'01',-1), parcial=function(mes){ return mes===hoyMes&&DASH.d.hoy!==ultimoDia; };
+  var vis={}; ses.forEach(function(s){ vis[s.id]=true; });
+  var tt=meses.map(function(m){ return todas.reduce(function(t,s){ return t+(mapa[m+'|'+s.id]||0); },0); }), mx=Math.max.apply(null,tt.concat([1]));
+  var col=function(i){ return _AN_COL[i%_AN_COL.length]; };
+  var barras=meses.map(function(m,i){ var cur=m===meses[meses.length-1];
+    return '<div class="an-mc'+(cur?' cur':'')+'"><b>'+fmt(tt[i])+'</b><div class="col" style="height:'+(tt[i]/mx*100)+'%;flex:none">'+todas.map(function(s,k){ return '<i style="flex:'+(mapa[m+'|'+s.id]||0)+';background:'+col(k)+'"></i>'; }).join('')+'</div><small>'+etq(m)+(parcial(m)?' (parcial)':'')+'</small></div>';
+  }).join('');
+  var lg=todas.map(function(s,k){ return '<span><em style="background:'+col(k)+'"></em>'+esc(s.nombre)+'</span>'; }).join('');
+  var filas=todas.map(function(s){
+    var t=meses.reduce(function(a,m){ return a+(mapa[m+'|'+s.id]||0); },0);
+    return '<tr'+(DASH.sede===s.nombre?' class="an-act"':'')+'><td><div class="an-nm">'+esc(s.nombre)+'</div></td>'+meses.map(function(m){ return '<td class="r an-n">'+fmt(mapa[m+'|'+s.id]||0)+'</td>'; }).join('')+'<td class="r an-n em">'+fmt(t)+'</td></tr>';
+  }).join('');
+  var primera=D.primera?_anDM(D.primera)+'/'+D.primera.slice(0,4):'';
+  return '<div class="sal2-card an-g"><h4>Pedidos por mes <small>'+etq(meses[0])+' a '+etq(meses[meses.length-1])+' de '+meses[meses.length-1].slice(0,4)+'</small></h4><div class="nota">Cada color es una sede.'+(parcial(meses[meses.length-1])?' El último mes es parcial: llega hasta el '+_anDM(DASH.d.hoy)+'.':'')+'</div>'+
+    '<div class="an-ms" style="grid-template-columns:repeat('+meses.length+',1fr)">'+barras+'</div><div class="an-lg">'+lg+'</div>'+
+    '<div class="sal2-pnl" style="margin:16px -8px 0"><div class="table-wrap an-t"><table><thead><tr><th>Sede</th>'+meses.map(function(m){ return '<th class="r">'+etq(m)+'</th>'; }).join('')+'<th class="r">Total</th></tr></thead><tbody>'+filas+
+    '<tr class="an-tot"><td>Total</td>'+tt.map(function(x){ return '<td class="r an-n em">'+fmt(x)+'</td>'; }).join('')+'<td class="r an-n em">'+fmt(tt.reduce(function(a,b){return a+b;},0))+'</td></tr></tbody></table></div></div>'+
+    '<div class="an-info">La comparación contra el mismo mes del año anterior estará disponible cuando haya un año de historial: las salidas empiezan el '+primera+'.</div></div>';
 }
 
 /* ── Órdenes de compra: una sola tabla con chips por estado ── */
