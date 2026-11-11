@@ -63,52 +63,55 @@ function loadCancelados(){
     .getCancelados(S.token, force, window.canc_rango||null);
 }
 
+var CANC_OPEN={};   // pedidos abiertos en la tabla
+var _CANC_CHEV='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>';
+var _CANC_UNDO='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>';
+
 function renderCancelados(r){
   if(_handleExpired(r,'cancelados-root')) return;
   if(!r||!r.ok){errBox('cancelados-root',r&&r.error?r.error:'Error al cargar cancelados, revisa la hoja "PD CANCELADOS" en el spreadsheet','cancelados');return;}
   DATA.cancelados=r.data;
-  var total=r.data.reduce(function(a,x){return a+(Number(x.unidad)||0);},0);
-  var pedidos=[...new Set(r.data.map(function(x){return x.nroPedido;}).filter(Boolean))].length;
-  // Aviso si se están mostrando solo los últimos N registros
-  var avisoTotal = r.total && r.total > r.data.length
-    ? '<div style="background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:var(--r);padding:8px 14px;font-size:12px;color:var(--warn);margin-bottom:16px;font-family:var(--font-mono)">'+
-        ICO('warn',13)+'Mostrando los últimos '+r.data.length+' de '+r.total+' registros totales. Usa el filtro de fecha para buscar registros anteriores.'+
-      '</div>'
-    : '';
+  CANC_OPEN={};
   var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+  // Los motivos del selector salen de lo que trae el servidor para el rango elegido
+  var motivos=[...new Set(r.data.map(function(x){return (x.motivo||'').trim();}).filter(Boolean))].sort();
+  // Mismo patrón que Salidas, Entradas, Conteo, Documentos y Validación: tres tarjetas de resumen + panel violeta con tabla hundida
   document.getElementById('cancelados-root').innerHTML=
-    avisoTotal+
-    '<div class="stats">'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div><div class="stat-label">Total ítems</div><div class="stat-val-row"><div class="stat-val" id="canc-stat-items">'+r.data.length+'</div><span class="stat-unit-pill">ítems</span></div></div>'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="stat-label">Pedidos únicos</div><div class="stat-val-row"><div class="stat-val" id="canc-stat-pedidos" style="color:var(--warn)">'+pedidos+'</div><span class="stat-unit-pill">pedidos</span></div></div>'+
-      '<div class="stat-card"><div class="stat-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><line x1="3.27" y1="6.96" x2="12" y2="12.01"/><line x1="20.73" y1="6.96" x2="12" y2="12.01"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div><div class="stat-label">Unidades canceladas</div><div class="stat-val-row"><div class="stat-val" id="canc-stat-und" style="color:var(--danger)">'+fmt(total)+'</div><span class="stat-unit-pill">und.</span></div></div>'+
-    '</div>'+
+    '<div class="sal2-sum" id="canc-sum"></div>'+
     '<div class="sal2-pnl">'+
     '<div class="sal2-fl">'+
-      '<div class="sal2-srch"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
-        '<input id="canc-busq" placeholder="Buscar SKU, pedido, descripción..." oninput="filterCancelados()"/></div>'+
+      '<div class="sal2-srch">'+icoBuscar+
+        '<input id="canc-busq" placeholder="Buscar SKU, pedido, descripción..." aria-label="Buscar SKU, pedido o descripción" autocomplete="off" oninput="filterCancelados()"/></div>'+
+      '<select class="inp" id="canc-motivo" aria-label="Motivo" onchange="filterCancelados()"><option value="">Todos los motivos</option>'+
+        motivos.map(function(m){return '<option>'+esc(m)+'</option>';}).join('')+'</select>'+
       _fechaFiltroHTML('canc','filterCancelados','cancRangoCambio')+
       '<span class="sal2-cnt" id="canc-count"></span>'+
       '<button id="btn-export-cancelados" class="sal2-exp" onclick="exportCancelados()">'+icoExportar+'Exportar</button>'+
     '</div>'+
     '<div class="table-wrap"><table>'+
       '<thead><tr>'+
-        '<th>Fecha</th><th>Hora</th><th>SKU</th><th>Nro. Pedido</th><th>Descripción</th>'+
-        '<th class="r">Pack</th><th class="r">Und.</th><th>Marca</th>'+
-        '<th class="c">Motor.</th><th class="r">Envases</th>'+
-        '<th class="c">Estado</th><th class="c">Revisión</th><th>Motivo</th>'+
-        (S&&S.rol==='store'?'<th class="c"></th>':'')+
+        '<th>Pedido</th><th class="col-hide-mobile">Motorizado</th><th class="col-hide-mobile">Motivo</th>'+
+        '<th class="c">Ítems</th><th class="r">Und.</th><th class="c col-hide-mobile">Estado</th>'+
+        '<th style="width:1%"></th>'+
       '</tr></thead>'+
       '<tbody id="cancelados-tbody"></tbody>'+
     '</table></div>'+
     '</div>';
   _initFiltroFecha('canc','filterCancelados',{page:'cancelados'});
+  _cancDelegar();
+  _cancResumenAnim=false;
   filterCancelados();
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ _cancResumenAnim=true; var s=document.getElementById('canc-sum'); if(s) s.classList.add('cn-go'); }); });
 }
+var _cancResumenAnim=false;   // las barras de motivos se llenan una sola vez al cargar; al filtrar se quedan llenas
 
-function _filterCancelados(){
+/* Lo que se ve en pantalla y lo que se exporta salen de la misma función: búsqueda, motivo y fecha */
+function _cancFiltradas(){
   var q=((document.getElementById('canc-busq')||{}).value||'').toLowerCase();
+  var mot=(document.getElementById('canc-motivo')||{}).value||'';
   var rows=(DATA.cancelados||[]).filter(function(r){
+    if(mot&&(r.motivo||'').trim()!==mot) return false;
     return !q||
       (r.sku||'').toLowerCase().indexOf(q)>-1||
       (r.desc||'').toLowerCase().indexOf(q)>-1||
@@ -117,33 +120,82 @@ function _filterCancelados(){
   });
   rows=_applyFiltroFecha('canc',rows);
   rows.sort(function(a,b){return b._row-a._row;});
-  var totalUnd=rows.reduce(function(a,x){return a+(Number(x.unidad)||0);},0);
-  var pedUnicos=new Set(rows.map(function(x){return x.nroPedido;}).filter(Boolean)).size;
-  var si=document.getElementById('canc-stat-items');   if(si)si.textContent=rows.length;
-  var sp=document.getElementById('canc-stat-pedidos'); if(sp)sp.textContent=pedUnicos;
-  var su=document.getElementById('canc-stat-und');     if(su)su.textContent=fmt(totalUnd);
+  return rows;
+}
+/* Una fila por pedido (los ítems de un mismo pedido van juntos); un ítem sin número de pedido queda solo */
+function _cancPedidos(rows){
+  var map={}, list=[];
+  rows.forEach(function(r){
+    var k=r.nroPedido?String(r.nroPedido):'sin:'+r._row;
+    if(!map[k]){ map[k]={ k:k, nro:r.nroPedido||'', fecha:r.fecha, hora:r.hora, motor:r.motorizado||'', motivo:r.motivo||'', estado:r.estado||'Cancelado', items:[] }; list.push(map[k]); }
+    map[k].items.push(r);
+  });
+  return list;
+}
+function _cancUnd(p){ return p.items.reduce(function(a,x){return a+(Number(x.unidad)||0);},0); }
+
+function _cancResumen(L,items){
+  var el=document.getElementById('canc-sum'); if(!el) return;
+  var und=L.reduce(function(a,p){return a+_cancUnd(p);},0), m={};
+  L.forEach(function(p){ var k=(p.motivo||'').trim()||'Sin motivo'; m[k]=(m[k]||0)+1; });
+  var top=Object.keys(m).map(function(k){return [k,m[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,3), mx=top.length?top[0][1]:1;
+  var pedidos=L.filter(function(p){return p.nro;}).length;
+  el.className='sal2-sum'+(_cancResumenAnim?' cn-go':'');
+  el.innerHTML=
+    '<div class="sal2-card cn-card"><div class="sal2-k">Unidades canceladas</div><div class="sal2-v">'+fmt(und)+'<small>und.</small></div><div class="sal2-n">en '+items+(items===1?' ítem':' ítems')+'</div></div>'+
+    '<div class="sal2-card cn-card"><div class="sal2-k">Pedidos únicos</div><div class="sal2-v">'+pedidos+'</div><div class="sal2-n">'+(pedidos?(items/pedidos).toFixed(1).replace('.',',')+' ítems por pedido':'')+'</div></div>'+
+    '<div class="sal2-card cn-card"><div class="sal2-k">Motivos más frecuentes</div>'+
+      (top.length?'<div class="cn-mot">'+top.map(function(x){
+        return '<div class="cn-mr"><span title="'+esc(x[0])+'">'+esc(x[0])+'</span><b>'+x[1]+(x[1]===1?' pedido':' pedidos')+'</b><div class="cn-mb"><i style="width:'+(x[1]/mx*100)+'%"></i></div></div>';
+      }).join('')+'</div>':'<div class="cn-vacio-m">Sin cancelaciones en este filtro</div>')+'</div>';
+}
+
+function _filterCancelados(){
+  var rows=_cancFiltradas();
+  var L=_cancPedidos(rows);
+  _cancResumen(L,rows.length);
   var el=document.getElementById('canc-count');
-  if(el)el.textContent=rows.length+' registros';
-  var tbody=rows.map(function(r){
-    return '<tr>'+
-      '<td class="mono" style="font-size:12px">'+esc(r.fecha)+'</td>'+
-      '<td class="mono" style="font-size:12px;color:var(--text3)">'+esc(r.hora)+'</td>'+
-      '<td class="mono">'+esc(r.sku)+'</td>'+
-      '<td class="mono pedido-link" style="font-size:11.5px;color:var(--danger)">'+esc(r.nroPedido||'-')+'</td>'+
-      '<td class="td-desc" title="'+esc(r.desc)+'">'+esc(r.desc)+'</td>'+
-      '<td class="r">'+fmt(r.pack)+'</td>'+
-      '<td class="r" style="font-weight:700;color:var(--danger)">'+fmt(r.unidad)+'</td>'+
-      '<td style="font-size:12px">'+(r.marca?'<span class="brand-pill">'+esc(r.marca)+'</span>':'<span style="color:var(--text4)">-</span>')+'</td>'+
-      '<td class="c" style="font-size:12px;color:var(--text3)">'+esc(r.motorizado||'-')+'</td>'+
-      '<td class="r" style="font-size:12px">'+esc(r.envases||'-')+'</td>'+
-      '<td class="c"><span class="sal-est cx"><i></i>'+esc(r.estado||'Cancelado')+'</span></td>'+
-      '<td class="c" style="font-size:12px;color:var(--text3)">'+esc(r.revision||'-')+'</td>'+
-      '<td style="font-size:12px" title="'+esc(r.motivo)+'">'+esc(r.motivo||'-')+'</td>'+
-      (S&&S.rol==='store'&&r.nroPedido?'<td class="c" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" title="Devolver este pedido a Salidas" data-nro="'+esc(r.nroPedido)+'" onclick="anularCancAbrir(this.dataset.nro)">'+ICO('undo',12)+'Anular</button></td>':(S&&S.rol==='store'?'<td></td>':''))+
-    '</tr>';
+  if(el)el.textContent=L.length+(L.length===1?' pedido':' pedidos');
+  var store=S&&S.rol==='store';
+  var tbody=L.map(function(p){
+    var o=!!CANC_OPEN[p.k], n=p.items.length, und=_cancUnd(p);
+    var anular=(store&&p.nro)?'<div class="cn-a"><button class="cn-b" title="Devolver este pedido a Salidas" data-nro="'+esc(p.nro)+'" onclick="event.stopPropagation();anularCancAbrir(this.dataset.nro)">'+_CANC_UNDO+'Anular</button></div>':'';
+    var h='<tr class="cn-g'+(o?' open':'')+'" data-k="'+esc(p.k)+'" tabindex="0" role="button" aria-expanded="'+o+'" aria-label="Pedido '+esc(p.nro||'sin número')+', '+n+(n===1?' ítem':' ítems')+', '+fmt(und)+' unidades">'+
+      '<td><span class="cn-chev">'+_CANC_CHEV+'</span><span style="display:inline-block;vertical-align:middle"><div class="cn-nm"><span class="nro">'+esc(p.nro||'-')+'</span></div>'+
+        '<div class="cn-sub">'+esc(p.fecha)+(p.hora?' · '+esc(p.hora):'')+'</div>'+
+        '<div class="cn-mm">'+esc(p.motivo||'-')+(p.motor?' · '+esc(p.motor):'')+'</div></span></td>'+
+      '<td class="cn-t col-hide-mobile">'+esc(p.motor||'-')+'</td>'+
+      '<td class="cn-t col-hide-mobile" title="'+esc(p.motivo)+'">'+esc(p.motivo||'-')+'</td>'+
+      '<td class="c"><span class="cn-pill">'+n+(n===1?' ítem':' ítems')+'</span></td>'+
+      '<td class="r cn-und">'+fmt(und)+'</td>'+
+      '<td class="c col-hide-mobile"><span class="sal-est cx"><i></i>'+esc(p.estado)+'</span></td>'+
+      '<td class="r">'+anular+'</td></tr>';
+    if(o) h+=p.items.map(function(x){
+      return '<tr class="cn-r"><td><div class="cn-it"><b>'+esc(x.desc)+(x.marca?'<span class="cn-brand">'+esc(x.marca)+'</span>':'')+'</b>'+
+        '<small>'+esc(x.sku)+(x.envases?' · Envases: '+esc(x.envases):'')+'</small></div></td>'+
+        '<td class="cn-t mut col-hide-mobile">'+(x.revision?'Revisión: '+esc(x.revision):'')+'</td><td class="col-hide-mobile"></td>'+
+        '<td class="c cn-t mut">'+fmt(x.pack)+' pack'+(Number(x.pack)===1?'':'s')+'</td><td class="r cn-und">'+fmt(x.unidad)+'</td><td class="col-hide-mobile"></td><td></td></tr>';
+    }).join('');
+    return h;
   }).join('');
   var t=document.getElementById('cancelados-tbody');
-  if(t)t.innerHTML=tbody||'<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:40px">Sin cancelados</td></tr>';
+  if(t)t.innerHTML=tbody||'<tr><td colspan="7" class="cn-vacio">Sin cancelados.<br>Prueba con otra fecha, motivo, SKU o número de pedido.</td></tr>';
+}
+
+/* Un solo oyente en la tabla: clic o Enter/Espacio abren y cierran el pedido */
+function _cancDelegar(){
+  var t=document.getElementById('cancelados-tbody'); if(!t||t._cancDel) return;
+  t._cancDel=true;
+  var abrir=function(tr){
+    var k=tr.dataset.k; CANC_OPEN[k]=!CANC_OPEN[k];
+    _filterCancelados();
+    var n=[].filter.call(t.querySelectorAll('tr.cn-g'),function(x){return x.dataset.k===k;})[0];
+    if(n) n.focus({preventScroll:true});
+  };
+  t.addEventListener('click',function(e){ var tr=e.target.closest('tr.cn-g'); if(tr) abrir(tr); });
+  t.addEventListener('keydown',function(e){
+    if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('cn-g')){ e.preventDefault(); abrir(e.target); }
+  });
 }
 
 /* ── Anular una cancelación (el pedido vuelve a Salidas) ── */

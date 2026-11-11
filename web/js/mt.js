@@ -759,13 +759,7 @@ function _getFilteredRows(name) {
   if (name === 'mt') {
     return _mtFiltrados();
   }
-  if (name === 'cancelados') {
-    var q = ((document.getElementById('canc-busq')||{}).value||'').toLowerCase();
-    var rows = (DATA.cancelados||[]).filter(function(r){
-      return !q||r.sku.toLowerCase().indexOf(q)>-1||r.desc.toLowerCase().indexOf(q)>-1||r.nroPedido.toLowerCase().indexOf(q)>-1;
-    });
-    return _applyFiltroFecha('canc', rows).sort(function(a,b){return b._row-a._row;});
-  }
+  if (name === 'cancelados') return _cancFiltradas();   // mismo filtro que la pantalla (búsqueda, motivo y fecha)
   if (name === 'conteo') {
     var q = ((document.getElementById('cnt-busq')||{}).value||'').toLowerCase();
     var rows = (DATA.conteo||[]).filter(function(r){
