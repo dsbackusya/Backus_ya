@@ -281,43 +281,59 @@ function dashAnCuerpo(){
   else requestAnimationFrame(function(){ var w=document.getElementById('an-wrap'); if(w) w.classList.add('an-go'); });
 }
 
-/* Pedidos por hora: curva con área y detalle al apuntar (horas reales de cada pedido) */
+/* Pedidos por hora: columnas con resumen (hora pico, franja fuerte, promedio), detalle al apuntar y reparto por turno */
 function _anHora(D,ids,a,b){
   var el=document.getElementById('an-hora'); if(!el) return;
   var por={}, tot=0; (D.horas||[]).forEach(function(h){ if(ids[h.sede_id]){ por[h.h]=(por[h.h]||0)+h.p; tot+=h.p; } });
-  var sedeTxt=DASH.sede?DASH.sede+' · ':'';
-  if(!tot){ el.innerHTML='<h4>Pedidos por hora</h4><div class="nota">Sin pedidos con hora registrada en este periodo.</div>'; return; }
+  el.classList.add('ph'); if(!DASH.go) el.classList.add('go'); else el.classList.remove('go');
+  var sedeTxt=DASH.sede?' · '+DASH.sede:'';
+  var rg='<div class="ph-rg">del '+_anDM(a)+' al '+_anDM(b)+'</div>';
+  if(!tot){ el.innerHTML='<div class="ph-hd"><div><h4>Pedidos por hora</h4><div class="nota">Sin pedidos con hora registrada en este periodo.</div></div>'+rg+'</div>'; return; }
   var hs=Object.keys(por).map(Number).filter(function(h){ return por[h]>=tot*0.01; });
-  var h0=Math.min.apply(null,hs.concat([8])), h1=Math.max.apply(null,hs.concat([22])), H=h1-h0+1, v=[];
+  var h0=Math.min.apply(null,hs.concat([8])), h1=Math.max.apply(null,hs.concat([22])), v=[];
   for(var h=h0;h<=h1;h++) v.push(por[h]||0);
-  var mx=Math.max.apply(null,v), pk=v.indexOf(mx), p10=Math.pow(10,Math.floor(Math.log10(mx))), top=Math.max(mx,Math.ceil(mx/p10)*p10);
-  var W=800, Ht=200, L=34, R=8, T=14, B=26, iw=W-L-R, ih=Ht-T-B;
-  var X=function(i){ return L+i/(H-1)*iw; }, Y=function(x){ return T+ih-(x/top)*ih; };
-  var pts=v.map(function(x,i){ return [X(i),Y(x)]; });
-  var d='M'+pts[0][0]+' '+pts[0][1];
-  for(var i=0;i<pts.length-1;i++){ var p0=pts[Math.max(i-1,0)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(i+2,pts.length-1)];
-    d+=' C'+(p1[0]+(p2[0]-p0[0])/6)+' '+(p1[1]+(p2[1]-p0[1])/6)+' '+(p2[0]-(p3[0]-p1[0])/6)+' '+(p2[1]-(p3[1]-p1[1])/6)+' '+p2[0]+' '+p2[1]; }
-  var area=d+' L'+X(H-1)+' '+(T+ih)+' L'+X(0)+' '+(T+ih)+' Z';
-  var gl=[0,0.5,1].map(function(f){ var y=T+ih-f*ih; return '<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(L-6)+'" y="'+(y+3)+'" text-anchor="end">'+Math.round(top*f)+'</text>'; }).join('');
-  var xs=v.map(function(_,i){ return '<text x="'+X(i)+'" y="'+(Ht-6)+'" text-anchor="middle"'+(i===pk?' class="pk"':'')+'>'+(h0+i)+'</text>'; }).join('');
-  el.innerHTML='<h4>Pedidos por hora <small>'+esc(sedeTxt)+'del '+_anDM(a)+' al '+_anDM(b)+'</small></h4><div class="nota">Frecuencia de pedidos durante el día. Hora pico: '+(h0+pk)+':00 con '+mx+' pedidos.</div>'+
-    '<div class="an-area" id="an-ar"><svg viewBox="0 0 '+W+' '+Ht+'" preserveAspectRatio="none" role="img" aria-label="Pedidos por hora, pico a las '+(h0+pk)+':00">'+gl+
-    '<defs><linearGradient id="an-ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7B61EF" stop-opacity=".45"/><stop offset="1" stop-color="#7B61EF" stop-opacity="0"/></linearGradient></defs>'+
-    '<path class="area" d="'+area+'" fill="url(#an-ag)"/><path class="ln" d="'+d+'"/>'+xs+
-    '<text class="pk" x="'+X(pk)+'" y="'+(Y(mx)-8)+'" text-anchor="middle">'+mx+'</text>'+
-    '<line class="cur" id="an-cur" y1="'+T+'" y2="'+(T+ih)+'"/><circle class="dot" id="an-dot" r="4.5"/></svg><div class="an-tip" id="an-tip" role="status"></div></div>';
-  var ar=document.getElementById('an-ar'), svg=ar.querySelector('svg'), tip=document.getElementById('an-tip');
-  var mover=function(cx){
-    var rc=svg.getBoundingClientRect(), i=Math.max(0,Math.min(H-1,Math.round(((cx-rc.left)/rc.width*W-L)/iw*(H-1)))), px=X(i)/W*rc.width;
-    var cur=document.getElementById('an-cur'), dot=document.getElementById('an-dot');
-    cur.setAttribute('x1',X(i)); cur.setAttribute('x2',X(i)); dot.setAttribute('cx',X(i)); dot.setAttribute('cy',Y(v[i]));
-    tip.innerHTML='<b>De '+(h0+i)+':00 a '+(h0+i+1)+':00</b><div>Pedidos<em>'+v[i]+'</em></div><div>Del total<em>'+(v[i]/tot*100).toFixed(1).replace('.',',')+'%</em></div>';
-    var w=tip.offsetWidth||150, x=Math.max(w/2,Math.min(rc.width-w/2,px)); tip.style.left=x+'px'; tip.style.top=Math.max(0,(Y(v[i])/Ht*rc.height)-70)+'px';
-    ar.classList.add('on'); tip.classList.add('on');
+  var pct=function(x){ return x.toFixed(1).replace('.',','); };
+  var mx=Math.max.apply(null,v), pk=v.indexOf(mx), avg=tot/v.length;
+  var st=mx<=40?10:mx<=100?25:mx<=200?50:Math.pow(10,Math.floor(Math.log10(mx))), top=Math.ceil(mx*1.08/st)*st;
+  var bi=-1, bs=-1; for(var i=0;i+2<v.length;i++){ var s3=v[i]+v[i+1]+v[i+2]; if(s3>bs){ bs=s3; bi=i; } }
+  var suma=function(d,e){ var s=0; for(var h=d;h<e;h++) s+=por[h]||0; return s; };
+  var tn=[{n:'Mañana',r:'0:00 a 12:00',s:suma(0,12),c:'#7B61EF'},{n:'Tarde',r:'12:00 a 18:00',s:suma(12,18),c:'#B9AEFF'},{n:'Noche',r:'18:00 a 24:00',s:suma(18,24),c:'#F2B04B'}];
+  var ticks=[0,.5,1].map(function(f){ return f*top; });
+  var yy=ticks.map(function(t){ return '<span style="bottom:'+(t/top*100)+'%">'+Math.round(t)+'</span>'; }).join('');
+  var gl=ticks.map(function(t,i){ return '<div class="ph-gl'+(i===0?' z':'')+'" style="bottom:'+(t/top*100)+'%"></div>'; }).join('');
+  var cols=v.map(function(x,i){
+    var cls='ph-c'+(i===pk?' pk':'')+((bi>=0&&i>=bi&&i<bi+3)?' fr':'');
+    return '<div class="'+cls+'" tabindex="0" data-i="'+i+'" role="img" aria-label="De '+(h0+i)+':00 a '+(h0+i+1)+':00, '+x+' pedidos">'+
+      '<div class="ph-b" style="height:'+Math.max(x/top*100,1.2)+'%;--i:'+i+'"><span class="ph-v">'+x+'</span></div>'+
+      '<span class="ph-x'+(i%2?' alt':'')+'">'+(h0+i)+'</span></div>';
+  }).join('');
+  el.innerHTML='<div class="ph-hd"><div><h4>Pedidos por hora</h4><div class="nota">A qué hora entran los pedidos durante el día'+esc(sedeTxt)+'</div></div>'+rg+'</div>'+
+    '<div class="ph-st"><div class="ph-s hi"><small>Hora pico</small><b>'+(h0+pk)+':00<em>'+mx+' pedidos</em></b></div>'+
+    '<div class="ph-s"><small>Franja más fuerte</small><b>'+(bi>=0?(h0+bi)+'–'+(h0+bi+3)+'h<em>'+pct(bs/tot*100)+'% del total</em>':'-')+'</b></div>'+
+    '<div class="ph-s"><small>Promedio por hora</small><b>'+Math.round(avg)+'<em>pedidos</em></b></div></div>'+
+    '<div class="ph-ch"><div class="ph-y">'+yy+'</div><div class="ph-pl" id="ph-pl">'+gl+
+      '<div class="ph-av" style="bottom:'+(avg/top*100)+'%"><i>Promedio '+Math.round(avg)+'</i></div>'+
+      '<div class="ph-cols" id="ph-cols">'+cols+'</div><div class="ph-tip" id="ph-tip" role="status"></div></div></div>'+
+    '<div class="ph-tn"><h5>Por turno</h5><div class="ph-bar">'+tn.map(function(t){ return '<i style="flex:'+Math.max(t.s,1)+';background:'+t.c+'"></i>'; }).join('')+'</div>'+
+    '<div class="ph-lg">'+tn.map(function(t){ return '<div><span><em style="background:'+t.c+'"></em>'+t.n+'</span><small><b>'+pct(t.s/tot*100)+'%</b>'+t.s+' pedidos · '+t.r+'</small></div>'; }).join('')+'</div></div>';
+  var pl=document.getElementById('ph-pl'), tip=document.getElementById('ph-tip'), col=document.getElementById('ph-cols'), cur=null;
+  var mostrar=function(c){
+    var i=+c.dataset.i, x=v[i], r=pl.getBoundingClientRect(), cr=c.getBoundingClientRect(), br=c.querySelector('.ph-b').getBoundingClientRect();
+    if(cur) cur.classList.remove('on'); c.classList.add('on'); cur=c;
+    var d=x-avg, dd=Math.round(d);
+    tip.innerHTML='<b>De '+(h0+i)+':00 a '+(h0+i+1)+':00</b><div>Pedidos<em>'+x+'</em></div><div>Del total<em>'+pct(x/tot*100)+'%</em></div><div>Frente al promedio<em class="'+(d>0.5?'up':d<-0.5?'dn':'')+'">'+(dd>0?'+':'')+dd+'</em></div>';
+    var w=tip.offsetWidth||160, cx=cr.left+cr.width/2-r.left, l=Math.max(0,Math.min(r.width-w,cx-w/2)), t=br.top-r.top-tip.offsetHeight-12;
+    if(t<-6) t=br.top-r.top+14;
+    tip.style.left=l+'px'; tip.style.top=t+'px'; tip.classList.add('on');
   };
-  ar.onpointermove=function(e){ if(e.pointerType==='mouse'||e.buttons) mover(e.clientX); };
-  ar.onpointerdown=function(e){ mover(e.clientX); };
-  ar.onpointerleave=function(){ ar.classList.remove('on'); tip.classList.remove('on'); };
+  var ocultar=function(){ if(cur) cur.classList.remove('on'); cur=null; tip.classList.remove('on'); };
+  col.addEventListener('pointerover',function(e){ var c=e.target.closest('.ph-c'); if(c&&e.pointerType!=='touch') mostrar(c); });
+  col.addEventListener('pointerdown',function(e){ var c=e.target.closest('.ph-c'); if(c) mostrar(c); });
+  col.addEventListener('pointermove',function(e){ if(e.pointerType==='touch'&&e.buttons){ var q=document.elementFromPoint(e.clientX,e.clientY), c=q&&q.closest&&q.closest('.ph-c'); if(c&&c!==cur) mostrar(c); } });
+  col.addEventListener('pointerleave',function(e){ if(e.pointerType==='mouse') ocultar(); });
+  col.addEventListener('focusin',function(e){ var c=e.target.closest('.ph-c'); if(c) mostrar(c); });
+  col.addEventListener('focusout',ocultar);
+  col.addEventListener('keydown',function(e){ var c=e.target.closest('.ph-c'); if(!c) return; var n=e.key==='ArrowRight'?c.nextElementSibling:e.key==='ArrowLeft'?c.previousElementSibling:null; if(n){ e.preventDefault(); n.focus(); } });
 }
 
 /* Pedidos por mes y sede (desde que hay datos). El mes en curso se marca como parcial. */
