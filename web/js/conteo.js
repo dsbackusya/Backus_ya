@@ -84,26 +84,32 @@ function renderConteo(r){
   if(_handleExpired(r,'conteo-root')) return;
   if(!r||!r.ok){errBox('conteo-root',r?r.error:'Respuesta inválida del servidor');return;}
   DATA.conteo=r.data;
-  var icoBuscar='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+  _CNT_MODO='';
+  var icoBuscar='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
   var icoScan='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5a2 2 0 0 1 2-2h1v2H5v1H3V5z"/><path d="M19 5a2 2 0 0 0-2-2h-1v2h2v1h2V5z"/><path d="M3 19a2 2 0 0 0 2 2h1v-2H5v-1H3v1z"/><path d="M19 19a2 2 0 0 1-2 2h-1v-2h2v-1h2v1z"/><line x1="10" y1="9" x2="10" y2="15"/><line x1="13" y1="9" x2="13" y2="15"/><line x1="16" y1="9" x2="16" y2="15"/><line x1="7" y1="9" x2="7" y2="15"/></svg>';
   var icoExportar='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  // Mismo patrón que Salidas y Entradas: tres tarjetas de resumen + panel violeta con tabla hundida
   document.getElementById('conteo-root').innerHTML=
-    '<div class="ci">'+
-    '<div class="ci-sum">'+
-      '<div class="ci-big"><div class="ci-k">Unidades contadas</div><div class="ci-v"><span id="cnt-stat-und">0</span><small>und.</small></div></div>'+
-      '<div class="ci-mini"><div class="ci-k">Registros</div><div class="ci-v" id="cnt-stat-total">0</div></div>'+
-      '<div class="ci-mini"><div class="ci-k">SKUs únicos</div><div class="ci-v" id="cnt-stat-skus">0</div></div>'+
-      '<div class="ci-mini"><div class="ci-k">Último conteo</div><div class="ci-v" id="cnt-stat-hora">-</div></div>'+
+    '<div class="sal2-sum">'+
+      '<div class="sal2-card sal2-ped"><div class="sal2-pl"><div class="sal2-k">Registros</div><div class="sal2-v" id="cnt-stat-total">0</div></div>'+
+        '<div class="sal2-pr"><div class="cq-hora"><span id="cnt-stat-hora">-</span><small>último conteo</small></div></div></div>'+
+      '<div class="sal2-card"><div class="sal2-k">Unidades contadas</div><div class="sal2-v"><span id="cnt-stat-und">0</span><small>und.</small></div><div class="sal2-n" id="cnt-und-n"></div></div>'+
+      '<div class="sal2-card"><div class="sal2-k">SKUs únicos</div><div class="sal2-v" id="cnt-stat-skus">0</div><div class="sal2-n" id="cnt-sku-n"></div></div>'+
     '</div>'+
-    '<div class="ci-tools">'+
-      '<label class="ci-srch"><span class="ci-srch-i">'+icoBuscar+'</span><input id="cnt-busq" placeholder="Buscar SKU, EAN o producto" autocomplete="off" aria-label="Buscar SKU, EAN o producto" oninput="filterConteo()"/></label>'+
-      '<button type="button" class="ci-ib sq" title="Escanear para buscar" aria-label="Escanear para buscar" onclick="openScannerConteoFiltro()">'+icoScan+'</button>'+
+    '<div class="sal2-pnl">'+
+    '<div class="sal2-fl">'+
+      '<div class="sal2-seg" id="cnt-seg" role="group" aria-label="Filtrar por número de conteos"></div>'+
+      '<div class="sal2-srch">'+icoBuscar+'<input id="cnt-busq" placeholder="Buscar SKU, EAN, producto..." aria-label="Buscar SKU, EAN o producto" autocomplete="off" oninput="filterConteo()"/></div>'+
+      '<button type="button" class="cam-btn" title="Escanear para buscar" aria-label="Escanear para buscar" onclick="openScannerConteoFiltro()">'+icoScan+'</button>'+
       _fechaFiltroHTML('cnt','filterConteo','cntRangoCambio')+
-      '<button type="button" id="btn-export-conteo" class="ci-btn" onclick="exportConteo()">'+icoExportar+'Exportar</button>'+
+      '<span class="sal2-cnt" id="cnt-count"></span>'+
+      '<button type="button" id="btn-export-conteo" class="sal2-exp" onclick="exportConteo()">'+icoExportar+'Exportar</button>'+
     '</div>'+
-    '<div class="ci-strip" id="cnt-strip"><span id="cnt-strip-t"></span><button type="button" class="ci-del" id="btn-eliminar-ean-dia" onclick="eliminarEANDia()">Eliminar estos del día</button></div>'+
-    '<div class="ci-lh"><b>Por producto</b><span id="cnt-count"></span></div>'+
-    '<div id="conteo-list"></div>'+
+    '<div class="cq-strip" id="cnt-strip"><span id="cnt-strip-t"></span><button type="button" id="btn-eliminar-ean-dia" onclick="eliminarEANDia()">Eliminar estos del día</button></div>'+
+    '<div class="table-wrap"><table>'+
+      '<thead><tr><th>Producto</th><th class="c col-hide-mobile">Conteos</th><th class="r col-hide-mobile">Packs</th><th class="r col-hide-mobile">Sueltas</th><th class="r">Total</th></tr></thead>'+
+      '<tbody id="conteo-tbody"></tbody>'+
+    '</table></div>'+
     '</div>';
   _initFiltroFecha('cnt','filterConteo',{page:'conteo'});
   filterConteo();
@@ -128,81 +134,97 @@ function _cntCoincide(r,qL){
   return !qL||r.sku.toLowerCase().indexOf(qL)>-1||r.producto.toLowerCase().indexOf(qL)>-1||r.ean.toLowerCase().indexOf(qL)>-1;
 }
 
+var _CNT_MODO='';   // '' todos · 'var' productos con varios conteos · 'uno' con un solo conteo
+function cntModo(m){ _CNT_MODO=m; _filterConteo(); }
+
 function _filterConteo(){
   var qRaw=((document.getElementById('cnt-busq')||{}).value||'').trim(), q=qRaw.toLowerCase();
   var filtered=(DATA.conteo||[]).filter(function(r){ return _cntCoincide(r,q); });
   filtered=_applyFiltroFecha('cnt',filtered);
 
-  // Resumen con los datos filtrados
-  var totalUnd=0, skusU=new Set(), hora='';
-  filtered.forEach(function(x){ totalUnd+=x.total; skusU.add(x.sku); if(x.hora&&String(x.hora)>hora) hora=String(x.hora); });
-  var put=function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
-  put('cnt-stat-total',filtered.length); put('cnt-stat-skus',skusU.size); put('cnt-stat-und',fmt(totalUnd)); put('cnt-stat-hora',hora?hora.slice(0,5):'-');
-
   // Agrupar filas por SKU
   var grupos=new Map(); // Map preserva el orden de inserción
-  window._CNT_ROWS={};   // índice por fila: editarConteoRowSafe lee de aquí (sin interpolar strings en onclick)
   filtered.forEach(function(r){
     var c=_conteoCalcRow(r), key=r.sku||r.ean;
     if(!grupos.has(key)) grupos.set(key,{sku:r.sku,ean:r.ean,producto:r.producto,mult:c.mult,filas:[],totalUnd:0,totalPacks:0,totalUnds:0});
     var g=grupos.get(key);
     g.filas.push({r:r,packsReal:c.packsReal,undReal:c.undReal,mult:c.mult});
     g.totalUnd+=c.undReal; g.totalPacks+=c.packsReal; g.totalUnds+=Number(r.unds||0);
-    window._CNT_ROWS[r._row]={r:r,packsReal:c.packsReal,mult:c.mult};
   });
+  var todos=[]; grupos.forEach(function(g){ todos.push(g); });
+  var nVarios=todos.filter(function(g){ return g.filas.length>1; }).length;
+
+  // Resumen y chips (con búsqueda y fecha ya aplicadas)
+  var totalUnd=0, hora='';
+  filtered.forEach(function(x){ totalUnd+=x.total; if(x.hora&&String(x.hora)>hora) hora=String(x.hora); });
+  var put=function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
+  var puth=function(id,v){ var e=document.getElementById(id); if(e) e.innerHTML=v; };
+  put('cnt-stat-total',filtered.length); put('cnt-stat-skus',todos.length); put('cnt-stat-und',fmt(totalUnd)); put('cnt-stat-hora',hora?hora.slice(0,5):'-');
+  puth('cnt-und-n',todos.length?'Promedio <b>'+fmt(Math.round(totalUnd/todos.length))+'</b> por producto':'');
+  puth('cnt-sku-n',todos.length?(nVarios?'<b>'+nVarios+'</b> con más de un conteo':'Todos con un solo conteo'):'');
+  var seg=document.getElementById('cnt-seg');
+  if(seg){
+    var ch=[['','Todos',todos.length],['var','Varios conteos',nVarios],['uno','Un conteo',todos.length-nVarios]];
+    seg.innerHTML=ch.map(function(c){ return '<button type="button" class="'+(_CNT_MODO===c[0]?'on':'')+'" aria-pressed="'+(_CNT_MODO===c[0])+'" onclick="cntModo(\''+c[0]+'\')">'+c[1]+' <span>'+c[2]+'</span></button>'; }).join('');
+  }
+
+  // Lista según el chip elegido
+  var lista=_CNT_MODO==='var'?todos.filter(function(g){ return g.filas.length>1; }):_CNT_MODO==='uno'?todos.filter(function(g){ return g.filas.length===1; }):todos;
+  window._CNT_ROWS={};   // índice por fila: editarConteoRowSafe lee de aquí (sin interpolar strings en onclick)
+  lista.forEach(function(g){ g.filas.forEach(function(f){ window._CNT_ROWS[f.r._row]={r:f.r,packsReal:f.packsReal,mult:f.mult}; }); });
   // Rendimiento: solo se dibujan de a 40 productos (se agregan más al bajar) y los conteos de cada producto se crean al abrirlo.
   // id por posición: sanear el SKU ('A-1' y 'A_1' darían el mismo id) mezclaría las filas de productos distintos
   _CNT.grupos=[]; _CNT.mapa={}; _CNT.n=0;
-  grupos.forEach(function(g){ g.gid='cg-'+_CNT.grupos.length; _CNT.grupos.push(g); _CNT.mapa[g.gid]=g; });
-
-  var el=document.getElementById('cnt-count');
-  if(el) el.textContent=_CNT.grupos.length+(_CNT.grupos.length===1?' producto':' productos')+' · '+filtered.length+(filtered.length===1?' registro':' registros');
+  lista.forEach(function(g){ g.gid='cg-'+_CNT.grupos.length; _CNT.grupos.push(g); _CNT.mapa[g.gid]=g; });
+  var nReg=lista.reduce(function(a,g){ return a+g.filas.length; },0);
+  put('cnt-count',lista.length+(lista.length===1?' producto':' productos'));
 
   // "Eliminar estos del día": solo aparece con una búsqueda y dice cuántos registros de HOY borraría
   var strip=document.getElementById('cnt-strip');
   if(strip){
     var hoy=_cntHoyStr(), nHoy=qRaw?(DATA.conteo||[]).filter(function(r){ return r.fecha===hoy&&_cntCoincide(r,q); }).length:0;
     strip.classList.toggle('on',nHoy>0);
-    if(nHoy>0){ var t=document.getElementById('cnt-strip-t'); if(t) t.innerHTML='<b>'+nHoy+(nHoy===1?' registro':' registros')+'</b> de hoy coinciden con «'+esc(qRaw)+'».'; }
+    if(nHoy>0) puth('cnt-strip-t','<b>'+nHoy+(nHoy===1?' registro':' registros')+'</b> de hoy coinciden con «'+esc(qRaw)+'».');
   }
 
-  var host=document.getElementById('conteo-list');
-  if(!host) return;
-  host.innerHTML='';
-  if(!_CNT.grupos.length){ host.innerHTML='<div class="ci-empty">'+(qRaw?'No hay conteos que coincidan.<br>Prueba con otro SKU, EAN o nombre.':'Sin registros')+'</div>'; _cntVigilar(null); return; }
+  var t=document.getElementById('conteo-tbody');
+  if(!t) return;
+  t.innerHTML='';
+  if(!_CNT.grupos.length){ t.innerHTML='<tr><td colspan="5" class="cq-empty">'+(qRaw||_CNT_MODO?'No hay conteos que coincidan.<br>Prueba con otro SKU, EAN o nombre.':'Sin registros')+'</td></tr>'; _cntVigilar(null); return; }
   _cntMas();
 }
 
 var _CNT={ grupos:[], mapa:{}, n:0, lote:40, obs:null };
 // Un conteo dentro de un producto: hora, packs × multiplicador + sueltas, total y acciones
-function _cntFila(item){
+function _cntFila(item,gid){
   var r=item.r, h=String(r.hora||'').slice(0,5);
   var cuando=(r.fecha&&r.fecha!==_cntHoyStr()?String(r.fecha).slice(0,5)+' ':'')+h;
   var sueltas=Number(r.unds||0);
-  return '<div class="cr"><span class="cr-h">'+esc(cuando)+'</span>'+
-    '<span class="cr-f"><b>'+fmt(item.packsReal)+'</b> '+(item.packsReal===1?'pack':'packs')+' × '+item.mult+(sueltas?' + <b>'+fmt(sueltas)+'</b> '+(sueltas===1?'suelta':'sueltas'):'')+'</span>'+
-    '<span class="cr-t">'+fmt(r.total)+'</span>'+
-    '<span class="cr-a"><button type="button" class="ci-ib" onclick="editarConteoRowSafe('+r._row+')" aria-label="Editar el conteo de '+esc(cuando)+'">Editar</button>'+
-    '<button type="button" class="ci-ib del" onclick="eliminarConteoRow('+r._row+')" aria-label="Eliminar el conteo de '+esc(cuando)+'">'+ICO('x',14,'s')+'</button></span></div>';
+  var acc='<button type="button" class="cq-b" onclick="event.stopPropagation();editarConteoRowSafe('+r._row+')" aria-label="Editar el conteo de '+esc(cuando)+'">Editar</button>'+
+          '<button type="button" class="cq-b del" onclick="event.stopPropagation();eliminarConteoRow('+r._row+')" aria-label="Eliminar el conteo de '+esc(cuando)+'">'+ICO('x',14,'s')+'</button>';
+  return '<tr class="cq-r cg-rows-'+gid+'">'+
+    '<td><span class="cq-h">'+esc(cuando)+'</span><span class="cq-f"><b>'+fmt(item.packsReal)+'</b> '+(item.packsReal===1?'pack':'packs')+' × '+item.mult+(sueltas?' + <b>'+fmt(sueltas)+'</b> '+(sueltas===1?'suelta':'sueltas'):'')+'</span></td>'+
+    '<td class="c col-hide-mobile"><div class="cq-a">'+acc+'</div></td>'+
+    '<td class="r col-hide-mobile">'+fmt(item.packsReal)+'</td>'+
+    '<td class="r col-hide-mobile">'+(sueltas?fmt(sueltas):'-')+'</td>'+
+    '<td class="r cq-t">'+fmt(r.total)+'<div class="cq-a cq-am">'+acc+'</div></td></tr>';
 }
 function _cntGrupo(g){
   var n=g.filas.length, gid=g.gid, tot=g.totalUnd+(g.totalUnds||0);
-  var ini=esc(String(g.producto||g.sku||'?').charAt(0).toUpperCase());
-  return '<div class="cg" id="'+gid+'"><button type="button" class="cg-h" aria-expanded="false" aria-controls="'+gid+'-b" onclick="_toggleGrupoConteo(\''+gid+'\')">'+
-    '<span class="cg-av" aria-hidden="true">'+ini+'</span>'+
-    '<span class="cg-m"><span class="cg-n">'+esc(g.producto)+'</span><span class="cg-s"><i>'+esc(g.sku)+'</i>'+(g.ean?'<i>'+esc(g.ean)+'</i>':'')+'</span></span>'+
-    '<span class="cg-c"><span class="ci-pill">'+n+(n===1?' conteo':' conteos')+'</span></span>'+
-    '<span class="cg-t">'+fmt(tot)+'<small>unidades</small></span>'+
-    '<span class="cg-chev" aria-hidden="true">'+ICO('right',16,'s')+'</span></button>'+
-    '<div class="cg-b" id="'+gid+'-b" hidden></div></div>';
+  return '<tr class="cq-g" id="'+gid+'" tabindex="0" role="button" aria-expanded="false" aria-label="'+esc(g.producto)+', '+fmt(tot)+' unidades, '+n+(n===1?' conteo':' conteos')+'" onclick="_toggleGrupoConteo(\''+gid+'\')">'+
+    '<td><span class="cq-chev" aria-hidden="true">'+ICO('right',14,'s')+'</span><span class="cq-pn"><span class="cq-name">'+esc(g.producto)+'</span><span class="cq-sub">'+esc(g.sku)+(g.ean?' · '+esc(g.ean):'')+'</span></span></td>'+
+    '<td class="c col-hide-mobile"><span class="cq-pill">'+n+(n===1?' conteo':' conteos')+'</span></td>'+
+    '<td class="r col-hide-mobile">'+fmt(g.totalPacks)+'</td>'+
+    '<td class="r col-hide-mobile">'+(g.totalUnds?fmt(g.totalUnds):'-')+'</td>'+
+    '<td class="r cq-t">'+fmt(tot)+'</td></tr>';
 }
 function _cntMas(){
-  var t=document.getElementById('conteo-list'); if(!t) return;
+  var t=document.getElementById('conteo-tbody'); if(!t) return;
   var marca=document.getElementById('cnt-mas'); if(marca) marca.remove();
   var desde=_CNT.n, hasta=Math.min(desde+_CNT.lote,_CNT.grupos.length), h='', i;
   for(i=desde;i<hasta;i++) h+=_cntGrupo(_CNT.grupos[i]);
   _CNT.n=hasta;
-  if(hasta<_CNT.grupos.length) h+='<div id="cnt-mas" class="ci-more">Mostrando '+hasta+' de '+_CNT.grupos.length+' productos…</div>';
+  if(hasta<_CNT.grupos.length) h+='<tr id="cnt-mas"><td colspan="5" class="cq-more">Mostrando '+hasta+' de '+_CNT.grupos.length+' productos…</td></tr>';
   t.insertAdjacentHTML('beforeend',h);
   _cntVigilar(document.getElementById('cnt-mas'));
 }
@@ -223,13 +245,17 @@ function editarConteoRowSafe(rowNum){
 }
 
 function _toggleGrupoConteo(gid){
-  var el=document.getElementById(gid), b=document.getElementById(gid+'-b'), g=_CNT.mapa[gid]; if(!el||!b||!g) return;
-  var abrir=b.hasAttribute('hidden');
-  if(abrir&&!b.firstChild) b.innerHTML=g.filas.map(function(item){ return _cntFila(item); }).join('');   // los conteos se crean al abrir
-  if(abrir) b.removeAttribute('hidden'); else b.setAttribute('hidden','');
-  el.classList.toggle('open',abrir);
-  var h=el.querySelector('.cg-h'); if(h) h.setAttribute('aria-expanded',abrir?'true':'false');
+  var cab=document.getElementById(gid), g=_CNT.mapa[gid]; if(!cab||!g) return;
+  var rows=document.querySelectorAll('.cg-rows-'+gid);
+  if(rows.length){ rows.forEach(function(tr){ tr.remove(); }); cab.classList.remove('open'); cab.setAttribute('aria-expanded','false'); return; }   // cerrar
+  cab.insertAdjacentHTML('afterend',g.filas.map(function(item){ return _cntFila(item,gid); }).join(''));                                           // abrir: se crean ahora
+  cab.classList.add('open'); cab.setAttribute('aria-expanded','true');
 }
+// Teclado: Enter o Espacio abren y cierran el producto
+document.addEventListener('keydown',function(e){
+  var t=e.target;
+  if((e.key==='Enter'||e.key===' ')&&t&&t.classList&&t.classList.contains('cq-g')){ e.preventDefault(); t.click(); }
+});
 
 function eliminarConteoRow(rowNum){
   _confirmDialog('Eliminar registro', 'Se eliminará esta fila del conteo. Esta acción no se puede deshacer.', function(){
