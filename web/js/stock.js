@@ -92,14 +92,11 @@ function _dashChipsSede(id){
 
 function dashDibujar(){
   var root=document.getElementById('dashboard-root'); if(!root||!DASH.m) return;
-  var fechaTxt=new Intl.DateTimeFormat('es-PE',{timeZone:'America/Lima',weekday:'long',day:'numeric',month:'long'}).format(new Date(DASH.d.hoy+'T12:00:00Z'));
-  fechaTxt=fechaTxt.replace(',','');
-  fechaTxt=fechaTxt.charAt(0).toUpperCase()+fechaTxt.slice(1);
   var hora=DASH.ts?DASH.ts.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit',hour12:false}):'';
   var det=DASH.vista==='det'&&DASH.sal;
   root.innerHTML=
     '<div id="db-main"'+(det?' hidden':'')+' class="'+(DASH.go?'db-go ':'')+(DASH.visto?'seen':'')+'">'+
-      '<div class="db-top"><div><div class="db-h1">Dashboard</div><div class="db-sub">'+esc(fechaTxt)+(hora?' · actualizado '+hora:'')+'</div></div>'+
+      '<div class="db-top"><div class="db-sub">'+(hora?'Actualizado '+hora:'')+'</div>'+   // el título y la fecha ya los muestra el encabezado de la página
         '<div class="db-tools">'+_dashChipsSede()+
           '<button class="db-dl" id="db-dl" aria-haspopup="true" aria-expanded="false" onclick="dashMenu(event)">'+_DASH_ICO_DL+'Descargas</button>'+
           '<div class="db-menu" id="db-menu" role="menu">'+
