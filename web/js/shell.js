@@ -35,18 +35,53 @@ window.showToast = function(msg, type) {
   t.classList.add('show');
 };
 
-/* ── PASSWORD TOGGLE ── */
-function togglePwd(){
-  var inp=document.getElementById('inp-p');
-  var eye=document.getElementById('pwd-eye');
-  if(inp.type==='password'){
-    inp.type='text';
-    eye.innerHTML='<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
-  } else {
-    inp.type='password';
-    eye.innerHTML='<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-  }
+/* ── LOGIN: mensajes, contraseña, aviso de Bloq Mayús y usuario recordado ── */
+var _LG_ICO_ERR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.5"/></svg>';
+var _LG_ICO_INFO='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/></svg>';
+function loginMsg(tipo,texto,campo){
+  var p=document.getElementById('l-msgp'), m=document.getElementById('l-msg'); if(!p||!m) return;
+  p.innerHTML=(tipo==='err'?_LG_ICO_ERR:_LG_ICO_INFO)+'<span></span>';
+  p.lastChild.textContent=texto;
+  m.className='lg-msg on '+tipo;
+  ['wu','wp'].forEach(function(w){ var e=document.getElementById(w); if(e) e.classList.remove('bad'); });
+  if(campo){ var c=document.getElementById(campo); if(c) c.classList.add('bad'); }
 }
+function loginLimpia(){
+  var m=document.getElementById('l-msg'); if(m) m.className='lg-msg';
+  ['wu','wp'].forEach(function(w){ var e=document.getElementById(w); if(e) e.classList.remove('bad'); });
+}
+function loginCargando(on){
+  var b=document.getElementById('btn-login'); if(!b) return;
+  b.disabled=on; b.classList.toggle('load',on); b.setAttribute('aria-label',on?'Verificando':'Ingresar');
+}
+function loginAyuda(){ loginMsg('info','Entra con el usuario de tu sede, por ejemplo DS SAN MIGUEL. Si no lo recuerdas, consúltalo con tu administrador.'); }
+function loginOlvide(){ loginMsg('info','Pide a tu administrador que restablezca tu contraseña. Ten a mano el nombre de tu sede.'); }
+function togglePwd(){
+  var inp=document.getElementById('inp-p'), eye=document.getElementById('pwd-eye'), btn=document.getElementById('pwd-toggle');
+  var ver=inp.type==='password';
+  inp.type=ver?'text':'password';
+  btn.setAttribute('aria-pressed',ver); btn.setAttribute('aria-label',ver?'Ocultar contraseña':'Mostrar contraseña');
+  eye.innerHTML=ver
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+}
+// Solo se recuerda el usuario (nunca la contraseña) en este equipo
+function loginRecordar(u){
+  try{ if(document.getElementById('inp-rec').checked) localStorage.setItem('tada-login-user',u); else localStorage.removeItem('tada-login-user'); }catch(e){}
+}
+(function loginIniciar(){
+  var f=function(o){ return new Intl.DateTimeFormat('es-PE',Object.assign({timeZone:'America/Lima'},o)).format(new Date()); };
+  var cap=function(t){ return t.charAt(0).toUpperCase()+t.slice(1); };
+  var mes=document.getElementById('lg-mes'), anio=document.getElementById('lg-anio'), dia=document.getElementById('lg-dia');
+  if(mes) mes.textContent=cap(f({month:'short'}).replace('.',''));
+  if(anio) anio.textContent=f({year:'numeric'});
+  if(dia) dia.innerHTML=cap(f({weekday:'long'}))+' '+f({day:'2-digit'})+'<br>'+cap(f({month:'long'}))+'<br>Ta·Da';
+  var p=document.getElementById('inp-p'), u=document.getElementById('inp-u'); if(!p||!u) return;
+  ['keydown','keyup'].forEach(function(ev){ p.addEventListener(ev,function(e){ var c=document.getElementById('l-caps'); if(c&&e.getModifierState) c.classList.toggle('on',e.getModifierState('CapsLock')); }); });
+  p.addEventListener('blur',function(){ var c=document.getElementById('l-caps'); if(c) c.classList.remove('on'); });
+  try{ var g=localStorage.getItem('tada-login-user'); if(g){ u.value=g; } }catch(e){}
+  if(document.getElementById('s-login').classList.contains('active')) (u.value?p:u).focus();
+})();
 
 /* ── MOBILE MENU ── */
 function toggleMobileMenu(force){

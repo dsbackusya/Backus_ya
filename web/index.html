@@ -64,50 +64,37 @@ window.addEventListener('load', function(){
 
 <!-- ══ LOGIN ══ -->
 <div id="s-login" class="screen">
-  <div class="login-bg-deco"></div>
-  <div class="login-shell">
-    <div class="login-visual">
-      <div class="login-visual-bg"></div>
-      <div class="login-visual-grain"></div>
-      <div class="login-visual-top">
-        <div class="login-logomark">DL</div>
-        <div class="login-back-link"><span>Backus · Sede</span></div>
+  <i class="lg-orb lg-o1"></i><i class="lg-orb lg-o2"></i><i class="lg-orb lg-o3"></i>
+  <div class="lg-grid">
+    <form class="lg-c lg-glass" id="login-form" novalidate onsubmit="doLogin();return false">
+      <div class="lg-top"><img class="lg-logo" src="img/logo-dinet.png" alt="Dinet Logistics" width="936" height="797"><button type="button" class="lg-link" onclick="loginAyuda()">Ayuda</button></div>
+      <h1 class="lg-title">Iniciar sesión</h1>
+      <p class="lg-sub">Accede con las credenciales de tu sede.</p>
+
+      <label class="lg-pill" id="wu" for="inp-u"><span class="lg-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+        <input id="inp-u" type="text" placeholder="Usuario de tu sede" autocomplete="username" autocapitalize="characters" spellcheck="false" aria-describedby="l-msg" aria-label="Usuario" oninput="loginLimpia()"></label>
+
+      <div class="lg-pill" id="wp"><span class="lg-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        <input id="inp-p" type="password" placeholder="Contraseña" autocomplete="current-password" aria-describedby="l-msg l-caps" aria-label="Contraseña" oninput="loginLimpia()">
+        <button type="button" class="lg-eye" id="pwd-toggle" onclick="togglePwd()" aria-label="Mostrar contraseña" aria-pressed="false"><svg id="pwd-eye" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        <button type="button" class="lg-ol" onclick="loginOlvide()">¿La olvidaste?</button></div>
+      <div class="lg-caps" id="l-caps" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 9h-5v6H9v-6H4z"/></svg>Bloq Mayús está activado</div>
+
+      <div class="lg-msg" id="l-msg" role="alert"><div><p id="l-msgp"></p></div></div>
+
+      <div class="lg-bt">
+        <div><div class="lg-txt">Usa el usuario y la clave que te dio tu administrador. Cada cuenta ve las sedes que le corresponden.</div>
+          <label class="lg-chk"><input type="checkbox" id="inp-rec" checked><i><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></i>Recordar mi usuario</label></div>
+        <button class="lg-go" id="btn-login" type="submit" aria-label="Ingresar"><span class="sp" aria-hidden="true"></span><svg class="ar" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg></button>
       </div>
-      <div class="login-visual-bottom">
-        <div class="login-visual-title">Gestión de<br/>Inventario</div>
-        <div class="login-visual-sub">Operado por Dinet Logistics<br/>para Ta·Da Delivery de Bebidas</div>
-        <div class="login-visual-dots">
-          <span class="login-vd active"></span>
-          <span class="login-vd"></span>
-          <span class="login-vd"></span>
-        </div>
-      </div>
-    </div>
-    <div class="login-form-side">
-      <div class="login-form-inner">
-        <div class="login-eyebrow">Bienvenido</div>
-        <div class="login-title">Iniciar sesión</div>
-        <div class="login-sub">Accede con las credenciales de tu sede para continuar</div>
-        <div class="login-card">
-          <div class="field">
-            <label>Usuario</label>
-            <input class="inp" id="inp-u" type="text" placeholder="tu usuario" autocomplete="username"/>
-          </div>
-          <div class="field">
-            <label>Contraseña</label>
-            <div class="pwd-wrap">
-              <input class="inp" id="inp-p" type="password" placeholder="••••••••" autocomplete="current-password"/>
-              <button type="button" class="pwd-toggle" onclick="togglePwd()" title="Mostrar/Ocultar">
-                <svg id="pwd-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              </button>
-            </div>
-          </div>
-          <div id="l-err" class="err-msg"></div>
-          <button class="btn btn-primary" id="btn-login" onclick="doLogin()" style="width:100%;justify-content:center">Ingresar <svg class="ico-s l" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
-        </div>
-        <div class="login-foot">GESTIONADO POR <span>DINET LOGISTICS</span></div>
-      </div>
-    </div>
+      <div class="lg-ft"><b>Gestionado por Dinet Logistics</b></div>
+    </form>
+
+    <aside class="lg-c lg-tall" aria-hidden="true">
+      <div class="lg-pan"><div class="lg-mes" id="lg-mes"></div><div class="lg-anio" id="lg-anio"></div><div class="lg-dia" id="lg-dia"></div></div>
+      <div class="lg-rt"><span>Control de stock<br>Salidas y entradas<br>Órdenes de compra</span><small>Todo por sede, en un solo lugar.</small></div>
+      <i class="lg-sun"></i>
+    </aside>
   </div>
 </div>
 

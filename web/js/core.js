@@ -211,24 +211,24 @@ function _handleExpired(r, rootId){
 
 /* ── LOGIN ── */
 function doLogin(){
-  var u=document.getElementById('inp-u').value.trim();
-  var p=document.getElementById('inp-p').value;
-  var err=document.getElementById('l-err');
-  var btn=document.getElementById('btn-login');
-  if(!u||!p){err.textContent='Completa todos los campos';return;}
-  err.textContent='';btn.disabled=true;btn.textContent='Verificando...';
+  var inpU=document.getElementById('inp-u'), inpP=document.getElementById('inp-p'), btn=document.getElementById('btn-login');
+  var u=inpU.value.trim(), p=inpP.value;
+  if(btn.disabled) return;
+  if(!u){ loginMsg('err','Escribe tu usuario.','wu'); inpU.focus(); return; }
+  if(!p){ loginMsg('err','Escribe tu contraseña.','wp'); inpP.focus(); return; }
+  loginLimpia(); loginCargando(true);
   google.script.run
     .withSuccessHandler(function(r){
-      btn.disabled=false;btn.textContent='Ingresar';
-      if(!r.ok){err.textContent=r.error;return;}
+      loginCargando(false);
+      if(!r.ok){ loginMsg('err',r.error||'Usuario o contraseña incorrectos. Revisa que el usuario sea el de tu sede.','wp'); inpP.focus(); return; }
+      loginRecordar(u);
       S={token:r.token,usuario:r.usuario,rol:r.rol,sheetId:r.sheetId};
       saveSession(S);
       showLoadingAndInit();
     })
-    .withFailureHandler(function(e){btn.disabled=false;btn.textContent='Ingresar';err.textContent='Error: '+e.message;})
+    .withFailureHandler(function(e){ loginCargando(false); loginMsg('err','No se pudo conectar: '+e.message); })
     .login(u,p);
 }
-document.getElementById('inp-p').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 
 function doLogout(){
   google.script.run.cerrarSesion(S.token);
@@ -240,7 +240,7 @@ function doLogout(){
   document.getElementById('s-app').classList.remove('active');
   document.getElementById('s-login').classList.add('active');
   document.getElementById('inp-p').value='';
-  document.getElementById('l-err').textContent='';
+  loginLimpia();
   toggleMobileMenu(false);
 }
 
