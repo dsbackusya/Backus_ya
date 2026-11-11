@@ -4824,3 +4824,31 @@ tr.dt-sel td{background:rgba(123,97,239,.12) !important}
 @media(prefers-reduced-motion:reduce){.db-k{animation:none;opacity:1;transform:none}.db-menu{transition:none}}
 
 #db-main[hidden],#db-det[hidden]{display:none}
+
+/* ── las tres sedes lado a lado ── */
+.db-sc3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.db-sc{display:flex;flex-direction:column;padding:18px 20px 16px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%;transition:border-color .15s,background .15s,transform .12s cubic-bezier(.23,1,.32,1)}
+.db-sc:hover{border-color:rgba(123,97,239,.5);background:#17171B}
+.db-sc:active{transform:scale(.99)}
+.db-sc:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+.db-sc .hd{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.db-sc .nm{font:600 15px Inter,sans-serif;color:var(--text)}
+.db-st{display:inline-flex;align-items:center;gap:6px;font:600 11px Inter,sans-serif;padding:3px 10px;border-radius:99px;white-space:nowrap}
+.db-st i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.db-st.rd{background:rgba(255,138,155,.12);color:#FF8A9B}.db-st.am{background:rgba(242,176,75,.12);color:#F2B04B}.db-st.ok{background:rgba(74,222,159,.12);color:#4ADE9F}
+.db-sc .big{display:flex;align-items:baseline;gap:8px;margin-top:14px}
+.db-sc .big b{font:700 34px var(--font-display);line-height:1;font-variant-numeric:tabular-nums}
+.db-sc .big span{font-size:12px;color:var(--text3)}
+.db-sc .spk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;align-items:end;height:34px;margin-top:12px}
+.db-sc .spk i{display:block;border-radius:3px 3px 1px 1px;background:rgba(123,97,239,.4);transform-origin:bottom;transform:scaleY(0);transition:transform .5s cubic-bezier(.23,1,.32,1)}
+.db-sc .spk i:last-child{background:linear-gradient(180deg,#B9AEFF,#7B61EF)}
+.db-go .db-sc .spk i{transform:scaleY(1)}
+.db-sc dl{display:grid;grid-template-columns:1fr auto;gap:9px 12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);font-size:12.5px}
+.db-sc dt{color:var(--text3)}
+.db-sc dd{margin:0;text-align:right;font:600 12.5px var(--font-mono);color:var(--text);font-variant-numeric:tabular-nums}
+.db-sc dd.neg{color:#FF8A9B}.db-sc dd.ok{color:#4ADE9F}.db-sc dd.mut{color:var(--text3)}
+.db-sc .go{margin-top:14px;font:600 12px Inter,sans-serif;color:var(--accent2)}
+.db-sc:hover .go{color:#fff}
+@media(max-width:1100px){.db-sc3{grid-template-columns:1fr}.db-sc dl{grid-template-columns:1fr auto}}
+@media(prefers-reduced-motion:reduce){.db-sc .spk i{transition:none}}
+.db-ch.solo{grid-template-columns:1fr}

@@ -109,6 +109,7 @@ function dashDibujar(){
             '<button role="menuitem" onclick="dashExportModulo(\'mt\',\'db-dl\')">Mermas y traslados</button></div>'+
         '</div></div>'+
       '<div class="db-kpis" id="db-kpis"></div>'+
+      (DASH.sal&&!DASH.sede&&DASH.m.sedes.length>1?'<div id="db-sedes3"></div>':'')+
       (DASH.sal?'<div class="db-sec"><b>Salidas de hoy</b><a tabindex="0" role="button" onclick="dashVista(\'det\')">Ver detalle →</a></div><div id="db-sal"></div>':'')+
       '<div class="db-sec"><b>Órdenes de compra</b><span>Estado de recepción</span></div>'+
       '<div class="sal2-pnl"><div class="sal2-fl"><div class="sal2-seg" id="db-occhips" role="group" aria-label="Filtrar órdenes"></div>'+
@@ -117,7 +118,7 @@ function dashDibujar(){
         '<span class="sal2-cnt" id="db-ocn"></span></div><div id="db-ocs"></div></div>'+
     '</div>'+
     '<div id="db-det"'+(det?'':' hidden')+' class="'+(DASH.go?'db-go':'')+'"></div>';
-  dashKpis(); if(DASH.sal) dashSalidas(); dashOCTabla();
+  dashKpis(); if(document.getElementById('db-sedes3')) dashSedes3(); if(DASH.sal) dashSalidas(); dashOCTabla();
   if(det) dashDetalle();
   if(!DASH.go) requestAnimationFrame(function(){ requestAnimationFrame(function(){ DASH.go=true; DASH.visto=true; ['db-main','db-det'].forEach(function(i){ var e=document.getElementById(i); if(e) e.classList.add('db-go'); }); var mn=document.getElementById('db-main'); if(mn) mn.classList.add('seen'); }); });
 }
@@ -146,6 +147,32 @@ function dashKpis(){
       '<div class="db-foot"><div class="db-dots">'+ses.map(function(s){ return '<span class="'+(m.conteo[s.id]?'':'no')+'"><i></i>'+esc(s.nombre)+'</span>'; }).join('')+'</div></div></div>';
 }
 
+/* ── Las tres sedes lado a lado (solo con «Todas»): tocar una tarjeta deja el Dashboard en esa sede ── */
+function dashSedes3(){
+  var el=document.getElementById('db-sedes3'); if(!el||!DASH.sal) return;
+  var m=DASH.m, M=_dashSalModelo(), s=DASH.sal;
+  var an=DASH.visto?';animation:none;opacity:1;transform:none':'';
+  var cancHoy={}, ret={}; (s.canc||[]).forEach(function(r){ if(r.fecha===s.hoy) cancHoy[r.sede_id]=(cancHoy[r.sede_id]||0)+r.p; });
+  (s.retornables||[]).forEach(function(r){ ret[r.sede_id]=[r.pend,r.total]; });
+  el.innerHTML='<div class="db-sec"><b>Las '+(M.ses.length===3?'tres':M.ses.length)+' sedes</b><span>Toca una para verla sola</span></div><div class="db-sc3">'+M.ses.map(function(x,i){
+    var d=M.hoy.por[x.nombre], a=M.ayer.por[x.nombre], serie=M.dias.map(function(dd){ return dd.por[x.nombre][0]; }), mx=Math.max.apply(null,serie)||1;
+    var oc=m.ocs.filter(function(o){return o.sede===x.nombre;}), pen=oc.filter(function(o){return o.col!=='r';}).length, ven=oc.filter(function(o){return o.col==='v';}).length;
+    var al=m.alertas.filter(function(y){return y.sede===x.nombre;}), crit=al.filter(function(y){return y.sev==='rd';}).length, avi=al.filter(function(y){return y.sev==='am';}).length;
+    var est=crit?['rd',crit+(crit===1?' crítica':' críticas')]:avi?['am',avi+(avi===1?' aviso':' avisos')]:['ok','Todo en orden'];
+    var r=ret[x.id]||[0,0], c=cancHoy[x.id]||0, cn=!!m.conteo[x.id];
+    return '<button class="sal2-card db-sc db-k" data-s="'+esc(x.nombre)+'" onclick="dashSede(this.dataset.s)" aria-label="Ver solo la sede '+esc(x.nombre)+'" style="animation-delay:'+(i*45)+'ms'+an+'">'+
+      '<div class="hd"><span class="nm">'+esc(x.nombre)+'</span><span class="db-st '+est[0]+'"><i></i>'+est[1]+'</span></div>'+
+      '<div class="big"><b>'+fmt(d[0])+'</b><span>pedidos hoy · ayer '+fmt(a[0])+'</span></div>'+
+      '<div class="spk" aria-hidden="true">'+serie.map(function(v){ return '<i style="height:'+Math.max(8,v/mx*100)+'%"></i>'; }).join('')+'</div>'+
+      '<dl><dt>Unidades hoy</dt><dd>'+fmt(d[1])+'</dd>'+
+        '<dt>Retornables por confirmar</dt><dd class="'+(r[0]?'':'ok')+'">'+r[0]+' de '+r[1]+'</dd>'+
+        '<dt>Cancelados hoy</dt><dd class="'+(c?'':'mut')+'">'+c+'</dd>'+
+        '<dt>OC pendientes</dt><dd>'+pen+(ven?' · <span style="color:#FF8A9B">'+ven+(ven===1?' vencida':' vencidas')+'</span>':'')+'</dd>'+
+        '<dt>Conteo de hoy</dt><dd class="'+(cn?'ok':'neg')+'">'+(cn?'Registrado':'Sin conteo')+'</dd></dl>'+
+      '<div class="go">Ver solo '+esc(x.nombre)+' →</div></button>';
+  }).join('')+'</div>';
+}
+
 /* ── Salidas: datos por día, hora y sede a partir de dashboard_salidas ── */
 function _dashSalModelo(){
   var s=DASH.sal, ses=_dashSedesSel(), ids={}; ses.forEach(function(x){ ids[x.id]=x.nombre; });
@@ -170,6 +197,7 @@ function dashSalidas(){
   var el=document.getElementById('db-sal'); if(!el||!DASH.sal) return;
   var M=_dashSalModelo(), hoy=M.hoy, mx=Math.max.apply(null,M.dias.map(function(d){return d.p;}))||1;
   var mxs=Math.max.apply(null,M.ses.map(function(x){return hoy.por[x.nombre][0];}))||1;
+  var multi=!DASH.sede&&M.ses.length>1;
   var an=DASH.visto?';animation:none;opacity:1;transform:none':'';
   var st=function(i){ return 'style="animation-delay:'+(i*45)+'ms'+an+'"'; };
   el.innerHTML='<div class="db-sg">'+
@@ -177,10 +205,10 @@ function dashSalidas(){
     '<div class="sal2-card db-s db-k" '+st(1)+'><div class="sal2-k">Unidades hoy</div><div class="sal2-v">'+fmt(hoy.u)+'<small>und.</small></div><div class="sal2-n">'+(hoy.p?(hoy.u/hoy.p).toFixed(1).replace('.',',')+' und. por pedido':'')+'</div></div>'+
     '<div class="sal2-card db-s db-k" '+st(2)+'><div class="sal2-k">Retornables por confirmar</div><div class="sal2-v '+(M.pend?'':'db-v-ok')+'">'+M.pend+'<small>de '+M.ret+'</small></div><div class="sal2-n">'+(M.pend?'Falta confirmar la recepción de envases':'Todo confirmado')+'</div></div>'+
     '<div class="sal2-card db-s db-k" '+st(3)+'><div class="sal2-k">Cancelados hoy</div><div class="sal2-v">'+M.cancHoy+'<small>'+(M.cancHoy===1?'pedido':'pedidos')+'</small></div><div class="sal2-n">'+(M.cancHoy?'Revísalos en Cancelados':'Sin cancelaciones')+'</div></div></div>'+
-    '<div class="sal2-card db-ch"><div><h4>Pedidos por día · últimos 7 días</h4><div class="db-bars" role="img" aria-label="Pedidos por día: '+M.dias.map(function(d){return d.n+' '+d.p;}).join(', ')+'">'+
+    '<div class="sal2-card db-ch'+(multi?' solo':'')+'"><div><h4>Pedidos por día · últimos 7 días</h4><div class="db-bars" role="img" aria-label="Pedidos por día: '+M.dias.map(function(d){return d.n+' '+d.p;}).join(', ')+'">'+
       M.dias.map(function(d,i){ return '<div class="db-bc'+(i===6?' hoy':'')+'"><b>'+fmt(d.p)+'</b><div class="col"><i style="height:'+Math.max(4,d.p/mx*100)+'%"></i></div><small>'+esc(d.n)+'</small></div>'; }).join('')+'</div></div>'+
-      '<div><h4>Hoy por sede</h4><div class="db-sl">'+M.ses.map(function(x){ var d=hoy.por[x.nombre];
-        return '<div class="db-sr"><span>'+esc(x.nombre)+'</span><b>'+d[0]+' pedidos</b><div class="bar"><i style="width:'+(d[0]/mxs*100)+'%"></i></div><small>'+fmt(d[1])+' unidades</small></div>'; }).join('')+'</div></div></div>';
+      (multi?'':'<div><h4>Hoy por sede</h4><div class="db-sl">'+M.ses.map(function(x){ var d=hoy.por[x.nombre];
+        return '<div class="db-sr"><span>'+esc(x.nombre)+'</span><b>'+d[0]+' pedidos</b><div class="bar"><i style="width:'+(d[0]/mxs*100)+'%"></i></div><small>'+fmt(d[1])+' unidades</small></div>'; }).join('')+'</div></div>')+'</div>';
 }
 
 /* ── Vista detallada de Salidas ── */
