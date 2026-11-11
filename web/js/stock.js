@@ -6,7 +6,7 @@
    DASHBOARD — admin / invitado
    KPIs, salidas de hoy (con vista detallada) y órdenes de compra, en el mismo estilo que el resto de pestañas.
 ══════════════════════════════════════ */
-var DASH={d:null,m:null,sal:null,sede:'',ts:null,q:'',oc:'',vista:'main',go:false,visto:false};
+var DASH={d:null,m:null,sal:null,sede:'',ts:null,q:'',oc:'',go:false,visto:false};
 
 function loadDashboard(){
   if(!S||!S.token){errBox('dashboard-root','Sin sesión activa.','dashboard');PAGE_LOADING['dashboard']=false;return;}
@@ -71,7 +71,7 @@ function _dashModelo(d){
 function renderDashboard(r){
   if(_handleExpired(r,'dashboard-root')) return;
   if(!r||!r.ok){errBox('dashboard-root',r?r.error:'Error desconocido','dashboard');return;}
-  DASH.d=r.data; DASH.m=_dashModelo(r.data); DASH.ts=new Date(); DASH.go=false; DASH.visto=false; DASH.vista='main';
+  DASH.d=r.data; DASH.m=_dashModelo(r.data); DASH.ts=new Date(); DASH.go=false; DASH.visto=false;
   if(DASH.sede && DASH.m.sedes.indexOf(DASH.sede)<0) DASH.sede='';
   dashDibujar();
 }
@@ -93,9 +93,9 @@ function _dashChipsSede(id){
 function dashDibujar(){
   var root=document.getElementById('dashboard-root'); if(!root||!DASH.m) return;
   var hora=DASH.ts?DASH.ts.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit',hour12:false}):'';
-  var det=DASH.vista==='det'&&DASH.sal;
+  // Orden de la pantalla: primero las órdenes de compra y debajo Salidas · análisis (lo de hoy por sede y el análisis del periodo)
   root.innerHTML=
-    '<div id="db-main"'+(det?' hidden':'')+' class="'+(DASH.go?'db-go ':'')+(DASH.visto?'seen':'')+'">'+
+    '<div id="db-main" class="'+(DASH.go?'db-go ':'')+(DASH.visto?'seen':'')+'">'+
       '<div class="db-top"><div class="db-sub">'+(hora?'Actualizado '+hora:'')+'</div>'+   // el título y la fecha ya los muestra el encabezado de la página
         '<div class="db-tools">'+_dashChipsSede()+
           '<button class="db-dl" id="db-dl" aria-haspopup="true" aria-expanded="false" onclick="dashMenu(event)">'+_DASH_ICO_DL+'Descargas</button>'+
@@ -105,59 +105,51 @@ function dashDibujar(){
             '<button role="menuitem" onclick="dashExportModulo(\'entradas\',\'db-dl\')">Entradas</button>'+
             '<button role="menuitem" onclick="dashExportModulo(\'mt\',\'db-dl\')">Mermas y traslados</button></div>'+
         '</div></div>'+
+      '<div class="db-sec" style="margin-top:6px"><b>Órdenes de compra</b><span>Estado de recepción</span></div>'+
       '<div class="db-kpis" id="db-kpis"></div>'+
-      (DASH.sal&&!DASH.sede&&DASH.m.sedes.length>1?'<div id="db-sedes3"></div>':'')+
-      (DASH.sal?'<div class="db-sec"><b>Salidas de hoy</b><a tabindex="0" role="button" onclick="dashVista(\'det\')">Ver detalle →</a></div><div id="db-sal"></div>':'')+
-      '<div class="db-sec"><b>Órdenes de compra</b><span>Estado de recepción</span></div>'+
       '<div class="sal2-pnl"><div class="sal2-fl"><div class="sal2-seg" id="db-occhips" role="group" aria-label="Filtrar órdenes"></div>'+
         '<div class="sal2-srch"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
         '<input id="db-ocq" placeholder="Buscar OC, proveedor o entrega…" aria-label="Buscar orden de compra" autocomplete="off" value="'+esc(DASH.q||'')+'" oninput="DASH.q=this.value;dashOCTabla()"/></div>'+
         '<span class="sal2-cnt" id="db-ocn"></span></div><div id="db-ocs"></div></div>'+
-    '</div>'+
-    '<div id="db-det"'+(det?'':' hidden')+' class="'+(DASH.go?'db-go':'')+'"></div>';
-  dashKpis(); if(document.getElementById('db-sedes3')) dashSedes3(); if(DASH.sal) dashSalidas(); dashOCTabla();
-  if(det){ dashDetalle(); dashAnCargar(); }
-  if(!DASH.go) requestAnimationFrame(function(){ requestAnimationFrame(function(){ DASH.go=true; DASH.visto=true; ['db-main','db-det'].forEach(function(i){ var e=document.getElementById(i); if(e) e.classList.add('db-go'); }); var mn=document.getElementById('db-main'); if(mn) mn.classList.add('seen'); }); });
+      (DASH.sal?'<div class="db-sec db-sec-an"><b>Salidas · análisis</b><span id="an-sub"></span></div><div id="db-sedes3"></div>':'<div class="db-sec db-sec-an"><b>Salidas · análisis</b><span id="an-sub"></span></div>')+
+      '<div class="sal2-pnl" style="margin-bottom:12px"><div class="an-fl"><div class="sal2-seg" id="an-pres" role="group" aria-label="Periodo"></div>'+
+        '<div class="an-rng" id="an-rng"><input type="date" class="fh-in" id="an-d0" aria-label="Desde" onchange="dashAnRango()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><input type="date" class="fh-in" id="an-d1" aria-label="Hasta" onchange="dashAnRango()"></div>'+
+        '<span class="an-cnt" id="an-cnt"></span></div></div>'+
+      '<div id="an-body"></div>'+
+    '</div>';
+  dashKpis(); if(document.getElementById('db-sedes3')) dashSedes3(); dashOCTabla(); dashAnFiltros(); dashAnCargar();
+  if(!DASH.go) requestAnimationFrame(function(){ requestAnimationFrame(function(){ DASH.go=true; DASH.visto=true; var mn=document.getElementById('db-main'); if(mn) mn.classList.add('db-go','seen'); }); });
 }
 function dashSede(s){ DASH.sede=s||''; dashDibujar(); }
 
-/* ── KPIs ── */
+/* ── KPIs de órdenes de compra ── */
 function dashKpis(){
   var el=document.getElementById('db-kpis'); if(!el) return;
-  var m=DASH.m, sede=DASH.sede, fs=function(x){ return !sede||x.sede===sede; };
-  var al=m.alertas.filter(fs), ocs=m.ocs.filter(fs);
-  var crit=al.filter(function(x){return x.sev==='rd';}).length, avis=al.filter(function(x){return x.sev==='am';}).length, inf=al.length-crit-avis;
+  var m=DASH.m, sede=DASH.sede, ocs=m.ocs.filter(function(x){ return !sede||x.sede===sede; });
   var abiertas=ocs.filter(function(x){return x.col!=='r';}).length, hoyN=ocs.filter(function(x){return x.col==='h';}).length;
   var venc=ocs.filter(function(x){return x.col==='v';}).length, recib=ocs.filter(function(x){return x.col==='r';}).length;
-  var ses=_dashSedesSel(), con=ses.filter(function(s){return m.conteo[s.id];}).length;
   var an=DASH.visto?';animation:none;opacity:1;transform:none':'';
   var st=function(i){ return 'style="animation-delay:'+(i*45)+'ms'+an+'"'; };
   el.innerHTML=
-    '<div class="sal2-card db-k hero" '+st(0)+'><div class="sal2-k">Hoy requiere atención</div><div class="sal2-v">'+al.length+'<small>'+(al.length===1?'cosa':'cosas')+'</small></div>'+
-      '<div class="sal2-n">'+(al.length?(crit?crit+(crit===1?' crítica':' críticas'):'Nada crítico')+(avis?' y '+avis+(avis===1?' aviso':' avisos'):'')+'.':'Todo en orden.')+'</div>'+
-      '<div class="db-foot"><div class="db-split"><i style="flex:'+crit+';background:#FF8A9B"></i><i style="flex:'+avis+';background:#F2B04B"></i><i style="flex:'+inf+';background:#B9AEFF"></i></div>'+
-      '<div class="db-lg"><span><em style="background:#FF8A9B"></em>'+crit+' críticas</span><span><em style="background:#F2B04B"></em>'+avis+' avisos</span><span><em style="background:#B9AEFF"></em>'+inf+' info</span></div></div></div>'+
-    '<div class="sal2-card db-k" '+st(1)+'><div class="sal2-k">OC pendientes</div><div class="sal2-v">'+abiertas+'</div><div class="sal2-n">'+hoyN+(hoyN===1?' llega hoy':' llegan hoy')+'</div></div>'+
-    '<div class="sal2-card db-k" '+st(2)+'><div class="sal2-k">OC vencidas</div><div class="sal2-v '+(venc?'db-v-neg':'')+'">'+venc+'</div><div class="sal2-n">sin recibir tras su fecha</div></div>'+
-    '<div class="sal2-card db-k" '+st(3)+'><div class="sal2-k">Recibidas · 7 días</div><div class="sal2-v">'+recib+'</div><div class="sal2-n">por fecha de recepción</div></div>'+
-    '<div class="sal2-card db-k" '+st(4)+'><div class="sal2-k">Conteo de hoy</div><div class="sal2-v '+(ses.length&&con===ses.length?'db-v-ok':'')+'">'+con+'<small>de '+ses.length+'</small></div>'+
-      '<div class="db-foot"><div class="db-dots">'+ses.map(function(s){ return '<span class="'+(m.conteo[s.id]?'':'no')+'"><i></i>'+esc(s.nombre)+'</span>'; }).join('')+'</div></div></div>';
+    '<div class="sal2-card db-k" '+st(0)+'><div class="sal2-k">OC pendientes</div><div class="sal2-v">'+abiertas+'</div><div class="sal2-n">'+hoyN+(hoyN===1?' llega hoy':' llegan hoy')+'</div></div>'+
+    '<div class="sal2-card db-k" '+st(1)+'><div class="sal2-k">OC vencidas</div><div class="sal2-v '+(venc?'db-v-neg':'')+'">'+venc+'</div><div class="sal2-n">sin recibir tras su fecha</div></div>'+
+    '<div class="sal2-card db-k" '+st(2)+'><div class="sal2-k">Recibidas · 7 días</div><div class="sal2-v">'+recib+'</div><div class="sal2-n">por fecha de recepción</div></div>';
 }
 
-/* ── Las tres sedes lado a lado (solo con «Todas»): tocar una tarjeta deja el Dashboard en esa sede ── */
+/* ── Hoy por sede: una tarjeta por sede visible; tocarla deja el Dashboard en esa sede (y tocarla otra vez vuelve a todas) ── */
 function dashSedes3(){
   var el=document.getElementById('db-sedes3'); if(!el||!DASH.sal) return;
   var m=DASH.m, M=_dashSalModelo(), s=DASH.sal;
   var an=DASH.visto?';animation:none;opacity:1;transform:none':'';
   var cancHoy={}, ret={}; (s.canc||[]).forEach(function(r){ if(r.fecha===s.hoy) cancHoy[r.sede_id]=(cancHoy[r.sede_id]||0)+r.p; });
   (s.retornables||[]).forEach(function(r){ ret[r.sede_id]=[r.pend,r.total]; });
-  el.innerHTML='<div class="db-sec"><b>Las '+(M.ses.length===3?'tres':M.ses.length)+' sedes</b><span>Toca una para verla sola</span></div><div class="db-sc3">'+M.ses.map(function(x,i){
+  el.innerHTML='<div class="db-sc3">'+M.ses.map(function(x,i){
     var d=M.hoy.por[x.nombre], a=M.ayer.por[x.nombre], serie=M.dias.map(function(dd){ return dd.por[x.nombre][0]; }), mx=Math.max.apply(null,serie)||1;
     var oc=m.ocs.filter(function(o){return o.sede===x.nombre;}), pen=oc.filter(function(o){return o.col!=='r';}).length, ven=oc.filter(function(o){return o.col==='v';}).length;
     var al=m.alertas.filter(function(y){return y.sede===x.nombre;}), crit=al.filter(function(y){return y.sev==='rd';}).length, avi=al.filter(function(y){return y.sev==='am';}).length;
     var est=crit?['rd',crit+(crit===1?' crítica':' críticas')]:avi?['am',avi+(avi===1?' aviso':' avisos')]:['ok','Todo en orden'];
     var r=ret[x.id]||[0,0], c=cancHoy[x.id]||0, cn=!!m.conteo[x.id];
-    return '<button class="sal2-card db-sc db-k" data-s="'+esc(x.nombre)+'" onclick="dashSede(this.dataset.s)" aria-label="Ver solo la sede '+esc(x.nombre)+'" style="animation-delay:'+(i*45)+'ms'+an+'">'+
+    return '<button class="sal2-card db-sc db-k" data-s="'+esc(x.nombre)+'" onclick="dashSede(DASH.sede?\'\':this.dataset.s)" aria-label="'+(DASH.sede?'Ver todas las sedes':'Ver solo la sede '+esc(x.nombre))+'" style="animation-delay:'+(i*45)+'ms'+an+'">'+
       '<div class="hd"><span class="nm">'+esc(x.nombre)+'</span><span class="db-st '+est[0]+'"><i></i>'+est[1]+'</span></div>'+
       '<div class="big"><b>'+fmt(d[0])+'</b><span>pedidos hoy · ayer '+fmt(a[0])+'</span></div>'+
       '<div class="spk" aria-hidden="true">'+serie.map(function(v){ return '<i style="height:'+Math.max(8,v/mx*100)+'%"></i>'; }).join('')+'</div>'+
@@ -166,7 +158,7 @@ function dashSedes3(){
         '<dt>Cancelados hoy</dt><dd class="'+(c?'':'mut')+'">'+c+'</dd>'+
         '<dt>OC pendientes</dt><dd>'+pen+(ven?' · <span style="color:#FF8A9B">'+ven+(ven===1?' vencida':' vencidas')+'</span>':'')+'</dd>'+
         '<dt>Conteo de hoy</dt><dd class="'+(cn?'ok':'neg')+'">'+(cn?'Registrado':'Sin conteo')+'</dd></dl>'+
-      '<div class="go">Ver solo '+esc(x.nombre)+' →</div></button>';
+      '<div class="go">'+(DASH.sede?'Ver todas las sedes ←':'Ver solo '+esc(x.nombre)+' →')+'</div></button>';
   }).join('')+'</div>';
 }
 
@@ -186,25 +178,7 @@ function _dashSalModelo(){
   var ret=0, pend=0; (s.retornables||[]).forEach(function(r){ if(ids[r.sede_id]){ ret+=r.total; pend+=r.pend; } });
   return {ses:ses,dias:dias,hoy:dias[dias.length-1],ayer:dias[dias.length-2],cancHoy:cancHoy,ret:ret,pend:pend};
 }
-function dashSalidas(){
-  var el=document.getElementById('db-sal'); if(!el||!DASH.sal) return;
-  var M=_dashSalModelo(), hoy=M.hoy, mx=Math.max.apply(null,M.dias.map(function(d){return d.p;}))||1;
-  var mxs=Math.max.apply(null,M.ses.map(function(x){return hoy.por[x.nombre][0];}))||1;
-  var multi=!DASH.sede&&M.ses.length>1;
-  var an=DASH.visto?';animation:none;opacity:1;transform:none':'';
-  var st=function(i){ return 'style="animation-delay:'+(i*45)+'ms'+an+'"'; };
-  el.innerHTML='<div class="db-sg">'+
-    '<div class="sal2-card db-s db-k" '+st(0)+'><div class="sal2-k">Pedidos hoy</div><div class="sal2-v">'+fmt(hoy.p)+'</div><div class="sal2-n">Ayer: '+fmt(M.ayer.p)+' pedidos</div></div>'+
-    '<div class="sal2-card db-s db-k" '+st(1)+'><div class="sal2-k">Unidades hoy</div><div class="sal2-v">'+fmt(hoy.u)+'<small>und.</small></div><div class="sal2-n">'+(hoy.p?(hoy.u/hoy.p).toFixed(1).replace('.',',')+' und. por pedido':'')+'</div></div>'+
-    '<div class="sal2-card db-s db-k" '+st(2)+'><div class="sal2-k">Retornables por confirmar</div><div class="sal2-v '+(M.pend?'':'db-v-ok')+'">'+M.pend+'<small>de '+M.ret+'</small></div><div class="sal2-n">'+(M.pend?'Falta confirmar la recepción de envases':'Todo confirmado')+'</div></div>'+
-    '<div class="sal2-card db-s db-k" '+st(3)+'><div class="sal2-k">Cancelados hoy</div><div class="sal2-v">'+M.cancHoy+'<small>'+(M.cancHoy===1?'pedido':'pedidos')+'</small></div><div class="sal2-n">'+(M.cancHoy?'Revísalos en Cancelados':'Sin cancelaciones')+'</div></div></div>'+
-    '<div class="sal2-card db-ch'+(multi?' solo':'')+'"><div><h4>Pedidos por día · últimos 7 días</h4><div class="db-bars" role="img" aria-label="Pedidos por día: '+M.dias.map(function(d){return d.n+' '+d.p;}).join(', ')+'">'+
-      M.dias.map(function(d,i){ return '<div class="db-bc'+(i===6?' hoy':'')+'"><b>'+fmt(d.p)+'</b><div class="col"><i style="height:'+Math.max(4,d.p/mx*100)+'%"></i></div><small>'+esc(d.n)+'</small></div>'; }).join('')+'</div></div>'+
-      (multi?'':'<div><h4>Hoy por sede</h4><div class="db-sl">'+M.ses.map(function(x){ var d=hoy.por[x.nombre];
-        return '<div class="db-sr"><span>'+esc(x.nombre)+'</span><b>'+d[0]+' pedidos</b><div class="bar"><i style="width:'+(d[0]/mxs*100)+'%"></i></div><small>'+fmt(d[1])+' unidades</small></div>'; }).join('')+'</div></div>')+'</div>';
-}
-
-/* ── Salidas · análisis (se abre con «Ver detalle»): filtros de sede y fechas, KPIs sin montos, sedes, horas y meses ── */
+/* ── Salidas · análisis: periodo y fechas, KPIs sin montos, sedes, horas y meses (la sede se elige arriba, con los chips de todo el Dashboard) ── */
 var DASH_AN={pre:'7',d0:'',d1:'',data:null,cargando:false,err:'',cache:{}};
 var _AN_PRES=[['7','Últimos 7 días'],['sp','Semana pasada'],['mes','Este mes'],['mp','Mes pasado'],['rg','Rango']];
 var _AN_COL=['#7B61EF','#B9AEFF','#5C5C80','#8A7BF0'];
@@ -219,33 +193,12 @@ function _anRango(){
   if(pre==='mp'){ var ini=hoy.slice(0,8)+'01', fin=_anMas(ini,-1); return [fin.slice(0,8)+'01',fin]; }
   return [_anMas(hoy,-6),hoy];
 }
-function dashVista(v){
-  DASH.vista=v;
-  var mn=document.getElementById('db-main'), dt=document.getElementById('db-det'); if(!mn||!dt) return;
-  if(v==='det'){ mn.classList.add('seen'); DASH.visto=true; mn.hidden=true; dt.hidden=false; dashDetalle(); dashAnCargar(); }
-  else { dt.hidden=true; mn.hidden=false; }
-  window.scrollTo(0,0); var pg=document.getElementById('p-dashboard'); if(pg&&pg.scrollTo) pg.scrollTo(0,0);
-}
-function dashDetalle(){   // armazón de la vista: botón de volver, título, filtros y el cuerpo que se llena con los datos
-  var el=document.getElementById('db-det'); if(!el) return;
-  el.innerHTML=
-    '<button class="dt-back" onclick="dashVista(\'main\')">'+_DASH_ICO_LOGO+'Dashboard</button>'+
-    '<div class="an-top"><div class="db-h1">Salidas · análisis</div><div class="db-sub" id="an-sub"></div></div>'+
-    '<div class="sal2-pnl" style="margin-bottom:12px"><div class="an-fl"><div class="sal2-seg" id="an-sedes" role="group" aria-label="Sede"></div><span class="an-sep"></span>'+
-      '<div class="sal2-seg" id="an-pres" role="group" aria-label="Periodo"></div>'+
-      '<div class="an-rng" id="an-rng"><input type="date" class="fh-in" id="an-d0" aria-label="Desde" onchange="dashAnRango()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><input type="date" class="fh-in" id="an-d1" aria-label="Hasta" onchange="dashAnRango()"></div>'+
-      '<span class="an-cnt" id="an-cnt"></span></div></div>'+
-    '<div id="an-body"></div>';
-  dashAnFiltros();
-}
 function dashAnFiltros(){
-  var sedes=document.getElementById('an-sedes'), pres=document.getElementById('an-pres'); if(!sedes||!pres) return;
-  sedes.innerHTML=[''].concat(DASH.m.sedes).map(function(s){ return '<button class="'+(s===DASH.sede?'on':'')+'" aria-pressed="'+(s===DASH.sede)+'" data-s="'+esc(s)+'" onclick="dashAnSede(this.dataset.s)">'+(s||'Todas')+'</button>'; }).join('');
+  var pres=document.getElementById('an-pres'); if(!pres) return;
   pres.innerHTML=_AN_PRES.map(function(p){ return '<button class="'+(DASH_AN.pre===p[0]?'on':'')+'" aria-pressed="'+(DASH_AN.pre===p[0])+'" data-p="'+p[0]+'" onclick="dashAnPre(this.dataset.p)">'+p[1]+'</button>'; }).join('');
   var rg=document.getElementById('an-rng'); if(rg) rg.classList.toggle('on',DASH_AN.pre==='rg');
   var r=_anRango(), a=document.getElementById('an-d0'), b=document.getElementById('an-d1'); if(a) a.value=r[0]; if(b){ b.value=r[1]; b.max=DASH.d.hoy; }
 }
-function dashAnSede(s){ DASH.sede=s||''; dashAnFiltros(); dashAnCuerpo(); }   // la sede se filtra en pantalla: no hace falta volver a pedir datos
 function dashAnPre(p){ DASH_AN.pre=p; if(p==='rg'&&!DASH_AN.d0){ var r=_anRango(); DASH_AN.d0=r[0]; DASH_AN.d1=r[1]; } dashAnFiltros(); dashAnCargar(); }
 function dashAnRango(){
   var a=document.getElementById('an-d0').value, b=document.getElementById('an-d1').value; if(!a||!b) return;
@@ -472,8 +425,6 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     var m=document.getElementById('db-menu');
     if(m&&m.classList.contains('on')){ m.classList.remove('on'); var b=document.getElementById('db-dl'); if(b){ b.setAttribute('aria-expanded','false'); b.focus(); } return; }
-    var md=document.getElementById('modal-confirm'), det=document.getElementById('db-det');
-    if(det&&!det.hidden&&!(md&&md.style.display==='flex')) dashVista('main');
   }
 });
 

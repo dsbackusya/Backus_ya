@@ -4664,22 +4664,11 @@ tr.cn-r{animation:cnRow .2s cubic-bezier(.23,1,.32,1)}
 .db-menu button:hover,.db-menu button:focus-visible{background:#1F1F23;color:var(--text);outline:none}
 
 /* ── KPIs ── */
-.db-kpis{display:grid;grid-template-columns:1.55fr repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.db-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
 .db-k{display:flex;flex-direction:column;min-height:150px;padding:18px 20px;opacity:0;transform:translateY(6px);animation:dbIn .4s cubic-bezier(.23,1,.32,1) forwards}
 @keyframes dbIn{to{opacity:1;transform:none}}
 .db-k .sal2-v{color:var(--text)}
 .db-k .sal2-v small{font-size:13px;color:var(--text3);font-weight:500;margin-left:6px}
-.db-k.hero{background:linear-gradient(135deg,#1B1730,var(--surface) 70%);border-color:rgba(123,97,239,.35)}
-.db-k.hero .sal2-v{font-size:44px}
-.db-foot{margin-top:auto;padding-top:14px}
-.db-split{display:flex;gap:2px;height:6px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,.07)}
-.db-split i{display:block;height:100%}
-.db-lg{display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:11.5px;color:var(--text2)}
-.db-lg em{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
-.db-dots{display:flex;gap:8px;flex-wrap:wrap}
-.db-dots span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text2)}
-.db-dots i{width:8px;height:8px;border-radius:50%;background:#4ADE9F}
-.db-dots span.no i{background:transparent;box-shadow:inset 0 0 0 1.5px var(--text4)}
 .db-v-neg{color:#FF8A9B !important}.db-v-ok{color:#4ADE9F !important}
 
 /* ── secciones ── */
@@ -4708,9 +4697,6 @@ tr.db-oc{cursor:pointer}
 /* ── recepciones por tienda ── */
 
 /* ── vista detallada de salidas ── */
-.dt-back{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px 0 8px;margin-bottom:10px;border-radius:11px;border:0;background:none;color:var(--text3);font:600 12.5px Inter,sans-serif;cursor:pointer;transition:color .15s,transform .12s cubic-bezier(.23,1,.32,1)}
-.dt-back:hover{color:var(--text)}.dt-back:active{transform:scale(.97)}.dt-back:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
-#db-det,#db-main{animation:vIn .18s cubic-bezier(.23,1,.32,1)}
 @keyframes vIn{from{opacity:0}to{opacity:1}}
 #db-main.seen .db-k{animation:none;opacity:1;transform:none}   /* al volver del detalle las tarjetas no se animan otra vez */
 .dt-c{padding:20px 22px;margin-bottom:12px}
@@ -4729,29 +4715,8 @@ tr.db-oc{cursor:pointer}
 .dt-nota{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text3);line-height:1.5}
 .dt-tag{font:500 10.5px Inter,sans-serif;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,.07);color:var(--text2)}
 /* ── salidas de hoy ── */
-.db-sg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-.db-s{display:flex;flex-direction:column;min-height:132px;padding:18px 20px}
-.db-s .sal2-v{color:var(--text)}
-.db-s .sal2-v small{font-size:13px;color:var(--text3);font-weight:500;margin-left:6px}
-.db-s .up{color:#4ADE9F}.db-s .dn{color:var(--text2)}
-.db-ch{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;margin-top:12px;padding:20px 22px}
-.db-ch h4{font:600 12px Inter,sans-serif;color:var(--text2);margin-bottom:14px}
-.db-bars{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;align-items:end;height:150px}
-.db-bc{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;min-width:0}
-.db-bc b{font:600 11px var(--font-mono);color:var(--text3);font-variant-numeric:tabular-nums}
-.db-bc .col{flex:1;width:100%;display:flex;align-items:flex-end}
-.db-bc i{display:block;width:100%;border-radius:8px 8px 4px 4px;background:rgba(123,97,239,.45);transform-origin:bottom;transform:scaleY(0);transition:transform .5s cubic-bezier(.23,1,.32,1)}
 .db-go .db-bc i{transform:scaleY(1)}
-.db-bc.hoy i{background:linear-gradient(180deg,#B9AEFF,#7B61EF)}
-.db-bc.hoy b{color:var(--text)}
-.db-bc small{font-size:11px;color:var(--text3)}.db-bc.hoy small{color:var(--text);font-weight:600}
-.db-sl{display:grid;gap:14px}
-.db-sr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;font-size:12.5px;color:var(--text2)}
-.db-sr b{font:600 12.5px var(--font-mono);color:var(--text);font-variant-numeric:tabular-nums}
-.db-sr .bar{grid-column:1/-1;height:5px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
-.db-sr .bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#7B61EF,#B9AEFF);transform-origin:left;transform:scaleX(0);transition:transform .5s cubic-bezier(.23,1,.32,1)}
 .db-go .db-sr .bar i{transform:scaleX(1)}
-.db-sr small{grid-column:1/-1;font-size:11px;color:var(--text3);margin-top:-2px}
 @media(max-width:1100px){.db-sg{grid-template-columns:1fr 1fr}.db-ch{grid-template-columns:1fr}}
 @media(max-width:600px){.db-sg{gap:8px}.db-s{min-height:0;padding:14px 16px}.db-ch{padding:16px}.db-bars{height:120px;gap:6px}}
 @media(prefers-reduced-motion:reduce){.db-bc i,.db-sr .bar i{transition:none}}
@@ -4772,7 +4737,6 @@ tr.db-oc{cursor:pointer}
 @media(max-width:600px){
   .db-kpis{grid-template-columns:1fr 1fr;gap:8px}
   .db-k{min-height:0;padding:14px 16px}
-  .db-k.hero .sal2-v{font-size:38px}
   .db-h1{font-size:21px}
   .db-menu{right:auto;left:0;transform-origin:top left}
 }
@@ -4806,7 +4770,6 @@ tr.db-oc{cursor:pointer}
 .db-sc:hover .go{color:#fff}
 @media(max-width:1100px){.db-sc3{grid-template-columns:1fr}.db-sc dl{grid-template-columns:1fr auto}}
 @media(prefers-reduced-motion:reduce){.db-sc .spk i{transition:none}}
-.db-ch.solo{grid-template-columns:1fr}
 
 /* ══ Dashboard · Salidas · análisis ══ */
 /* filtros */
@@ -4903,3 +4866,5 @@ tr.an-act td{background:rgba(123,97,239,.12) !important}
 .an-2{grid-template-columns:minmax(0,.85fr) minmax(0,1.6fr)}
 @media(max-width:1100px){.an-2{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){#db-det,#db-main{animation:none}.dt-li .bar i{transition:none}}
+.db-sec-an{margin-top:34px}
+#db-sedes3{margin-bottom:16px}
