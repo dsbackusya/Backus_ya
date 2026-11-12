@@ -343,7 +343,7 @@ function _anHora(D,ids,a,b){
    Turno 1: 07:00–16:00 · Turno 2: 14:00–23:00 · traslape 14:00–16:00 · 8 h efectivas por turno (1 h de pausas y refrigerio).
 ══════════════════════════════════════ */
 var DASH_PERS={d:null,err:'',cargando:false,esc:'r',dia:6,vista:'p'};
-var _PE={c:{n:'Conservador',cap:45,dem:'prom',t:'Cuida pausas y calidad'},r:{n:'Recomendado',cap:55,dem:'prom',t:'Equilibrio entre demanda y equipo'},a:{n:'Alta demanda',cap:60,dem:'p80',t:'Día exigente: 1 de cada 5'}};
+var _PE={c:{n:'Conservador',cap:50,dem:'prom',t:'Cuida pausas y calidad'},r:{n:'Recomendado',cap:60,dem:'prom',t:'Meta: 60 pedidos por persona'},a:{n:'Alta demanda',cap:60,dem:'p80',t:'Día exigente: 1 de cada 5'}};
 var _PDIA=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'], _PDC=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 var _PH_EF=8, _PH0=8, _PH1=22;
 
@@ -372,15 +372,20 @@ function _persModelo(esc){
     gp[c.sede_id]=(gp[c.sede_id]||0)+c.p; gu[c.sede_id]=(gu[c.sede_id]||0)+c.u;
   });
   var z=function(){ var a=[]; for(var k=0;k<24;k++) a.push(0); return a; };
-  var dias=[];
+  var dias=[], grupos=DASH.sede?Object.keys(ids).map(function(s){ return [s]; }):[Object.keys(ids)];
   for(var dow=1;dow<=7;dow++){
     var o={dow:dow,n:0,p:0,l:0,u:0,t1:0,t2:0,srv:0,pendMax:0,D:z(),req:z(),disp:z(),carry:z(),prom:z(),dem:0};
-    Object.keys(ids).forEach(function(sid){
-      var n=nd[sid+'|'+dow], cs=cel[sid+'|'+dow]; if(!n||!cs) return;
-      var prom=z(), tp=0, tl=0, tu=0;
-      for(h=_PH0;h<=_PH1;h++){ var c=cs[h]; prom[h]=c?c.p/n:0; tp+=prom[h]; tl+=c?c.l/n:0; tu+=c?c.u/n:0; }
-      var k=(E.dem==='p80'&&tp>0)?Math.max(1,(p80[sid+'|'+dow]||tp)/tp):1;
-      var gx=gp[sid]?gu[sid]/gp[sid]:0, un=tp?tu/tp:0, fc=gx?Math.min(1.2,Math.max(.85,un/gx)):1;   // complejidad: unidades por pedido del día frente al promedio de la sede
+    grupos.forEach(function(sids){   // una sede elegida = esa sede; «todas» = una sola operación con los pedidos de todas sumados
+      var n=0, prom=z(), tp=0, tl=0, tu=0, p8=0, gpp=0, guu=0;
+      sids.forEach(function(sid){
+        var ns=nd[sid+'|'+dow], cs=cel[sid+'|'+dow]; if(!ns||!cs) return;
+        n=Math.max(n,ns); p8+=p80[sid+'|'+dow]||0; gpp+=gp[sid]||0; guu+=gu[sid]||0;
+        for(h=_PH0;h<=_PH1;h++){ var c=cs[h]; if(c){ prom[h]+=c.p/ns; tl+=c.l/ns; tu+=c.u/ns; } }
+      });
+      for(h=_PH0;h<=_PH1;h++) tp+=prom[h];
+      if(!n||!tp) return;
+      var k=(E.dem==='p80')?Math.max(1,(p8||tp)/tp):1;
+      var gx=gpp?guu/gpp:0, un=tp?tu/tp:0, fc=gx?Math.min(1.2,Math.max(.85,un/gx)):1;   // complejidad: unidades por pedido del día frente al promedio
       var cap=E.cap/fc, rate=cap/_PH_EF, D=prom.map(function(x){ return x*k; });
       var a1=0,a2=0;
       for(h=_PH0;h<=_PH1;h++){ if(h<14) a1+=D[h]; else if(h<16){ a1+=D[h]/2; a2+=D[h]/2; } else a2+=D[h]; }
@@ -483,9 +488,9 @@ function _persDibujar(){
     ['Días con mayor dotación',lst(function(x){ return x.tot===rmx; })+' ('+rmx+' personas)'],
     ['Días con menos personal',lst(function(x){ return x.tot===rmn; })+' ('+rmn+' personas)'],
     ['Horarios que necesitan refuerzo',ref.length?ref.join(' · '):'Con la dotación recomendada ninguna hora queda corta. Las más justas son '+topP+'.'],
-    ['Personas a contratar o mantener','Para '+turnR+' turnos por semana, con 5 turnos por persona y 2 días de descanso, hacen falta '+planta+' '+(planta===1?'persona':'personas')+(DASH.sede?'':' en total (suma de las sedes elegidas, mínimo 1 por turno en cada una)')+'.'],
-    ['Cómo evitar la sobrecarga','Rotar quien arma los pedidos pesados (cajas) cada 2 horas y no pasar de 60 pedidos por persona. El día más cargado es '+_PDIA[mxPP.dow-1]+' con '+_pf(mxPP.ppp,0)+' por persona'+(mxPP.ppp>55?', por encima de los 55 del objetivo: conviene reforzar ese día.':', dentro del objetivo de 55.')],
-    ['Dotación semanal óptima',turnR+' turnos-persona por semana (escenario recomendado: 55 pedidos por persona y turno).']
+    ['Personas a contratar o mantener','Para '+turnR+' turnos por semana, con 5 turnos por persona y 2 días de descanso, hacen falta '+planta+' '+(planta===1?'persona':'personas')+(DASH.sede?'':' en total (las sedes juntas, como una sola operación)')+'.'],
+    ['Cómo evitar la sobrecarga','Rotar quien arma los pedidos pesados (cajas) cada 2 horas y no pasar de 60 pedidos por persona. El día más cargado es '+_PDIA[mxPP.dow-1]+' con '+_pf(mxPP.ppp,0)+' por persona'+(mxPP.ppp>60?', por encima de la meta de 60: conviene reforzar ese día.':', dentro de la meta de 60.')],
+    ['Dotación semanal óptima',turnR+' turnos-persona por semana (escenario recomendado: 60 pedidos por persona y turno).']
   ];
   var resH='<div class="pr-rs"><h5>Respuestas</h5><dl>'+resp.map(function(x,i){ return '<div><dt><i>'+(i+1)+'</i>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd></div>'; }).join('')+'</dl></div>';
 
@@ -498,7 +503,7 @@ function _persDibujar(){
     '<p><b>Lo que no se puede calcular todavía.</b> No se guarda la hora real de preparación ni los tiempos de picking, así que se supone que un pedido se prepara en su hora de ingreso. Tampoco hay peso ni mezcla de cajas, six packs, latas y botellas por pedido (se usan líneas y unidades), ni pausas reales. Los pedidos sin hora registrada no entran. Con esos datos se podría afinar la capacidad por persona.</p></div></details>';
 
   var cuantas=function(n){ return '<span><b>'+n+'</b> '+(n===1?'persona':'personas')+'</span>'; };
-  var sem='<div class="pr-wk-t">'+(DASH.sede?DASH.sede:((DASH.d.sedes||[]).length>1?'Las '+DASH.d.sedes.length+' sedes juntas':'Sede'))+' · '+E.n+'</div><div class="pr-wk">'+dias.map(function(x,i){
+  var sem='<div class="pr-wk-t">'+(DASH.sede?DASH.sede:((DASH.d.sedes||[]).length>1?'Las '+DASH.d.sedes.length+' sedes juntas, como una sola operación':'Sede'))+' · '+E.n+'</div><div class="pr-wk">'+dias.map(function(x,i){
     return '<button class="pr-wd'+(x.tot===mxT&&mxT!==mnT?' mx':'')+'" onclick="persDia('+i+')" aria-label="'+_PDIA[i]+': turno 1 '+x.t1+', turno 2 '+x.t2+'"><span class="pr-wn">'+_PDIA[i]+'</span>'+
       '<span class="pr-wt"><i>Turno 1</i>'+cuantas(x.t1)+'</span><span class="pr-wt"><i>Turno 2</i>'+cuantas(x.t2)+'</span></button>';
   }).join('')+'</div>';
