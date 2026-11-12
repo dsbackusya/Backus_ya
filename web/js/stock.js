@@ -493,7 +493,7 @@ function _persDibujar(){
       '<tr class="an-tot"><td>Semana</td>'+MS.map(function(m){ return '<td class="r an-n em">'+m.dias.reduce(function(t,y){ return t+y.tot; },0)+'</td>'; }).join('')+'</tr></tbody></table></div></div>';
   }
   el.classList.remove('go');
-  el.innerHTML=head+sem+stats+tabla+'<div class="pr-g2"><div class="pr-hmw"><h5>Mapa de calor <small>pedidos promedio por día y hora</small></h5>'+heat+'</div></div>'+cob+resu+det;
+  el.innerHTML=head+sem+'<div class="nota pr-nt" style="margin:8px 2px 18px">Toca un día para ver su cobertura hora por hora.</div>'+stats+'<div class="pr-g2"><div class="pr-hmw"><h5>Mapa de calor <small>pedidos promedio por día y hora</small></h5>'+heat+'</div></div>'+cob+resu+det;
 }
 
 /* Pedidos por mes y sede (desde que hay datos). El mes en curso se marca como parcial. */
