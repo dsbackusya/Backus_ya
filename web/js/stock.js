@@ -343,7 +343,7 @@ function _anHora(D,ids,a,b){
    Turno 1: 07:00–16:00 · Turno 2: 14:00–23:00 · traslape 14:00–16:00 · 8 h efectivas por turno (1 h de pausas y refrigerio).
 ══════════════════════════════════════ */
 var DASH_PERS={d:null,err:'',cargando:false,esc:'r',dia:6,vista:'p'};
-var _PE={c:{n:'Conservador',cap:50,dem:'prom',t:'Cuida pausas y calidad'},r:{n:'Recomendado',cap:60,dem:'prom',t:'Meta: 60 pedidos por persona'},a:{n:'Alta demanda',cap:60,dem:'p80',t:'Día exigente: 1 de cada 5'}};
+var _PE={c:{n:'Conservador',cap:50,dem:'prom',t:'Cuida pausas y calidad'},r:{n:'Recomendado',cap:70,dem:'prom',t:'Promedio: 70 pedidos por persona'},a:{n:'Alta demanda',cap:60,dem:'p80',t:'Día exigente: 1 de cada 5'}};
 var _PDIA=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'], _PDC=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
 var _PH_EF=8, _PH0=8, _PH1=22;
 
@@ -372,7 +372,7 @@ function _persModelo(esc){
   var z=function(){ var a=[]; for(var k=0;k<24;k++) a.push(0); return a; };
   var dias=[], grupos=DASH.sede?Object.keys(ids).map(function(s){ return [s]; }):[Object.keys(ids)];
   for(var dow=1;dow<=7;dow++){
-    var o={dow:dow,n:0,p:0,l:0,u:0,t1:0,t2:0,srv:0,pendMax:0,D:z(),req:z(),disp:z(),carry:z(),prom:z(),dem:0};
+    var o={dow:dow,n:0,a1:0,a2:0,p:0,l:0,u:0,t1:0,t2:0,srv:0,pendMax:0,D:z(),req:z(),disp:z(),carry:z(),prom:z(),dem:0};
     grupos.forEach(function(sids){   // una sede elegida = esa sede; «todas» = una sola operación con los pedidos de todas sumados
       var n=0, prom=z(), tp=0, tl=0, tu=0, p8=0;
       sids.forEach(function(sid){
@@ -393,7 +393,7 @@ function _persModelo(esc){
         o.D[h]+=D[h]; o.disp[h]+=dp; o.req[h]+=D[h]/rate; o.carry[h]+=carry; o.prom[h]+=prom[h];
         if(carry>o.pendMax) o.pendMax=carry;
       }
-      o.n=Math.max(o.n,n); o.p+=tp*k; o.l+=tl*k; o.u+=tu*k; o.t1+=s1; o.t2+=s2; o.dem+=tp;
+      o.n=Math.max(o.n,n); o.p+=tp*k; o.l+=tl*k; o.u+=tu*k; o.t1+=s1; o.t2+=s2; o.a1+=a1; o.a2+=a2; o.dem+=tp;
     });
     o.tot=o.t1+o.t2; o.cob=o.p?o.srv/o.p:1; o.ppp=o.tot?o.p/o.tot:0;
     dias.push(o);
@@ -414,7 +414,7 @@ function _persDibujar(){
   var el=document.getElementById('an-pers'); if(!el) return;
   if(DASH_PERS.err){ el.innerHTML='<div class="ph-hd"><div><h4>Personal por turno</h4></div></div><div class="err-box" style="margin-top:12px">'+esc(DASH_PERS.err)+'</div>'; return; }
   if(!DASH_PERS.d) return;
-  var M=_persModelo(DASH_PERS.esc), E=M.E, dias=M.dias, di=DASH_PERS.dia;
+  var M=_persModelo('r'), E=M.E, dias=M.dias, di=DASH_PERS.dia;
   var tot=dias.reduce(function(t,d){ return t+d.p; },0), turnos=dias.reduce(function(t,d){ return t+d.tot; },0);
   if(!tot){ el.innerHTML='<div class="ph-hd"><div><h4>Personal por turno</h4><div class="nota">Aún no hay pedidos con hora registrada para calcular.</div></div></div>'; return; }
   var sedeTxt=DASH.sede?' · '+DASH.sede:'';
@@ -424,7 +424,7 @@ function _persDibujar(){
 
   var segs=Object.keys(_PE).map(function(k){ return '<button data-pe="'+k+'" class="'+(k===DASH_PERS.esc?'on':'')+'" aria-pressed="'+(k===DASH_PERS.esc)+'" onclick="persEsc(this.dataset.pe)">'+_PE[k].n+'</button>'; }).join('');
   var head='<div class="ph-hd"><div><h4>Personal por turno</h4><div class="nota">Cuántas personas de picking hacen falta cada día y turno, con los pedidos reales de las últimas 12 semanas'+esc(sedeTxt)+'</div></div>'+
-    '<div class="pr-sc"><div class="sal2-seg" role="group" aria-label="Escenario">'+segs+'</div><small>'+E.cap+' pedidos por persona y turno · '+E.t+'</small></div></div>';
+    '<div class="pr-sc"><small>Regla: '+E.cap+' pedidos por persona y turno</small></div></div>';
 
   var stats='<div class="ph-st pr-st">'+
     '<div class="ph-s hi"><small>Personas por semana</small><b>'+turnos+'<em>turnos-persona</em></b></div>'+
@@ -499,13 +499,13 @@ function _persDibujar(){
     '<p><b>Cobertura.</b> Pedidos que se pueden preparar en la hora en que entran ÷ total de pedidos.</p>'+
     '<p><b>Lo que no se puede calcular todavía.</b> No se guarda la hora real de preparación ni los tiempos de picking, así que se supone que un pedido se prepara en su hora de ingreso. Tampoco hay peso ni mezcla de cajas, six packs, latas y botellas por pedido (se usan líneas y unidades), ni pausas reales. Los pedidos sin hora registrada no entran. Con esos datos se podría afinar la capacidad por persona.</p></div></details>';
 
-  var cuantas=function(n){ return '<span><b>'+n+'</b> '+(n===1?'persona':'personas')+'</span>'; };
+  var cuantas=function(n,p){ return '<span><b>'+n+'</b> '+(n===1?'persona':'personas')+'<small> · '+Math.round(p)+' pedidos</small></span>'; };
   var sem='<div class="pr-wk-t">'+(DASH.sede?DASH.sede:((DASH.d.sedes||[]).length>1?'Las '+DASH.d.sedes.length+' sedes juntas, como una sola operación':'Sede'))+' · '+E.n+'</div><div class="pr-wk">'+dias.map(function(x,i){
     return '<button class="pr-wd'+(x.tot===mxT&&mxT!==mnT?' mx':'')+'" onclick="persDia('+i+')" aria-label="'+_PDIA[i]+': turno 1 '+x.t1+', turno 2 '+x.t2+'"><span class="pr-wn">'+_PDIA[i]+'</span>'+
-      '<span class="pr-wt"><i>Turno 1</i>'+cuantas(x.t1)+'</span><span class="pr-wt"><i>Turno 2</i>'+cuantas(x.t2)+'</span></button>';
+      '<span class="pr-wt"><i>Turno 1 · 07:00 a 16:00</i>'+cuantas(x.t1,x.a1)+'</span><span class="pr-wt"><i>Turno 2 · 14:00 a 23:00</i>'+cuantas(x.t2,x.a2)+'</span></button>';
   }).join('')+'</div>';
   el.classList.remove('go');
-  el.innerHTML=head+sem+stats+tabla+'<div class="pr-g2"><div class="pr-hmw"><h5>Mapa de calor <small>pedidos promedio por día y hora</small></h5>'+heat+'</div></div>'+cob+esq+resH+det;
+  el.innerHTML=head+sem+stats+tabla+'<div class="pr-g2"><div class="pr-hmw"><h5>Mapa de calor <small>pedidos promedio por día y hora</small></h5>'+heat+'</div></div>'+cob+det;
 }
 
 /* Pedidos por mes y sede (desde que hay datos). El mes en curso se marca como parcial. */
