@@ -456,21 +456,18 @@ function _persDibujar(){
   var heat='<div class="pr-hm" role="table" aria-label="Pedidos promedio por día y hora"><div class="pr-hr pr-hh"><span></span>'+hh.map(function(h){ return '<span>'+h+'</span>'; }).join('')+'</div>'+
     dias.map(function(d,i){ return '<div class="pr-hr"><span class="pr-hd">'+_PDC[i]+'</span>'+hh.map(function(h){ var v=d.prom[h], a=mxh?v/mxh:0; return '<span class="pr-hc" style="--a:'+a.toFixed(3)+'" title="'+_PDIA[i]+' '+h+':00 a '+(h+1)+':00 · '+_pf(v,1)+' pedidos en promedio">'+(v>=1?Math.round(v):'')+'</span>'; }).join('')+'</div>'; }).join('')+'</div>';
 
-  // Cobertura por hora del día elegido
-  var d=dias[di], rows='', falta=[], holg=[];
+  // ¿Alcanza el personal en cada hora? (día elegido): pedidos que entran frente a los que las personas presentes alcanzan a preparar
+  var d=dias[di], rows='', falta=[], rate=E.cap/_PH_EF;
   for(var q=_PH0;q<=_PH1;q++){
-    var rq=d.req[q], dp=d.disp[q], df=dp-rq, est=rq>dp+0.05?'f':(rq<dp*0.5?'h':'o');
-    if(est==='f') falta.push(q); if(est==='h') holg.push(q);
-    rows+='<tr class="pr-e-'+est+'"><td class="an-n">'+q+':00–'+(q+1)+':00'+((q===14||q===15)?' <em class="pr-tp">traslape</em>':'')+'</td><td class="r an-n">'+_pf(d.D[q],1)+'</td><td class="r an-n">'+_pf(rq,1)+'</td><td class="r an-n">'+dp+'</td>'+
-      '<td class="r an-n"><span class="pr-df '+(df<-0.05?'dn':df>0.05?'up':'')+'">'+(df>0?'+':'')+_pf(df,1)+'</span></td>'+
-      '<td class="r an-n col-m">'+(d.carry[q]>0.5?_pf(d.carry[q],0):'-')+'</td>'+
-      '<td class="r"><span class="pr-tg">'+(est==='f'?'Falta':est==='h'?'Holgura':'Justo')+'</span></td></tr>';
+    var ent=d.D[q], pue=d.disp[q]*rate, ok=Math.round(ent)<=Math.round(pue), pen=d.carry[q];
+    if(!ok) falta.push(q);
+    rows+='<tr class="pr-e-'+(ok?'o':'f')+'"><td class="an-n">'+q+':00 a '+(q+1)+':00'+((q===14||q===15)?' <em class="pr-tp">entran los dos turnos</em>':'')+'</td><td class="r an-n">'+_pf(ent,0)+'</td><td class="r an-n">'+d.disp[q]+'</td><td class="r an-n">'+_pf(pue,0)+'</td>'+
+      '<td class="r"><span class="pr-tg">'+(ok?'Alcanza':'No alcanza'+(pen>=1?' · quedan '+Math.round(pen):''))+'</span></td></tr>';
   }
   var diaBtns=_PDC.map(function(n,i){ return '<button class="'+(i===di?'on':'')+'" aria-pressed="'+(i===di)+'" onclick="persDia('+i+')">'+n+'</button>'; }).join('');
-  var cob='<div class="pr-cv"><div class="pr-cvh"><h5>Cobertura hora por hora</h5><div class="sal2-seg" role="group" aria-label="Día">'+diaBtns+'</div></div>'+
-    '<div class="pr-sm"><b>'+_PDIA[di]+'</b>: '+d.t1+' en el turno 1 y '+d.t2+' en el turno 2 · '+(falta.length?'<span class="dn">falta personal en '+_persHoras(falta)+'</span>':'<span class="up">ninguna hora queda corta</span>')+(d.pendMax>=1?' · hasta '+Math.round(d.pendMax)+' pedidos pendientes':'')+'</div>'+
-    '<div class="table-wrap an-t"><table class="pr-ct"><thead><tr><th>Hora</th><th class="r" title="Pedidos que entran por hora, en promedio">Pedidos</th><th class="r" title="Personas necesarias en esa hora para no acumular pedidos">Requerido</th><th class="r">Disponible</th><th class="r">Diferencia</th><th class="r col-m" title="Pedidos que quedan sin preparar al terminar la hora">Pendientes</th><th class="r">Estado</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
-
+  var cob='<div class="pr-cv"><div class="pr-cvh"><h5>¿Alcanza el personal en cada hora?</h5><div class="sal2-seg" role="group" aria-label="Día">'+diaBtns+'</div></div>'+
+    '<div class="pr-sm"><b>'+_PDIA[di]+' en '+esc(sd.nombre)+'</b>: '+d.t1+' '+(d.t1===1?'persona':'personas')+' en el turno 1 y '+d.t2+' en el turno 2. '+(falta.length?'<span class="dn">No alcanza entre las '+_persHoras(falta).replace(/h/g,':00')+'.</span>':'<span class="up">Alcanza en todas las horas.</span>')+' Cada persona prepara unos '+_pf(rate,1)+' pedidos por hora ('+E.cap+' por turno de '+_PH_EF+' horas).</div>'+
+    '<div class="table-wrap an-t"><table class="pr-ct"><thead><tr><th>Hora</th><th class="r" title="Pedidos que entran en esa hora, en promedio">Pedidos que entran</th><th class="r">Personas</th><th class="r" title="Pedidos que esas personas alcanzan a preparar en la hora">Pueden preparar</th><th class="r">Resultado</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
   var det='<details class="pr-fm"><summary>Cómo se calcula y qué datos faltan</summary><div class="pr-fb">'+
     '<p><b>Demanda.</b> Pedidos distintos por día de la semana y hora de ingreso (últimas 12 semanas, sin contar hoy), divididos entre los días que hubo de cada uno. En «Alta demanda» se usa el día exigente: el que solo superan 1 de cada 5 días.</p>'+
     '<p><b>Capacidad por persona.</b> Pedidos por turno ÷ 8 horas efectivas (turno de 9 h menos 1 h de pausas y refrigerio) = pedidos por hora. No se ajusta por complejidad: los pedidos pesan casi lo mismo todos los días (entre 1,3 y 1,4 ítems y de 16 a 20 unidades por pedido), por eso se muestran como dato y no cambian la capacidad.</p>'+
