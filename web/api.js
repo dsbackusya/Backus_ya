@@ -1129,6 +1129,13 @@
     return { ok: true, data: r.data };
   });
 
+  // Demanda real por sede, día de la semana y hora (pedidos, líneas y unidades) para dimensionar el personal de picking
+  API.getDashboardPersonal = guard(async function (p, desde, hasta) {
+    var r = await sb.rpc('dashboard_personal', { p_desde: parseFecha(desde), p_hasta: parseFecha(hasta) });
+    if (r.error) throw r.error;
+    return { ok: true, data: r.data };
+  });
+
   // Elimina una orden de compra. El administrador, cualquiera; una tienda, solo las VENCIDAS de su sede (la base lo exige).
   // Las entradas ya registradas con esa OC no se tocan.
   API.eliminarOC = guard(async function (p, oc) {
