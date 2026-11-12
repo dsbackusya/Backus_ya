@@ -360,9 +360,16 @@ function _persCargar(){
 var _pf=function(x,d){ return (+x).toFixed(d==null?1:d).replace('.',','); };
 
 /* Modelo: por día de la semana, personas por turno, cobertura por hora y pendientes. Se calcula por sede y se suma. */
-function _persModelo(esc){
+function _persSede(){   // la sede del panel: la de los chips de arriba o, si es «Todas», la que se elija en el propio panel
+  var ss=DASH.d.sedes||[], s=null;
+  if(DASH.sede) s=ss.filter(function(x){ return x.nombre===DASH.sede; })[0];
+  if(!s&&DASH_PERS.sede) s=ss.filter(function(x){ return x.id===DASH_PERS.sede; })[0];
+  return s||ss[0];
+}
+function persSede(id){ DASH_PERS.sede=+id; _persDibujar(); }
+function _persModelo(esc,sid){
   var P=DASH_PERS.d, E=_PE[esc], ids={}, i, h;
-  (DASH.d.sedes||[]).forEach(function(s){ if(!DASH.sede||s.nombre===DASH.sede) ids[s.id]=true; });
+  ids[sid]=true;
   var nd={}, p80={}, cel={};
   (P.dias||[]).forEach(function(x){ nd[x.sede_id+'|'+x.dow]=x.n; p80[x.sede_id+'|'+x.dow]=+x.p80; });
   (P.celdas||[]).forEach(function(c){
@@ -370,7 +377,7 @@ function _persModelo(esc){
     var k=c.sede_id+'|'+c.dow, hh=Math.min(_PH1,Math.max(_PH0,c.h)), o=cel[k]||(cel[k]={});
     var q=o[hh]||(o[hh]={p:0,l:0,u:0}); q.p+=c.p; q.l+=c.l; q.u+=c.u;  });
   var z=function(){ var a=[]; for(var k=0;k<24;k++) a.push(0); return a; };
-  var dias=[], grupos=DASH.sede?Object.keys(ids).map(function(s){ return [s]; }):[Object.keys(ids)];
+  var dias=[], grupos=[[String(sid)]];
   for(var dow=1;dow<=7;dow++){
     var o={dow:dow,n:0,a1:0,a2:0,p:0,l:0,u:0,t1:0,t2:0,srv:0,pendMax:0,D:z(),req:z(),disp:z(),carry:z(),prom:z(),dem:0};
     grupos.forEach(function(sids){   // una sede elegida = esa sede; «todas» = una sola operación con los pedidos de todas sumados
@@ -414,15 +421,16 @@ function _persDibujar(){
   var el=document.getElementById('an-pers'); if(!el) return;
   if(DASH_PERS.err){ el.innerHTML='<div class="ph-hd"><div><h4>Personal por turno</h4></div></div><div class="err-box" style="margin-top:12px">'+esc(DASH_PERS.err)+'</div>'; return; }
   if(!DASH_PERS.d) return;
-  var M=_persModelo('r'), E=M.E, dias=M.dias, di=DASH_PERS.dia;
+  var sd=_persSede(), M=_persModelo('r',sd.id), E=M.E, dias=M.dias, di=DASH_PERS.dia;
   var tot=dias.reduce(function(t,d){ return t+d.p; },0), turnos=dias.reduce(function(t,d){ return t+d.tot; },0);
   if(!tot){ el.innerHTML='<div class="ph-hd"><div><h4>Personal por turno</h4><div class="nota">Aún no hay pedidos con hora registrada para calcular.</div></div></div>'; return; }
-  var sedeTxt=DASH.sede?' · '+DASH.sede:'';
+  var sedeTxt=' · '+sd.nombre;
   var mxT=Math.max.apply(null,dias.map(function(d){ return d.tot; })), mnT=Math.min.apply(null,dias.map(function(d){ return d.tot; }));
   var top=dias.filter(function(d){ return d.tot===mxT; }), cobT=dias.reduce(function(t,d){ return t+d.srv; },0)/tot;
   var mxP=dias.reduce(function(m,d){ return d.ppp>m.ppp?d:m; },dias[0]);
 
-  var segs=Object.keys(_PE).map(function(k){ return '<button data-pe="'+k+'" class="'+(k===DASH_PERS.esc?'on':'')+'" aria-pressed="'+(k===DASH_PERS.esc)+'" onclick="persEsc(this.dataset.pe)">'+_PE[k].n+'</button>'; }).join('');
+  var todas=DASH.d.sedes||[];
+  var tabsS=(!DASH.sede&&todas.length>1)?'<div class="pr-sd"><div class="sal2-seg" role="group" aria-label="Sede">'+todas.map(function(s){ return '<button class="'+(s.id===sd.id?'on':'')+'" aria-pressed="'+(s.id===sd.id)+'" data-s="'+s.id+'" onclick="persSede(this.dataset.s)">'+esc(s.nombre)+'</button>'; }).join('')+'</div></div>':'';
   var head='<div class="ph-hd"><div><h4>Personal por turno</h4><div class="nota">Cuántas personas de picking hacen falta cada día y turno, con los pedidos reales de las últimas 12 semanas'+esc(sedeTxt)+'</div></div>'+
     '<div class="pr-sc"><small>Regla: '+E.cap+' pedidos por persona y turno</small></div></div>';
 
@@ -463,34 +471,6 @@ function _persDibujar(){
     '<div class="pr-sm"><b>'+_PDIA[di]+'</b>: '+d.t1+' en el turno 1 y '+d.t2+' en el turno 2 · '+(falta.length?'<span class="dn">falta personal en '+_persHoras(falta)+'</span>':'<span class="up">ninguna hora queda corta</span>')+(d.pendMax>=1?' · hasta '+Math.round(d.pendMax)+' pedidos pendientes':'')+'</div>'+
     '<div class="table-wrap an-t"><table class="pr-tb"><thead><tr><th>Hora</th><th class="r" title="Pedidos que entran por hora, en promedio">Pedidos</th><th class="r" title="Personas necesarias en esa hora para no acumular pedidos">Requerido</th><th class="r">Disponible</th><th class="r">Diferencia</th><th class="r col-m" title="Pedidos que quedan sin preparar al terminar la hora">Pendientes</th><th class="r">Estado</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
 
-  // Escenarios lado a lado
-  var Mc=_persModelo('c'), Mr=_persModelo('r'), Ma=_persModelo('a');
-  var esq='<div class="pr-es"><h5>Comparación de escenarios</h5><div class="table-wrap an-t"><table><thead><tr><th>Día</th><th class="r">Conservador</th><th class="r">Recomendado</th><th class="r">Alta demanda</th></tr></thead><tbody>'+
-    dias.map(function(x,i){ var c=Mc.dias[i], r=Mr.dias[i], a=Ma.dias[i]; return '<tr><td><div class="an-nm">'+_PDIA[i]+'</div></td><td class="r an-n">'+c.t1+' + '+c.t2+' = <b>'+c.tot+'</b></td><td class="r an-n">'+r.t1+' + '+r.t2+' = <b>'+r.tot+'</b></td><td class="r an-n">'+a.t1+' + '+a.t2+' = <b>'+a.tot+'</b></td></tr>'; }).join('')+
-    '<tr class="an-tot"><td>Semana</td>'+[Mc,Mr,Ma].map(function(m){ return '<td class="r an-n em">'+m.dias.reduce(function(t,x){ return t+x.tot; },0)+'</td>'; }).join('')+'</tr></tbody></table></div><div class="nota pr-nt">Formato: turno 1 + turno 2 = total de personas ese día.</div></div>';
-
-  // Respuestas concretas
-  var rec=Mr.dias, dn=function(f){ return rec.map(function(x,i){ return _PDC[i]+' '+f(x); }).join(' · '); };
-  var rmx=Math.max.apply(null,rec.map(function(x){return x.tot;})), rmn=Math.min.apply(null,rec.map(function(x){return x.tot;}));
-  var lst=function(f){ return rec.map(function(x,i){ return f(x)?_PDIA[i]:null; }).filter(Boolean).join(', '); };
-  var ref=[]; rec.forEach(function(x,i){ var fl=[]; for(var h=_PH0;h<=_PH1;h++) if(x.req[h]>x.disp[h]+0.05) fl.push(h); if(fl.length) ref.push(_PDC[i]+' '+_persHoras(fl)); });
-  var pico=[]; rec.forEach(function(x,i){ for(var h=_PH0;h<=_PH1;h++) pico.push({d:i,h:h,r:x.req[h]/x.disp[h]}); });
-  pico.sort(function(a,b){ return b.r-a.r; });
-  var topP=pico.slice(0,3).map(function(x){ return _PDC[x.d]+' '+x.h+'–'+(x.h+1)+'h'; }).join(', ');
-  var turnR=rec.reduce(function(t,x){ return t+x.tot; },0), planta=Math.ceil(turnR/5);
-  var mxPP=rec.reduce(function(m,x){ return x.ppp>m.ppp?x:m; },rec[0]);
-  var resp=[
-    ['Turno 1 (07:00–16:00) por día',dn(function(x){ return x.t1; })],
-    ['Turno 2 (14:00–23:00) por día',dn(function(x){ return x.t2; })],
-    ['Días con mayor dotación',lst(function(x){ return x.tot===rmx; })+' ('+rmx+' personas)'],
-    ['Días con menos personal',lst(function(x){ return x.tot===rmn; })+' ('+rmn+' personas)'],
-    ['Horarios que necesitan refuerzo',ref.length?ref.join(' · '):'Con la dotación recomendada ninguna hora queda corta. Las más justas son '+topP+'.'],
-    ['Personas a contratar o mantener','Para '+turnR+' turnos por semana, con 5 turnos por persona y 2 días de descanso, hacen falta '+planta+' '+(planta===1?'persona':'personas')+(DASH.sede?'':' en total (las sedes juntas, como una sola operación)')+'.'],
-    ['Cómo evitar la sobrecarga','Rotar quien arma los pedidos pesados (cajas) cada 2 horas y no pasar de 60 pedidos por persona. El día más cargado es '+_PDIA[mxPP.dow-1]+' con '+_pf(mxPP.ppp,0)+' por persona'+(mxPP.ppp>60?', por encima de la meta de 60: conviene reforzar ese día.':', dentro de la meta de 60.')],
-    ['Dotación semanal óptima',turnR+' turnos-persona por semana (escenario recomendado: 60 pedidos por persona y turno).']
-  ];
-  var resH='<div class="pr-rs"><h5>Respuestas</h5><dl>'+resp.map(function(x,i){ return '<div><dt><i>'+(i+1)+'</i>'+x[0]+'</dt><dd>'+esc(x[1])+'</dd></div>'; }).join('')+'</dl></div>';
-
   var det='<details class="pr-fm"><summary>Cómo se calcula y qué datos faltan</summary><div class="pr-fb">'+
     '<p><b>Demanda.</b> Pedidos distintos por día de la semana y hora de ingreso (últimas 12 semanas, sin contar hoy), divididos entre los días que hubo de cada uno. En «Alta demanda» se usa el día exigente: el que solo superan 1 de cada 5 días.</p>'+
     '<p><b>Capacidad por persona.</b> Pedidos por turno ÷ 8 horas efectivas (turno de 9 h menos 1 h de pausas y refrigerio) = pedidos por hora. No se ajusta por complejidad: los pedidos pesan casi lo mismo todos los días (entre 1,3 y 1,4 ítems y de 16 a 20 unidades por pedido), por eso se muestran como dato y no cambian la capacidad.</p>'+
@@ -500,12 +480,20 @@ function _persDibujar(){
     '<p><b>Lo que no se puede calcular todavía.</b> No se guarda la hora real de preparación ni los tiempos de picking, así que se supone que un pedido se prepara en su hora de ingreso. Tampoco hay peso ni mezcla de cajas, six packs, latas y botellas por pedido (se usan líneas y unidades), ni pausas reales. Los pedidos sin hora registrada no entran. Con esos datos se podría afinar la capacidad por persona.</p></div></details>';
 
   var cuantas=function(n,p){ return '<span><b>'+n+'</b> '+(n===1?'persona':'personas')+'<small> · '+Math.round(p)+' pedidos</small></span>'; };
-  var sem='<div class="pr-wk-t">'+(DASH.sede?DASH.sede:((DASH.d.sedes||[]).length>1?'Las '+DASH.d.sedes.length+' sedes juntas, como una sola operación':'Sede'))+' · '+E.n+'</div><div class="pr-wk">'+dias.map(function(x,i){
+  var sem=tabsS+'<div class="pr-wk-t">'+esc(sd.nombre)+' · personas por turno</div><div class="pr-wk">'+dias.map(function(x,i){
     return '<button class="pr-wd'+(x.tot===mxT&&mxT!==mnT?' mx':'')+'" onclick="persDia('+i+')" aria-label="'+_PDIA[i]+': turno 1 '+x.t1+', turno 2 '+x.t2+'"><span class="pr-wn">'+_PDIA[i]+'</span>'+
       '<span class="pr-wt"><i>Turno 1 · 07:00 a 16:00</i>'+cuantas(x.t1,x.a1)+'</span><span class="pr-wt"><i>Turno 2 · 14:00 a 23:00</i>'+cuantas(x.t2,x.a2)+'</span></button>';
   }).join('')+'</div>';
+  // Resumen de todas las sedes, cada una con su propio cálculo
+  var resu='';
+  if(!DASH.sede&&todas.length>1){
+    var MS=todas.map(function(s){ return _persModelo('r',s.id); });
+    resu='<div class="pr-es"><h5>Todas las sedes <small>cada sede con su propio cálculo: turno 1 + turno 2</small></h5><div class="table-wrap an-t"><table><thead><tr><th>Día</th>'+todas.map(function(s){ return '<th class="r">'+esc(s.nombre)+'</th>'; }).join('')+'</tr></thead><tbody>'+
+      dias.map(function(x,i){ return '<tr><td><div class="an-nm">'+_PDIA[i]+'</div></td>'+MS.map(function(m){ var y=m.dias[i]; return '<td class="r an-n">'+y.t1+' + '+y.t2+' = <b>'+y.tot+'</b></td>'; }).join('')+'</tr>'; }).join('')+
+      '<tr class="an-tot"><td>Semana</td>'+MS.map(function(m){ return '<td class="r an-n em">'+m.dias.reduce(function(t,y){ return t+y.tot; },0)+'</td>'; }).join('')+'</tr></tbody></table></div></div>';
+  }
   el.classList.remove('go');
-  el.innerHTML=head+sem+stats+tabla+'<div class="pr-g2"><div class="pr-hmw"><h5>Mapa de calor <small>pedidos promedio por día y hora</small></h5>'+heat+'</div></div>'+cob+det;
+  el.innerHTML=head+sem+stats+tabla+'<div class="pr-g2"><div class="pr-hmw"><h5>Mapa de calor <small>pedidos promedio por día y hora</small></h5>'+heat+'</div></div>'+cob+resu+det;
 }
 
 /* Pedidos por mes y sede (desde que hay datos). El mes en curso se marca como parcial. */
