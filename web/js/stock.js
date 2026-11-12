@@ -363,30 +363,27 @@ var _pf=function(x,d){ return (+x).toFixed(d==null?1:d).replace('.',','); };
 function _persModelo(esc){
   var P=DASH_PERS.d, E=_PE[esc], ids={}, i, h;
   (DASH.d.sedes||[]).forEach(function(s){ if(!DASH.sede||s.nombre===DASH.sede) ids[s.id]=true; });
-  var nd={}, p80={}, cel={}, gp={}, gu={};
+  var nd={}, p80={}, cel={};
   (P.dias||[]).forEach(function(x){ nd[x.sede_id+'|'+x.dow]=x.n; p80[x.sede_id+'|'+x.dow]=+x.p80; });
   (P.celdas||[]).forEach(function(c){
     if(!ids[c.sede_id]) return;
     var k=c.sede_id+'|'+c.dow, hh=Math.min(_PH1,Math.max(_PH0,c.h)), o=cel[k]||(cel[k]={});
-    var q=o[hh]||(o[hh]={p:0,l:0,u:0}); q.p+=c.p; q.l+=c.l; q.u+=c.u;
-    gp[c.sede_id]=(gp[c.sede_id]||0)+c.p; gu[c.sede_id]=(gu[c.sede_id]||0)+c.u;
-  });
+    var q=o[hh]||(o[hh]={p:0,l:0,u:0}); q.p+=c.p; q.l+=c.l; q.u+=c.u;  });
   var z=function(){ var a=[]; for(var k=0;k<24;k++) a.push(0); return a; };
   var dias=[], grupos=DASH.sede?Object.keys(ids).map(function(s){ return [s]; }):[Object.keys(ids)];
   for(var dow=1;dow<=7;dow++){
     var o={dow:dow,n:0,p:0,l:0,u:0,t1:0,t2:0,srv:0,pendMax:0,D:z(),req:z(),disp:z(),carry:z(),prom:z(),dem:0};
     grupos.forEach(function(sids){   // una sede elegida = esa sede; «todas» = una sola operación con los pedidos de todas sumados
-      var n=0, prom=z(), tp=0, tl=0, tu=0, p8=0, gpp=0, guu=0;
+      var n=0, prom=z(), tp=0, tl=0, tu=0, p8=0;
       sids.forEach(function(sid){
         var ns=nd[sid+'|'+dow], cs=cel[sid+'|'+dow]; if(!ns||!cs) return;
-        n=Math.max(n,ns); p8+=p80[sid+'|'+dow]||0; gpp+=gp[sid]||0; guu+=gu[sid]||0;
+        n=Math.max(n,ns); p8+=p80[sid+'|'+dow]||0;
         for(h=_PH0;h<=_PH1;h++){ var c=cs[h]; if(c){ prom[h]+=c.p/ns; tl+=c.l/ns; tu+=c.u/ns; } }
       });
       for(h=_PH0;h<=_PH1;h++) tp+=prom[h];
       if(!n||!tp) return;
       var k=(E.dem==='p80')?Math.max(1,(p8||tp)/tp):1;
-      var gx=gpp?guu/gpp:0, un=tp?tu/tp:0, fc=gx?Math.min(1.2,Math.max(.85,un/gx)):1;   // complejidad: unidades por pedido del día frente al promedio
-      var cap=E.cap/fc, rate=cap/_PH_EF, D=prom.map(function(x){ return x*k; });
+      var cap=E.cap, rate=cap/_PH_EF, D=prom.map(function(x){ return x*k; });
       var a1=0,a2=0;
       for(h=_PH0;h<=_PH1;h++){ if(h<14) a1+=D[h]; else if(h<16){ a1+=D[h]/2; a2+=D[h]/2; } else a2+=D[h]; }
       var s1=Math.max(1,Math.ceil(a1/cap-1e-9)), s2=Math.max(1,Math.ceil(a2/cap-1e-9)), carry=0;
@@ -496,7 +493,7 @@ function _persDibujar(){
 
   var det='<details class="pr-fm"><summary>Cómo se calcula y qué datos faltan</summary><div class="pr-fb">'+
     '<p><b>Demanda.</b> Pedidos distintos por día de la semana y hora de ingreso (últimas 12 semanas, sin contar hoy), divididos entre los días que hubo de cada uno. En «Alta demanda» se usa el día exigente: el que solo superan 1 de cada 5 días.</p>'+
-    '<p><b>Capacidad por persona.</b> Pedidos por turno ÷ 8 horas efectivas (turno de 9 h menos 1 h de pausas y refrigerio) = pedidos por hora. Se ajusta por complejidad: unidades por pedido del día ÷ unidades por pedido promedio de la sede (entre 0,85 y 1,2).</p>'+
+    '<p><b>Capacidad por persona.</b> Pedidos por turno ÷ 8 horas efectivas (turno de 9 h menos 1 h de pausas y refrigerio) = pedidos por hora. No se ajusta por complejidad: los pedidos pesan casi lo mismo todos los días (entre 1,3 y 1,4 ítems y de 16 a 20 unidades por pedido), por eso se muestran como dato y no cambian la capacidad.</p>'+
     '<p><b>Personas por turno.</b> Pedidos del turno ÷ capacidad por turno, redondeado hacia arriba y con mínimo 1 por turno. Turno 1: de 8 a 14 h y la mitad del traslape. Turno 2: la otra mitad y de 16 h al cierre.</p>'+
     '<p><b>Requerido por hora.</b> Pedidos de la hora ÷ pedidos por hora de una persona. Disponible: turno 1 antes de las 14 h, ambos turnos de 14 a 16 h, turno 2 desde las 16 h. Pendientes: lo que no alcanza a prepararse en la hora y pasa a la siguiente.</p>'+
     '<p><b>Cobertura.</b> Pedidos que se pueden preparar en la hora en que entran ÷ total de pedidos.</p>'+
