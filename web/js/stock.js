@@ -469,7 +469,7 @@ function _persDibujar(){
   var diaBtns=_PDC.map(function(n,i){ return '<button class="'+(i===di?'on':'')+'" aria-pressed="'+(i===di)+'" onclick="persDia('+i+')">'+n+'</button>'; }).join('');
   var cob='<div class="pr-cv"><div class="pr-cvh"><h5>Cobertura hora por hora</h5><div class="sal2-seg" role="group" aria-label="Día">'+diaBtns+'</div></div>'+
     '<div class="pr-sm"><b>'+_PDIA[di]+'</b>: '+d.t1+' en el turno 1 y '+d.t2+' en el turno 2 · '+(falta.length?'<span class="dn">falta personal en '+_persHoras(falta)+'</span>':'<span class="up">ninguna hora queda corta</span>')+(d.pendMax>=1?' · hasta '+Math.round(d.pendMax)+' pedidos pendientes':'')+'</div>'+
-    '<div class="table-wrap an-t"><table class="pr-tb"><thead><tr><th>Hora</th><th class="r" title="Pedidos que entran por hora, en promedio">Pedidos</th><th class="r" title="Personas necesarias en esa hora para no acumular pedidos">Requerido</th><th class="r">Disponible</th><th class="r">Diferencia</th><th class="r col-m" title="Pedidos que quedan sin preparar al terminar la hora">Pendientes</th><th class="r">Estado</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+    '<div class="table-wrap an-t"><table class="pr-ct"><thead><tr><th>Hora</th><th class="r" title="Pedidos que entran por hora, en promedio">Pedidos</th><th class="r" title="Personas necesarias en esa hora para no acumular pedidos">Requerido</th><th class="r">Disponible</th><th class="r">Diferencia</th><th class="r col-m" title="Pedidos que quedan sin preparar al terminar la hora">Pendientes</th><th class="r">Estado</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
 
   var det='<details class="pr-fm"><summary>Cómo se calcula y qué datos faltan</summary><div class="pr-fb">'+
     '<p><b>Demanda.</b> Pedidos distintos por día de la semana y hora de ingreso (últimas 12 semanas, sin contar hoy), divididos entre los días que hubo de cada uno. En «Alta demanda» se usa el día exigente: el que solo superan 1 de cada 5 días.</p>'+
@@ -493,7 +493,7 @@ function _persDibujar(){
       '<tr class="an-tot"><td>Semana</td>'+MS.map(function(m){ return '<td class="r an-n em">'+m.dias.reduce(function(t,y){ return t+y.tot; },0)+'</td>'; }).join('')+'</tr></tbody></table></div></div>';
   }
   el.classList.remove('go');
-  el.innerHTML=head+sem+'<div class="nota pr-nt" style="margin:8px 2px 18px">Toca un día para ver su cobertura hora por hora.</div>'+stats+'<div class="pr-g2"><div class="pr-hmw"><h5>Mapa de calor <small>pedidos promedio por día y hora</small></h5>'+heat+'</div></div>'+cob+resu+det;
+  el.innerHTML=head+sem+'<div class="nota pr-nt" style="margin:8px 2px 18px">Toca un día para ver su cobertura hora por hora.</div>'+stats+'<div class="pr-mp"><div class="pr-hmw"><h5>Mapa de calor <small>pedidos promedio por día y hora</small></h5>'+heat+'</div></div>'+cob+resu+det;
 }
 
 /* Pedidos por mes y sede (desde que hay datos). El mes en curso se marca como parcial. */
