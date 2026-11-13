@@ -1057,10 +1057,25 @@ function _kxExcel(k,r){
   k.filas.forEach(function(x){
     A.push([f(x.fecha),x.tipo,x.doc,x.det,x.ent||'',x.sal||'',x.saldo,x.conteo===undefined?'':x.conteo,x.dif===undefined?'':x.dif]);
   });
+  // Totales por tipo (M-T: unidades que restan; en Ajuste un negativo significa que sumó stock)
+  var t={ENT:0,SAL:0,MERMA:0,TRASLADO:0,AJUSTE:0,NC:0,OTROS:0};
+  k.filas.forEach(function(x){
+    if(x.tipo==='Entrada') t.ENT+=x.ent;
+    else if(x.tipo==='Salidas') t.SAL+=x.sal;
+    else if(x.tipo==='M-T') t[_mtTipo({tipo:x.doc})]+=(x.sal||0)-(x.ent||0);
+  });
   A.push([]);
-  A.push(['Totales del rango','','','',k.totEntradas,k.totSalidas+k.totMT,k.final]);
-  A.push(['Salidas por ventas',k.totSalidas]);
-  A.push(['Mermas y traslados',k.totMT]);
+  A.push(['TOTALES DEL RANGO']);
+  A.push(['Total entradas',t.ENT]);
+  A.push(['Total salidas (ventas)',t.SAL]);
+  A.push(['Total mermas',t.MERMA]);
+  A.push(['Total traslados',t.TRASLADO]);
+  A.push(['Total ajustes (negativo = sumó stock)',t.AJUSTE]);
+  A.push(['Total notas de crédito',t.NC]);
+  if(t.OTROS) A.push(['Otros M-T',t.OTROS]);
+  A.push([]);
+  A.push(['Stock sistema',k.final]);
+  A.push(['Stock físico actual'+(u?' (conteo del '+f(u.fecha)+')':''),u?u.total:'Sin conteos']);
   var ws=XLSX.utils.aoa_to_sheet(A);
   ws['!cols']=[{wch:12},{wch:10},{wch:18},{wch:42},{wch:10},{wch:10},{wch:14},{wch:14},{wch:22}];
   var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Kardex');
