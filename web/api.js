@@ -261,6 +261,70 @@
     return { ok: true, data: { e: r[0], s: r[1], m: r[2] } };
   });
 
+  // Kardex de un producto: saldo inicial del sistema, conteos, entradas, salidas (por día) y M-T entre dos fechas.
+  // El saldo sigue la misma regla que v_stock: entradas - salidas - M-T.
+  API.getKardex = guard(async function (p, row, desde, hasta) {
+    var ref = _stockRows[row];
+    if (!ref) return { ok: false, error: 'Producto no encontrado' };
+    var d0 = parseFecha(desde), d1 = parseFecha(hasta);
+    if (!d0 || !d1) return { ok: false, error: 'Elige las dos fechas' };
+    if (d0 > d1) { var t = d0; d0 = d1; d1 = t; }
+    function q(tabla, cols) { return sb.from(tabla).select(cols).eq('sede_id', ref.sede_id).eq('sku', ref.sku); }
+    var r = await Promise.all([
+      todas(function () { return q('entradas', 'unidades').lt('fecha', d0).order('id'); }),
+      todas(function () { return q('salidas', 'unidad').lt('fecha', d0).order('id'); }),
+      todas(function () { return q('mt', 'cantidad').lt('fecha', d0).order('id'); }),
+      todas(function () { return q('entradas', 'id,fecha,unidades,factura,proveedor,oc,responsable').gte('fecha', d0).lte('fecha', d1).order('fecha').order('id'); }),
+      todas(function () { return q('salidas', 'id,fecha,unidad,nro_pedido').gte('fecha', d0).lte('fecha', d1).order('fecha').order('id'); }),
+      todas(function () { return q('mt', 'id,fecha,cantidad,tipo,motivo,observaciones').gte('fecha', d0).lte('fecha', d1).order('fecha').order('id'); }),
+      todas(function () { return q('conteos', 'id,fecha,total').lte('fecha', d1).order('fecha').order('id'); })
+    ]);
+    function suma(a, c) { return a.reduce(function (s, f) { return s + num(f[c]); }, 0); }
+    var inicial = suma(r[0], 'unidades') - suma(r[1], 'unidad') - suma(r[2], 'cantidad');
+    // Conteos: todas las filas de un mismo día se suman (cada una es una ubicación o una vuelta de conteo)
+    var cont = {};
+    r[6].forEach(function (f) { cont[f.fecha] = (cont[f.fecha] || 0) + num(f.total); });
+    var diasCont = Object.keys(cont).sort();
+    var ult = diasCont.length ? { fecha: diasCont[diasCont.length - 1], total: cont[diasCont[diasCont.length - 1]] } : null;
+    // Salidas: un renglón por día (con la cantidad de pedidos)
+    var sal = {};
+    r[4].forEach(function (f) {
+      var o = sal[f.fecha] || (sal[f.fecha] = { u: 0, ped: {} });
+      o.u += num(f.unidad); o.ped[f.nro_pedido] = 1;
+    });
+    var porDia = {};
+    function dia(f) { return porDia[f] || (porDia[f] = { e: [], s: null, m: [] }); }
+    r[3].forEach(function (f) { dia(f.fecha).e.push(f); });
+    r[5].forEach(function (f) { dia(f.fecha).m.push(f); });
+    Object.keys(sal).forEach(function (f) { dia(f).s = sal[f]; });
+    diasCont.forEach(function (f) { if (f >= d0) dia(f); });
+    var fechas = Object.keys(porDia).sort(), saldo = inicial, filas = [], tE = 0, tS = 0, tM = 0;
+    fechas.forEach(function (f) {
+      var o = porDia[f];
+      if (cont[f] !== undefined) {
+        filas.push({ fecha: f, tipo: 'Conteo', doc: '', det: 'Conteo físico del día', ent: 0, sal: 0, saldo: saldo, conteo: cont[f], dif: cont[f] - saldo });
+      }
+      o.e.forEach(function (x) {
+        var u = num(x.unidades); saldo += u; tE += u;
+        filas.push({ fecha: f, tipo: 'Entrada', doc: str(x.factura), det: [str(x.proveedor), x.oc ? 'OC ' + str(x.oc) : ''].filter(Boolean).join(' · '), ent: u, sal: 0, saldo: saldo });
+      });
+      o.m.forEach(function (x) {
+        var c = num(x.cantidad); saldo -= c;
+        if (c > 0) tM += c; else tE += -c;
+        filas.push({ fecha: f, tipo: 'M-T', doc: str(x.tipo), det: [str(x.motivo), str(x.observaciones)].filter(Boolean).join(' · '), ent: c < 0 ? -c : 0, sal: c > 0 ? c : 0, saldo: saldo });
+      });
+      if (o.s) {
+        saldo -= o.s.u; tS += o.s.u;
+        var n = Object.keys(o.s.ped).length;
+        filas.push({ fecha: f, tipo: 'Salidas', doc: '', det: n + (n === 1 ? ' pedido' : ' pedidos'), ent: 0, sal: o.s.u, saldo: saldo });
+      }
+    });
+    return { ok: true, data: {
+      sku: ref.sku, desc: str(ref.descripcion || ref.desc), sede: sedeNombre(ref.sede_id), desde: d0, hasta: d1,
+      inicial: inicial, final: saldo, ultimoConteo: ult, filas: filas, totEntradas: tE, totSalidas: tS, totMT: tM
+    } };
+  });
+
   // Stock en packs de todas las sedes (para la descarga del Dashboard); una tienda solo ve su sede en el resto de la app.
   API.getStockPackTodasSedes = guard(async function () {
     var filas = await todas(function () { return sb.rpc('stock_pack_todas_sedes'); });

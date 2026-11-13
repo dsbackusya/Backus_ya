@@ -988,7 +988,9 @@ function stkAbrir(row){
     '<div class="stk-st3 d2"><div><span>Costo en inventario</span><b>'+(r.costo?'S/ '+fmt(r.costo):'-')+'</b></div><div><span>Unidades por pack</span><b>'+(r.packs>0?fmt(r.packs):'-')+'</b></div></div>'+
     (e==='ng'?'<div class="stk-warn">Salieron más unidades de las que entraron. Revisa las entradas o haz un conteo.</div>':'')+
     '<div class="stk-btns">'+(tienda?'<button type="button" class="stk-b e" onclick="stkIr(\'entradas\')">'+_stkIc('<path d="M12 4v13"/><path d="M6 12l6 6 6-6"/>')+'Entrada</button><button type="button" class="stk-b s" onclick="stkIr(\'salidas\')">'+_stkIc('<path d="M12 20V7"/><path d="M6 12l6-6 6 6"/>')+'Salida</button><button type="button" class="stk-b g" onclick="stkIr(\'conteo\')">'+_stkIc('<path d="M5 9h14M5 15h14M9 4L7 20M17 4l-2 16"/>')+'Contar</button>':'')+
-    '<button type="button" class="stk-b g'+(tienda?'':' w')+'" onclick="stkCerrar();abrirSKUForm('+r._row+')">'+_stkIc('<path d="M4 20h4l11-11-4-4L4 16z"/>')+'Editar SKU</button></div></div>';
+    '<button type="button" class="stk-b g'+(tienda?'':' w')+'" onclick="stkCerrar();abrirSKUForm('+r._row+')">'+_stkIc('<path d="M4 20h4l11-11-4-4L4 16z"/>')+'Editar SKU</button>'+
+    '<button type="button" class="stk-b g w kx" onclick="stkKx(\'m\','+r._row+')">'+_stkIc('<path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/>')+'Descargar kardex</button></div>'+
+    '<div class="stk-kx" id="stk-kx-m"></div></div>';
   c.innerHTML=mb+'<div class="stk-dk">'+
     '<div class="stk-ps" style="margin:0 0 6px"><span class="sk">'+esc(r.sku)+'</span></div>'+
     '<h3>'+esc(r.desc)+'</h3>'+
@@ -999,7 +1001,9 @@ function stkAbrir(row){
     '<div class="stk-rowm"><span>Mermas y traslados</span><b>'+fmt(r.mt)+'</b></div>'+
     '<div class="stk-rowm"><span>Costo en inventario</span><b>'+(r.costo?'S/ '+fmt(r.costo):'-')+'</b></div>'+
     (e==='ng'?'<div class="stk-warn">Salieron más unidades de las que entraron. Revisa las entradas o haz un conteo.</div>':'')+
-    '<div style="margin-top:18px"><button class="btn btn-primary" style="width:100%" onclick="stkCerrar();abrirSKUForm('+r._row+')">Editar SKU</button></div></div>';
+    '<div style="margin-top:18px"><button class="btn btn-primary" style="width:100%" onclick="stkCerrar();abrirSKUForm('+r._row+')">Editar SKU</button></div>'+
+    '<div style="margin-top:10px"><button type="button" class="btn btn-ghost" style="width:100%;justify-content:center;gap:8px" onclick="stkKx(\'d\','+r._row+')">'+_stkIc('<path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/>')+'Descargar kardex</button></div>'+
+    '<div class="stk-kx" id="stk-kx-d"></div></div>';
   document.getElementById('stk-dr').classList.add('on');
   var dm=document.getElementById('stk-dim'); if(dm) dm.classList.add('on');
   var bx=document.querySelector('#stk-dr .x'); if(bx) setTimeout(function(){ bx.focus(); },50);
@@ -1007,6 +1011,63 @@ function stkAbrir(row){
 }
 function _stkIc(p){ return '<svg viewBox="0 0 24 24">'+p+'</svg>'; }
 function stkIr(n){ stkCerrar(); navTo(n,document.getElementById('nav-'+n)); }
+/* Kardex del producto: elige un rango de fechas y baja un Excel con último conteo, entradas, salidas y M-T */
+function _kxIso(d){ return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima'}).format(d); }
+function stkKx(w,row){
+  var el=document.getElementById('stk-kx-'+w); if(!el) return;
+  if(el.classList.contains('on')){ el.classList.remove('on'); el.innerHTML=''; return; }
+  var hoy=_kxIso(new Date()), ini=_kxIso(new Date(Date.now()-30*86400000));
+  el.innerHTML='<h5>Kardex del producto</h5><p>Último conteo, entradas, salidas y M-T entre las fechas que elijas.</p>'+
+    '<div class="kx-f"><label>Desde<input type="date" id="kx-d-'+w+'" value="'+ini+'" max="'+hoy+'"></label><label>Hasta<input type="date" id="kx-h-'+w+'" value="'+hoy+'" max="'+hoy+'"></label></div>'+
+    '<div class="kx-p">'+[[7,'7 días'],[30,'30 días'],[90,'90 días'],[365,'1 año']].map(function(x){return '<button type="button" onclick="stkKxRango(\''+w+'\','+x[0]+')">'+x[1]+'</button>';}).join('')+'</div>'+
+    '<button type="button" class="kx-go" id="kx-go-'+w+'" onclick="stkKxBajar(\''+w+'\','+row+')">Descargar Excel</button>';
+  el.classList.add('on');
+}
+function stkKxRango(w,dias){
+  var d=document.getElementById('kx-d-'+w), h=document.getElementById('kx-h-'+w); if(!d||!h) return;
+  h.value=_kxIso(new Date()); d.value=_kxIso(new Date(Date.now()-dias*86400000));
+}
+function stkKxBajar(w,row){
+  var d=document.getElementById('kx-d-'+w), h=document.getElementById('kx-h-'+w), b=document.getElementById('kx-go-'+w);
+  if(!d||!h||!d.value||!h.value){ showToast('Elige las dos fechas','err'); return; }
+  var r=(DATA.stock||[]).filter(function(x){return x._row===row;})[0];
+  b.disabled=true; b.textContent='Preparando…';
+  var fin=function(){ b.disabled=false; b.textContent='Descargar Excel'; };
+  google.script.run
+    .withSuccessHandler(function(res){
+      fin();
+      if(!res||!res.ok){ showToast((res&&res.error)||'No se pudo armar el kardex','err'); return; }
+      _kxExcel(res.data,r);
+    })
+    .withFailureHandler(function(){ fin(); showToast('No se pudo armar el kardex','err'); })
+    .getKardex(S.token,row,d.value,h.value);
+}
+function _kxExcel(k,r){
+  var f=function(s){ var p=String(s||'').split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:''; };
+  var u=k.ultimoConteo;
+  var A=[
+    ['KARDEX · '+(r?r.desc:k.sku)],
+    ['SKU',k.sku,'','Sede',k.sede],
+    ['Del',f(k.desde),'','Al',f(k.hasta)],
+    ['Último conteo',u?f(u.fecha):'Sin conteos',u?u.total:'','','Saldo del sistema al cierre',k.final],
+    [],
+    ['Saldo inicial (sistema)','','','',k.inicial],
+    ['Fecha','Tipo','Documento','Detalle','Entradas','Salidas','Saldo sistema','Conteo físico','Diferencia vs saldo al inicio del día']
+  ];
+  k.filas.forEach(function(x){
+    A.push([f(x.fecha),x.tipo,x.doc,x.det,x.ent||'',x.sal||'',x.saldo,x.conteo===undefined?'':x.conteo,x.dif===undefined?'':x.dif]);
+  });
+  A.push([]);
+  A.push(['Totales del rango','','','',k.totEntradas,k.totSalidas+k.totMT,k.final]);
+  A.push(['Salidas por ventas',k.totSalidas]);
+  A.push(['Mermas y traslados',k.totMT]);
+  var ws=XLSX.utils.aoa_to_sheet(A);
+  ws['!cols']=[{wch:12},{wch:10},{wch:18},{wch:42},{wch:10},{wch:10},{wch:14},{wch:14},{wch:22}];
+  var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Kardex');
+  var sku=String(k.sku).replace(/[^\w.-]+/g,'_');
+  XLSX.writeFile(wb,'kardex_'+sku+'_'+k.desde+'_a_'+k.hasta+'.xlsx');
+  showToast('Kardex descargado ('+k.filas.length+' movimientos)','ok');
+}
 /* Evolución del stock de los últimos 30 días: se arma hacia atrás desde el stock de hoy con las entradas, salidas y M-T de cada día */
 function stkEvol(r){
   _STK_ROW=r._row;
