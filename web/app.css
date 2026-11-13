@@ -2045,6 +2045,9 @@ body.cnt-open .sidebar,body.cnt-open .topbar,body.cnt-open .content,body.cnt-ope
 .stk-g2 b{display:block;font:700 20px var(--font-display);margin-top:4px;color:var(--text)}
 .stk-rowm{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);font-size:13px;color:var(--text2)}
 .stk-rowm b{color:var(--text);font-weight:600}
+.stk-kxb{width:100%;height:44px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font:600 14px 'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:background-color .15s ease,transform .12s ease}
+.stk-kxb:hover{background:var(--surface3)}.stk-kxb:active{transform:scale(.98)}
+.stk-kxb svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 /* Kardex del producto (formulario que se abre bajo los botones del detalle) */
 .stk-kx{display:none;margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:14px}
 .stk-kx.on{display:block;animation:kxIn .18s cubic-bezier(.23,1,.32,1)}

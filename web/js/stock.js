@@ -1002,7 +1002,7 @@ function stkAbrir(row){
     '<div class="stk-rowm"><span>Costo en inventario</span><b>'+(r.costo?'S/ '+fmt(r.costo):'-')+'</b></div>'+
     (e==='ng'?'<div class="stk-warn">Salieron más unidades de las que entraron. Revisa las entradas o haz un conteo.</div>':'')+
     '<div style="margin-top:18px"><button class="btn btn-primary" style="width:100%" onclick="stkCerrar();abrirSKUForm('+r._row+')">Editar SKU</button></div>'+
-    '<div style="margin-top:10px"><button type="button" class="btn btn-ghost" style="width:100%;justify-content:center;gap:8px" onclick="stkKx(\'d\','+r._row+')">'+_stkIc('<path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/>')+'Descargar kardex</button></div>'+
+    '<div style="margin-top:10px"><button type="button" class="stk-kxb" onclick="stkKx(\'d\','+r._row+')">'+_stkIc('<path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/>')+'Descargar kardex</button></div>'+
     '<div class="stk-kx" id="stk-kx-d"></div></div>';
   document.getElementById('stk-dr').classList.add('on');
   var dm=document.getElementById('stk-dim'); if(dm) dm.classList.add('on');
