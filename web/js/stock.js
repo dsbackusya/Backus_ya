@@ -1205,13 +1205,13 @@ function repExcel(){
     ['Fecha',f(REP.hoy),'','Salidas de los últimos',REP.dias+' días (sin contar hoy)'],
     ['Pedir para cubrir',REP.cub+' días','','Sede',admin?'Todas las sedes':(_sedeBonita(S.usuario||'').replace(/^DS\s+/i,''))],
     [],
-    (admin?['Sede']:[]).concat(['SKU','Prioridad','Producto','Marca','Categoría','Stock actual','Salidas ('+REP.dias+' días)','Promedio por día','Días que alcanza','Cantidad a pedir (und)','Packs a pedir'])];
+    (admin?['Sede']:[]).concat(['SKU','Código SAP','Prioridad','Producto','Marca','Categoría','Stock actual','Salidas ('+REP.dias+' días)','Promedio por día','Días que alcanza','Cantidad a pedir (und)','Packs a pedir'])];
   REP.lista.forEach(function(x){
     var r=x.r;
-    A.push((admin?[r.sede]:[]).concat([r.sku,x.cl||'-',r.desc,r.marca,r.categoria,r.stock,x.sal,Math.round(x.prom*10)/10,x.cob===null?'':Math.round(x.cob*10)/10,x.ped||'',x.ped&&r.packs>1?Math.round(x.ped/r.packs*10)/10:'']));
+    A.push((admin?[r.sede]:[]).concat([r.sku,(REP.map.sap||{})[r.sku]||'',x.cl||'-',r.desc,r.marca,r.categoria,r.stock,x.sal,Math.round(x.prom*10)/10,x.cob===null?'':Math.round(x.cob*10)/10,x.ped||'',x.ped&&r.packs>1?Math.round(x.ped/r.packs*10)/10:'']));
   });
   var ws=XLSX.utils.aoa_to_sheet(A);
-  ws['!cols']=(admin?[{wch:14}]:[]).concat([{wch:14},{wch:10},{wch:44},{wch:16},{wch:18},{wch:12},{wch:16},{wch:14},{wch:14},{wch:20},{wch:12}]);
+  ws['!cols']=(admin?[{wch:14}]:[]).concat([{wch:14},{wch:14},{wch:10},{wch:44},{wch:16},{wch:18},{wch:12},{wch:16},{wch:14},{wch:14},{wch:20},{wch:12}]);
   var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Reposición');
   XLSX.writeFile(wb,'requerimiento_'+REP.hoy+'.xlsx');
   showToast('Requerimiento descargado ('+REP.lista.length+' productos)','ok');

@@ -330,15 +330,20 @@
     var n = Math.min(Math.max(Number(dias) || 30, 1), 90);
     var hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date());
     var desde = restarDias(hoy, n);
-    var filas = await todas(function () {
-      return filtroSede(sb.from('salidas').select('sede_id,sku,fecha,unidad'), p).gte('fecha', desde).lt('fecha', hoy).order('id');
-    });
+    var res = await Promise.all([
+      todas(function () {
+        return filtroSede(sb.from('salidas').select('sede_id,sku,fecha,unidad'), p).gte('fecha', desde).lt('fecha', hoy).order('id');
+      }),
+      todas(function () { return sb.from('maestro_sku').select('sku,cod_sap').order('sku'); }).catch(function () { return []; })
+    ]);
+    var filas = res[0], sap = {};
+    res[1].forEach(function (r) { var c = str(r.cod_sap); if (/^[0-9]+$/.test(c)) sap[r.sku] = c; });
     var acc = {};
     filas.forEach(function (f) {
       var k = f.sede_id + '|' + f.sku, d = acc[k] || (acc[k] = {});
       d[f.fecha] = (d[f.fecha] || 0) + num(f.unidad);
     });
-    return { ok: true, data: { hoy: hoy, dias: n, sedeUnica: p.rol === 'store' ? p.sede_id : null, mapa: acc } };
+    return { ok: true, data: { hoy: hoy, dias: n, sedeUnica: p.rol === 'store' ? p.sede_id : null, mapa: acc, sap: sap } };
   });
 
   // Stock en packs de todas las sedes (para la descarga del Dashboard); una tienda solo ve su sede en el resto de la app.
