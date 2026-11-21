@@ -5046,3 +5046,5 @@ tr.an-act td{background:rgba(123,97,239,.12) !important}
   .rep-ft{padding:10px 16px calc(14px + env(safe-area-inset-bottom))}
 }
 @media (prefers-reduced-motion:reduce){.rep-bx,.rep-sp{animation:none}}
+.rep-pr{display:inline-grid;place-items:center;width:18px;height:18px;margin-right:7px;border-radius:5px;font:700 10.5px 'Inter',sans-serif;font-style:normal;vertical-align:1px}
+.rep-pr.A{background:rgba(123,97,239,.28);color:#D7CFFF}.rep-pr.B{background:rgba(242,176,75,.2);color:#F2B04B}.rep-pr.C{background:rgba(255,255,255,.08);color:var(--text3)}

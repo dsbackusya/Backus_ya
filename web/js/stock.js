@@ -1085,8 +1085,9 @@ function _kxExcel(k,r){
   showToast('Kardex descargado ('+k.filas.length+' movimientos)','ok');
 }
 /* Reposición: qué producto tiene menos stock, cuáles salen más y cuánto pedir para cubrir N días con el ritmo de salidas reciente */
-var REP={dias:15,cub:15,ord:'cob',solo:false,q:'',map:null,hoy:'',sedeU:null,lista:[],lote:100,t:0,cargando:false,err:''};
-var _REP_ORD=[['cob','Más urgentes'],['stk','Menos stock'],['sal','Más salen']];
+var REP={dias:15,cub:15,ord:'pri',cls:'',solo:false,q:'',map:null,hoy:'',sedeU:null,lista:[],lote:100,t:0,cargando:false,err:''};
+var _REP_COL={A:3,B:2,C:0};   // días extra de colchón según la prioridad del SKU
+var _REP_ORD=[['pri','Prioridad'],['cob','Más urgentes'],['stk','Menos stock'],['sal','Más salen']];
 function repAbrir(){
   var ov=document.getElementById('rep-ov');
   if(!ov){
@@ -1100,6 +1101,7 @@ function repAbrir(){
         '<div class="rep-sg" id="rep-ord">'+_REP_ORD.map(function(o){ return '<button type="button" data-o="'+o[0]+'" onclick="repOrden(\''+o[0]+'\')">'+o[1]+'</button>'; }).join('')+'</div>'+
         '<div class="rep-g"><label>Salidas de los últimos<div class="rep-ch">'+chips('dias',[7,15,30])+'</div></label>'+
           '<label>Pedir para cubrir<div class="rep-ch">'+chips('cub',[7,15,30])+'</div></label></div>'+
+        '<div class="rep-g"><label>Prioridad del SKU<div class="rep-ch" id="rep-cls">'+[['','Todas'],['A','A · los que más salen'],['B','B'],['C','C']].map(function(x){ return '<button type="button" data-c="'+x[0]+'" onclick="repCls(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('')+'</div></label></div>'+
         '<div class="rep-bq"><input id="rep-q" type="search" placeholder="Buscar SKU o producto" autocomplete="off" oninput="repBuscar(this.value)"><label class="rep-sw"><input type="checkbox" id="rep-solo" onchange="repSolo(this.checked)"><span>Solo lo que hay que pedir</span></label></div>'+
       '</div>'+
       '<div class="rep-kp" id="rep-kp"></div>'+
@@ -1131,9 +1133,11 @@ function repCargar(){
 }
 function repMarcar(){
   document.querySelectorAll('#rep-ov [data-k]').forEach(function(b){ b.classList.toggle('on',+b.dataset.v===REP[b.dataset.k]); });
+  document.querySelectorAll('#rep-ov [data-c]').forEach(function(b){ b.classList.toggle('on',b.dataset.c===REP.cls); });
   document.querySelectorAll('#rep-ov [data-o]').forEach(function(b){ b.classList.toggle('on',b.dataset.o===REP.ord); });
 }
 function repSet(k,v){ REP[k]=v; repMarcar(); repDibujar(); }
+function repCls(c){ REP.cls=c; repMarcar(); repDibujar(); }
 function repOrden(o){ REP.ord=o; repMarcar(); repDibujar(); }
 function repBuscar(v){ REP.q=String(v||'').toLowerCase().trim(); repDibujar(); }
 function repSolo(on){ REP.solo=!!on; repDibujar(); }
@@ -1141,23 +1145,35 @@ function repMas(){ REP.lote+=100; repDibujar(true); }
 function _repCalc(){
   var m=REP.map, d0=_anMas(REP.hoy,-REP.dias);
   var filas=(DATA.stock||[]).map(function(r){
-    var d=m.mapa[(r.sheetId||REP.sedeU)+'|'+r.sku], sal=0;
-    if(d) for(var f in d) if(f>=d0) sal+=d[f];
-    var prom=sal/REP.dias, st=Math.max(r.stock,0), need=prom*REP.cub-st, ped=0;
-    if(need>0){ ped=Math.ceil(need-1e-9); if(r.packs>1) ped=Math.ceil(ped/r.packs)*r.packs; }
-    return {r:r,sal:sal,prom:prom,cob:prom>0?st/prom:null,ped:ped};
+    var d=m.mapa[(r.sheetId||REP.sedeU)+'|'+r.sku], sal=0, s30=0;
+    if(d) for(var f in d){ s30+=d[f]; if(f>=d0) sal+=d[f]; }
+    return {r:r,sal:sal,s30:s30,sid:r.sheetId||REP.sedeU};
   });
+  // Prioridad ABC por sede según lo vendido en 30 días: A = el 80% de las salidas, B = hasta el 95%, C = el resto con ventas
+  var gr={}; filas.forEach(function(x){ if(x.s30>0) (gr[x.sid]=gr[x.sid]||[]).push(x); });
+  Object.keys(gr).forEach(function(k){
+    var g=gr[k].sort(function(a,b){return b.s30-a.s30;}), tot=g.reduce(function(s,x){return s+x.s30;},0), ac=0;
+    g.forEach(function(x){ x.cl=ac<tot*.8?'A':(ac<tot*.95?'B':'C'); ac+=x.s30; });
+  });
+  filas.forEach(function(x){
+    var r=x.r, col=_REP_COL[x.cl]||0, prom=x.sal/REP.dias, st=Math.max(r.stock,0), need=prom*(REP.cub+col)-st, ped=0;
+    if(need>0){ ped=Math.ceil(need-1e-9); if(r.packs>1) ped=Math.ceil(ped/r.packs)*r.packs; }
+    x.prom=prom; x.cob=prom>0?st/prom:null; x.ped=ped; x.cl=x.cl||'';
+  });
+  var cnt={A:0,B:0,C:0}; filas.forEach(function(x){ if(x.cl) cnt[x.cl]++; });
   if(REP.q) filas=filas.filter(function(x){ return x.r.sku.toLowerCase().indexOf(REP.q)>-1||x.r.desc.toLowerCase().indexOf(REP.q)>-1; });
+  if(REP.cls) filas=filas.filter(function(x){ return x.cl===REP.cls; });
   var porPedir=filas.filter(function(x){return x.ped>0;});
   if(REP.solo) filas=porPedir;
-  var o=REP.ord;
+  var o=REP.ord, rk={A:0,B:1,C:2,'':3};
+  var urg=function(a,b){ var ca=a.cob===null?1e9:a.cob, cb=b.cob===null?1e9:b.cob; return ca-cb||b.sal-a.sal; };
   filas.sort(function(a,b){
     if(o==='stk') return a.r.stock-b.r.stock||b.sal-a.sal;
     if(o==='sal') return b.sal-a.sal||a.r.stock-b.r.stock;
-    var ca=a.cob===null?1e9:a.cob, cb=b.cob===null?1e9:b.cob;
-    return ca-cb||b.sal-a.sal;
+    if(o==='pri') return rk[a.cl]-rk[b.cl]||urg(a,b);
+    return urg(a,b);
   });
-  return {filas:filas,pedir:porPedir.length,und:porPedir.reduce(function(s,x){return s+x.ped;},0)};
+  return {filas:filas,cnt:cnt,pedir:porPedir.length,und:porPedir.reduce(function(s,x){return s+x.ped;},0)};
 }
 function _repN(n,d){ return (+n).toLocaleString('es-PE',{minimumFractionDigits:0,maximumFractionDigits:d==null?1:d}); }
 function repDibujar(mas){
@@ -1168,12 +1184,12 @@ function repDibujar(mas){
   if(!REP.map) return;
   var c=_repCalc(); REP.lista=c.filas; if(!mas) REP.lote=100;
   if(dl) dl.disabled=!c.filas.length;
-  kp.innerHTML='<b>'+fmt(c.pedir)+'</b> productos por pedir · <b>'+fmt(c.und)+'</b> unidades <span>para cubrir '+REP.cub+' días con el ritmo de los últimos '+REP.dias+' días</span>';
+  kp.innerHTML='<b>'+fmt(c.pedir)+'</b> productos por pedir · <b>'+fmt(c.und)+'</b> unidades <span>para cubrir '+REP.cub+' días con el ritmo de los últimos '+REP.dias+' días · colchón extra: A +3 d, B +2 d</span>';
   if(!c.filas.length){ ls.innerHTML='<div class="rep-vc">'+(REP.solo?'Ningún producto necesita pedido con estos datos.':'Sin resultados.')+'</div>'; return; }
   var admin=!(S&&S.rol==='store'), h='<div class="rep-r rep-th"><div>Producto</div><div>Stock</div><div>Salió</div><div>Alcanza</div><div>Pedir</div></div>';
   c.filas.slice(0,REP.lote).forEach(function(x){
     var r=x.r, cob=x.cob, cls=cob===null?'':(cob<=3?' bad':(cob<=7?' mid':''));
-    h+='<div class="rep-r"><div class="rep-n"><b>'+esc(r.desc)+'</b><span>'+esc(r.sku)+(admin&&r.sede?' · '+esc(r.sede):'')+'</span></div>'+
+    h+='<div class="rep-r"><div class="rep-n"><b>'+(x.cl?'<i class="rep-pr '+x.cl+'">'+x.cl+'</i>':'')+esc(r.desc)+'</b><span>'+esc(r.sku)+(admin&&r.sede?' · '+esc(r.sede):'')+'</span></div>'+
       '<div class="rep-c" data-l="Stock"><b'+(r.stock<=0?' class="bad"':'')+'>'+fmt(r.stock)+'</b></div>'+
       '<div class="rep-c" data-l="Salió '+REP.dias+' d"><b>'+(x.sal?fmt(x.sal):'—')+'</b>'+(x.sal?'<small>'+_repN(x.prom)+'/día</small>':'')+'</div>'+
       '<div class="rep-c" data-l="Alcanza"><b class="'+cls.trim()+'">'+(cob===null?'—':(cob<1?'<1 d':_repN(cob)+' d'))+'</b></div>'+
@@ -1189,13 +1205,13 @@ function repExcel(){
     ['Fecha',f(REP.hoy),'','Salidas de los últimos',REP.dias+' días (sin contar hoy)'],
     ['Pedir para cubrir',REP.cub+' días','','Sede',admin?'Todas las sedes':(_sedeBonita(S.usuario||'').replace(/^DS\s+/i,''))],
     [],
-    (admin?['Sede']:[]).concat(['SKU','Producto','Marca','Categoría','Stock actual','Salidas ('+REP.dias+' días)','Promedio por día','Días que alcanza','Cantidad a pedir (und)','Packs a pedir'])];
+    (admin?['Sede']:[]).concat(['SKU','Prioridad','Producto','Marca','Categoría','Stock actual','Salidas ('+REP.dias+' días)','Promedio por día','Días que alcanza','Cantidad a pedir (und)','Packs a pedir'])];
   REP.lista.forEach(function(x){
     var r=x.r;
-    A.push((admin?[r.sede]:[]).concat([r.sku,r.desc,r.marca,r.categoria,r.stock,x.sal,Math.round(x.prom*10)/10,x.cob===null?'':Math.round(x.cob*10)/10,x.ped||'',x.ped&&r.packs>1?Math.round(x.ped/r.packs*10)/10:'']));
+    A.push((admin?[r.sede]:[]).concat([r.sku,x.cl||'-',r.desc,r.marca,r.categoria,r.stock,x.sal,Math.round(x.prom*10)/10,x.cob===null?'':Math.round(x.cob*10)/10,x.ped||'',x.ped&&r.packs>1?Math.round(x.ped/r.packs*10)/10:'']));
   });
   var ws=XLSX.utils.aoa_to_sheet(A);
-  ws['!cols']=(admin?[{wch:14}]:[]).concat([{wch:14},{wch:44},{wch:16},{wch:18},{wch:12},{wch:16},{wch:14},{wch:14},{wch:20},{wch:12}]);
+  ws['!cols']=(admin?[{wch:14}]:[]).concat([{wch:14},{wch:10},{wch:44},{wch:16},{wch:18},{wch:12},{wch:16},{wch:14},{wch:14},{wch:20},{wch:12}]);
   var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Reposición');
   XLSX.writeFile(wb,'requerimiento_'+REP.hoy+'.xlsx');
   showToast('Requerimiento descargado ('+REP.lista.length+' productos)','ok');
