@@ -754,6 +754,7 @@ function renderStock(r){
       '<select class="stk-sel" id="stock-cat" onchange="filterStock()"><option value="">Todas las categorías</option>'+catOpts+'</select>'+
       '<select class="stk-sel" id="stock-mar" onchange="filterStock()"><option value="">Todas las marcas</option>'+marOpts+'</select>'+
       '<span class="sal2-cnt" id="stock-count"></span>'+
+      '<button type="button" class="sal2-exp" onclick="repAbrir()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span>Reposición</span></button>'+
       '<button id="btn-export-stock" class="sal2-exp" onclick="exportStock()">'+icoExportar+'<span id="stk-exp-t">Exportar</span></button>'+
     '</div>'+
     '<div class="stk-sec"><b>Productos</b><span class="stk-so"><span id="stk-sec-n"></span><button type="button" class="stk-sort" onclick="stkOrden()"><span id="stk-ord">'+_STK_ORDL[_STK_ORD]+'</span><svg viewBox="0 0 24 24"><path d="M8 5v14M5 16l3 3 3-3M16 19V5M13 8l3-3 3 3"/></svg></button></span></div>'+
@@ -1082,6 +1083,122 @@ function _kxExcel(k,r){
   var sku=String(k.sku).replace(/[^\w.-]+/g,'_');
   XLSX.writeFile(wb,'kardex_'+sku+'_'+k.desde+'_a_'+k.hasta+'.xlsx');
   showToast('Kardex descargado ('+k.filas.length+' movimientos)','ok');
+}
+/* Reposición: qué producto tiene menos stock, cuáles salen más y cuánto pedir para cubrir N días con el ritmo de salidas reciente */
+var REP={dias:15,cub:15,ord:'cob',solo:false,q:'',map:null,hoy:'',sedeU:null,lista:[],lote:100,t:0,cargando:false,err:''};
+var _REP_ORD=[['cob','Más urgentes'],['stk','Menos stock'],['sal','Más salen']];
+function repAbrir(){
+  var ov=document.getElementById('rep-ov');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='rep-ov'; ov.className='rep-ov';
+    ov.setAttribute('role','dialog'); ov.setAttribute('aria-modal','true'); ov.setAttribute('aria-label','Reposición');
+    ov.onclick=function(e){ if(e.target===ov) repCerrar(); };
+    var chips=function(k,arr){ return arr.map(function(n){ return '<button type="button" data-k="'+k+'" data-v="'+n+'" onclick="repSet(\''+k+'\','+n+')">'+n+' días</button>'; }).join(''); };
+    ov.innerHTML='<div class="rep-bx">'+
+      '<div class="rep-hd"><div><b>Reposición</b><small>Qué se está acabando y qué más sale, para armar tu requerimiento</small></div><button type="button" class="rep-x" onclick="repCerrar()" aria-label="Cerrar">×</button></div>'+
+      '<div class="rep-ct">'+
+        '<div class="rep-sg" id="rep-ord">'+_REP_ORD.map(function(o){ return '<button type="button" data-o="'+o[0]+'" onclick="repOrden(\''+o[0]+'\')">'+o[1]+'</button>'; }).join('')+'</div>'+
+        '<div class="rep-g"><label>Salidas de los últimos<div class="rep-ch">'+chips('dias',[7,15,30])+'</div></label>'+
+          '<label>Pedir para cubrir<div class="rep-ch">'+chips('cub',[7,15,30])+'</div></label></div>'+
+        '<div class="rep-bq"><input id="rep-q" type="search" placeholder="Buscar SKU o producto" autocomplete="off" oninput="repBuscar(this.value)"><label class="rep-sw"><input type="checkbox" id="rep-solo" onchange="repSolo(this.checked)"><span>Solo lo que hay que pedir</span></label></div>'+
+      '</div>'+
+      '<div class="rep-kp" id="rep-kp"></div>'+
+      '<div class="rep-ls" id="rep-ls"></div>'+
+      '<div class="rep-ft"><button type="button" class="rep-dl" id="rep-dl" onclick="repExcel()">Descargar requerimiento (Excel)</button></div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('keydown',function(e){ if(e.key==='Escape') repCerrar(); });
+  }
+  ov.classList.add('on'); document.body.style.overflow='hidden';
+  repMarcar();
+  var c=ov.querySelector('.rep-x'); if(c) c.focus();
+  if(REP.map&&Date.now()-REP.t<5*60000){ repDibujar(); return; }
+  repCargar();
+}
+function repCerrar(){
+  var ov=document.getElementById('rep-ov'); if(ov) ov.classList.remove('on');
+  document.body.style.overflow='';
+}
+function repCargar(){
+  REP.cargando=true; REP.err=''; repDibujar();
+  google.script.run
+    .withSuccessHandler(function(r){
+      REP.cargando=false;
+      if(!r||!r.ok){ REP.err=(r&&r.error)||'No se pudieron leer las salidas'; repDibujar(); return; }
+      REP.map=r.data; REP.hoy=r.data.hoy; REP.sedeU=r.data.sedeUnica; REP.t=Date.now(); repDibujar();
+    })
+    .withFailureHandler(function(){ REP.cargando=false; REP.err='No se pudieron leer las salidas'; repDibujar(); })
+    .getRotacion(S.token,30);
+}
+function repMarcar(){
+  document.querySelectorAll('#rep-ov [data-k]').forEach(function(b){ b.classList.toggle('on',+b.dataset.v===REP[b.dataset.k]); });
+  document.querySelectorAll('#rep-ov [data-o]').forEach(function(b){ b.classList.toggle('on',b.dataset.o===REP.ord); });
+}
+function repSet(k,v){ REP[k]=v; repMarcar(); repDibujar(); }
+function repOrden(o){ REP.ord=o; repMarcar(); repDibujar(); }
+function repBuscar(v){ REP.q=String(v||'').toLowerCase().trim(); repDibujar(); }
+function repSolo(on){ REP.solo=!!on; repDibujar(); }
+function repMas(){ REP.lote+=100; repDibujar(true); }
+function _repCalc(){
+  var m=REP.map, d0=_anMas(REP.hoy,-REP.dias);
+  var filas=(DATA.stock||[]).map(function(r){
+    var d=m.mapa[(r.sheetId||REP.sedeU)+'|'+r.sku], sal=0;
+    if(d) for(var f in d) if(f>=d0) sal+=d[f];
+    var prom=sal/REP.dias, st=Math.max(r.stock,0), need=prom*REP.cub-st, ped=0;
+    if(need>0){ ped=Math.ceil(need-1e-9); if(r.packs>1) ped=Math.ceil(ped/r.packs)*r.packs; }
+    return {r:r,sal:sal,prom:prom,cob:prom>0?st/prom:null,ped:ped};
+  });
+  if(REP.q) filas=filas.filter(function(x){ return x.r.sku.toLowerCase().indexOf(REP.q)>-1||x.r.desc.toLowerCase().indexOf(REP.q)>-1; });
+  var porPedir=filas.filter(function(x){return x.ped>0;});
+  if(REP.solo) filas=porPedir;
+  var o=REP.ord;
+  filas.sort(function(a,b){
+    if(o==='stk') return a.r.stock-b.r.stock||b.sal-a.sal;
+    if(o==='sal') return b.sal-a.sal||a.r.stock-b.r.stock;
+    var ca=a.cob===null?1e9:a.cob, cb=b.cob===null?1e9:b.cob;
+    return ca-cb||b.sal-a.sal;
+  });
+  return {filas:filas,pedir:porPedir.length,und:porPedir.reduce(function(s,x){return s+x.ped;},0)};
+}
+function _repN(n,d){ return (+n).toLocaleString('es-PE',{minimumFractionDigits:0,maximumFractionDigits:d==null?1:d}); }
+function repDibujar(mas){
+  var ls=document.getElementById('rep-ls'), kp=document.getElementById('rep-kp'), dl=document.getElementById('rep-dl');
+  if(!ls) return;
+  if(REP.cargando){ kp.innerHTML=''; ls.innerHTML='<div class="rep-vc"><i class="rep-sp"></i>Calculando las salidas de los últimos 30 días…</div>'; if(dl) dl.disabled=true; return; }
+  if(REP.err){ kp.innerHTML=''; ls.innerHTML='<div class="rep-vc">'+esc(REP.err)+'<br><button type="button" onclick="repCargar()">Reintentar</button></div>'; if(dl) dl.disabled=true; return; }
+  if(!REP.map) return;
+  var c=_repCalc(); REP.lista=c.filas; if(!mas) REP.lote=100;
+  if(dl) dl.disabled=!c.filas.length;
+  kp.innerHTML='<b>'+fmt(c.pedir)+'</b> productos por pedir · <b>'+fmt(c.und)+'</b> unidades <span>para cubrir '+REP.cub+' días con el ritmo de los últimos '+REP.dias+' días</span>';
+  if(!c.filas.length){ ls.innerHTML='<div class="rep-vc">'+(REP.solo?'Ningún producto necesita pedido con estos datos.':'Sin resultados.')+'</div>'; return; }
+  var admin=!(S&&S.rol==='store'), h='<div class="rep-r rep-th"><div>Producto</div><div>Stock</div><div>Salió</div><div>Alcanza</div><div>Pedir</div></div>';
+  c.filas.slice(0,REP.lote).forEach(function(x){
+    var r=x.r, cob=x.cob, cls=cob===null?'':(cob<=3?' bad':(cob<=7?' mid':''));
+    h+='<div class="rep-r"><div class="rep-n"><b>'+esc(r.desc)+'</b><span>'+esc(r.sku)+(admin&&r.sede?' · '+esc(r.sede):'')+'</span></div>'+
+      '<div class="rep-c" data-l="Stock"><b'+(r.stock<=0?' class="bad"':'')+'>'+fmt(r.stock)+'</b></div>'+
+      '<div class="rep-c" data-l="Salió '+REP.dias+' d"><b>'+(x.sal?fmt(x.sal):'—')+'</b>'+(x.sal?'<small>'+_repN(x.prom)+'/día</small>':'')+'</div>'+
+      '<div class="rep-c" data-l="Alcanza"><b class="'+cls.trim()+'">'+(cob===null?'—':(cob<1?'<1 d':_repN(cob)+' d'))+'</b></div>'+
+      '<div class="rep-c rep-p" data-l="Pedir"><b>'+(x.ped?fmt(x.ped):'—')+'</b>'+(x.ped&&r.packs>1?'<small>'+_repN(x.ped/r.packs)+' packs</small>':'')+'</div></div>';
+  });
+  if(c.filas.length>REP.lote) h+='<button type="button" class="rep-mas" onclick="repMas()">Mostrar más ('+fmt(c.filas.length-REP.lote)+' restantes)</button>';
+  var y=ls.scrollTop; ls.innerHTML=h; if(mas) ls.scrollTop=y;
+}
+function repExcel(){
+  if(!REP.map||!REP.lista.length){ showToast('No hay productos para descargar','err'); return; }
+  var admin=!(S&&S.rol==='store'), f=function(s){ var p=String(s||'').split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:''; };
+  var A=[['REQUERIMIENTO DE REPOSICIÓN'],
+    ['Fecha',f(REP.hoy),'','Salidas de los últimos',REP.dias+' días (sin contar hoy)'],
+    ['Pedir para cubrir',REP.cub+' días','','Sede',admin?'Todas las sedes':(_sedeBonita(S.usuario||'').replace(/^DS\s+/i,''))],
+    [],
+    (admin?['Sede']:[]).concat(['SKU','Producto','Marca','Categoría','Stock actual','Salidas ('+REP.dias+' días)','Promedio por día','Días que alcanza','Cantidad a pedir (und)','Packs a pedir'])];
+  REP.lista.forEach(function(x){
+    var r=x.r;
+    A.push((admin?[r.sede]:[]).concat([r.sku,r.desc,r.marca,r.categoria,r.stock,x.sal,Math.round(x.prom*10)/10,x.cob===null?'':Math.round(x.cob*10)/10,x.ped||'',x.ped&&r.packs>1?Math.round(x.ped/r.packs*10)/10:'']));
+  });
+  var ws=XLSX.utils.aoa_to_sheet(A);
+  ws['!cols']=(admin?[{wch:14}]:[]).concat([{wch:14},{wch:44},{wch:16},{wch:18},{wch:12},{wch:16},{wch:14},{wch:14},{wch:20},{wch:12}]);
+  var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Reposición');
+  XLSX.writeFile(wb,'requerimiento_'+REP.hoy+'.xlsx');
+  showToast('Requerimiento descargado ('+REP.lista.length+' productos)','ok');
 }
 /* Evolución del stock de los últimos 30 días: se arma hacia atrás desde el stock de hoy con las entradas, salidas y M-T de cada día */
 function stkEvol(r){

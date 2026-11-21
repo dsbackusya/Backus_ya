@@ -325,6 +325,22 @@
     } };
   });
 
+  // Salidas por día y producto de los últimos N días completos (sin contar hoy): base de la vista de Reposición en Stock.
+  API.getRotacion = guard(async function (p, dias) {
+    var n = Math.min(Math.max(Number(dias) || 30, 1), 90);
+    var hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date());
+    var desde = restarDias(hoy, n);
+    var filas = await todas(function () {
+      return filtroSede(sb.from('salidas').select('sede_id,sku,fecha,unidad'), p).gte('fecha', desde).lt('fecha', hoy).order('id');
+    });
+    var acc = {};
+    filas.forEach(function (f) {
+      var k = f.sede_id + '|' + f.sku, d = acc[k] || (acc[k] = {});
+      d[f.fecha] = (d[f.fecha] || 0) + num(f.unidad);
+    });
+    return { ok: true, data: { hoy: hoy, dias: n, sedeUnica: p.rol === 'store' ? p.sede_id : null, mapa: acc } };
+  });
+
   // Stock en packs de todas las sedes (para la descarga del Dashboard); una tienda solo ve su sede en el resto de la app.
   API.getStockPackTodasSedes = guard(async function () {
     var filas = await todas(function () { return sb.rpc('stock_pack_todas_sedes'); });
